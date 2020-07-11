@@ -100,7 +100,7 @@ namespace MoonSharp.Hardwire
 		/// <param name="action">The action to be performed, or null.</param>
 		public void DispatchTablePairs(string parent, Table table, CodeTypeMemberCollection members, Action<string, CodeExpression> action = null)
 		{
-			foreach (var pair in table.Pairs.OrderBy(x => x.Key.ToString()))
+			foreach (var pair in table.Pairs.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal))
 			{
 				var key = pair.Key;
 				var value = pair.Value;
