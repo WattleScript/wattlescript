@@ -82,7 +82,7 @@ namespace MoonSharp.Hardwire
 		{
 			try
 			{
-				DispatchTablePairs(table, m_KickstarterClass.Members,
+				DispatchTablePairs(null, table, m_KickstarterClass.Members,
 					exp => m_InitStatements.Add(new CodeMethodInvokeExpression(new CodeTypeReferenceExpression(typeof(UserData)), "RegisterType", exp)));
 			}
 			catch (Exception ex)
@@ -94,12 +94,13 @@ namespace MoonSharp.Hardwire
 		/// <summary>
 		/// Used by generators to dispatch a table of types
 		/// </summary>
+		/// <param name="parent">Parent name (can be null)</param>
 		/// <param name="table">The table.</param>
 		/// <param name="members">The members.</param>
 		/// <param name="action">The action to be performed, or null.</param>
-		public void DispatchTablePairs(Table table, CodeTypeMemberCollection members, Action<string, CodeExpression> action = null)
+		public void DispatchTablePairs(string parent, Table table, CodeTypeMemberCollection members, Action<string, CodeExpression> action = null)
 		{
-			foreach (var pair in table.Pairs)
+			foreach (var pair in table.Pairs.OrderBy(x => x.Key.ToString()))
 			{
 				var key = pair.Key;
 				var value = pair.Value;
@@ -122,7 +123,7 @@ namespace MoonSharp.Hardwire
 						continue;
 					}
 
-					var exp = DispatchTable(key.String, value.Table, members);
+					var exp = DispatchTable(parent, key.String, value.Table, members);
 
 					if (action != null && exp != null)
 						foreach (var e in exp)
@@ -153,9 +154,9 @@ namespace MoonSharp.Hardwire
 		/// <param name="table">The table.</param>
 		/// <param name="members">The members.</param>
 		/// <param name="action">The action to be performed, or null.</param>
-		public void DispatchTablePairs(Table table, CodeTypeMemberCollection members, Action<CodeExpression> action)
+		public void DispatchTablePairs(string parent, Table table, CodeTypeMemberCollection members, Action<CodeExpression> action)
 		{
-			DispatchTablePairs(table, members, (_, e) => action(e));
+			DispatchTablePairs(parent, table, members, (_, e) => action(e));
 		}
 
 
@@ -167,7 +168,7 @@ namespace MoonSharp.Hardwire
 		/// <param name="members">The members.</param>
 		/// <returns></returns>
 		/// <exception cref="System.ArgumentException">table cannot be dispatched as it has no class or class of invalid type.</exception>
-		public CodeExpression[] DispatchTable(string key, Table table, CodeTypeMemberCollection members)
+		public CodeExpression[] DispatchTable(string parent, string key, Table table, CodeTypeMemberCollection members)
 		{
 			DynValue d = table.Get("class");
 			if (d.Type != DataType.String)
@@ -180,7 +181,7 @@ namespace MoonSharp.Hardwire
 			table.Set("$key", DynValue.NewString(key));
 
 			var gen = HardwireGeneratorRegistry.GetGenerator(d.String);
-			var result = gen.Generate(table, this, members);
+			var result = gen.Generate(parent, table, this, members);
 
 			m_NestStack.Pop();
 

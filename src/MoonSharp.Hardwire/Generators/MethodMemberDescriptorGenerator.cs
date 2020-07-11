@@ -30,7 +30,7 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.MethodMemberDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
 		{
 			bool isArray = table.Get("arraytype").IsNotNil();
 			string memberName = table.Get("name").String;
@@ -42,8 +42,19 @@ namespace MoonSharp.Hardwire.Generators
 					return null;
 			}
 
+			// Create the parameters
+			List<HardwireParameterDescriptor> paramDescs = HardwireParameterDescriptor.LoadDescriptorsFromTable(table.Get("params").Table);
+
+			int paramNum = paramDescs.Count;
+			int optionalNum = paramDescs.Where(p => p.HasDefaultValue).Count();
+			
 			// Create the descriptor class
-			string className = m_Prefix + "_" + Guid.NewGuid().ToString("N");
+			var idstr = $"{parent}$method${table.Get("static").Boolean || table.Get("ctor").Boolean}:{memberName}";
+			foreach (var p in paramDescs)
+			{
+				idstr += $"#{p.ParamType}::{p.IsOut}::{p.IsRef}";
+			}
+			string className = m_Prefix + "_" + IdGen.Create(idstr);
 
 			CodeTypeDeclaration classCode = new CodeTypeDeclaration(className);
 			classCode.TypeAttributes = System.Reflection.TypeAttributes.NestedPrivate | System.Reflection.TypeAttributes.Sealed;
@@ -54,11 +65,7 @@ namespace MoonSharp.Hardwire.Generators
 			ctor.Attributes = MemberAttributes.Assembly;
 			classCode.Members.Add(ctor);
 
-			// Create the parameters
-			List<HardwireParameterDescriptor> paramDescs = HardwireParameterDescriptor.LoadDescriptorsFromTable(table.Get("params").Table);
-
-			int paramNum = paramDescs.Count;
-			int optionalNum = paramDescs.Where(p => p.HasDefaultValue).Count();
+		
 
 			// Add initialize call to ctor
 			List<CodeExpression> initParams = new List<CodeExpression>();

@@ -16,7 +16,7 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.ValueTypeDefaultCtorMemberDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
 		{
 			MethodMemberDescriptorGenerator mgen = new MethodMemberDescriptorGenerator("VTDC");
 
@@ -32,7 +32,7 @@ namespace MoonSharp.Hardwire.Generators
 			mt["special"] = false;
 
 
-			return mgen.Generate(mt, generator, members);
+			return mgen.Generate(parent, mt, generator, members);
 		}
 	}
 }

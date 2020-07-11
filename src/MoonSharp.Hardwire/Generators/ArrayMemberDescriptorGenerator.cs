@@ -18,10 +18,10 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.ArrayMemberDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members)
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members)
 		{
-			string className = "AIDX_" + Guid.NewGuid().ToString("N");
 			string name = table.Get("name").String;
+			string className = "AIDX_" + IdGen.Create($"{parent ?? "null"}:array:{name}");
 			bool setter = table.Get("setter").Boolean;
 
 			CodeTypeDeclaration classCode = new CodeTypeDeclaration(className);
