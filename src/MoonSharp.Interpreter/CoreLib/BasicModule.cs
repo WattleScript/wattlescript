@@ -229,47 +229,47 @@ namespace MoonSharp.Interpreter.CoreLib
 				if (e.Type != DataType.String)
 					return DynValue.Nil;
 
-				if (e.String.StartsWith("0x"))
-				{
-					if (long.TryParse(e.String.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long l))
-						return DynValue.NewNumber(l);
-					return DynValue.Nil;
-				}
-				if (double.TryParse(e.String, NumberStyles.Any, CultureInfo.InvariantCulture, out double d))
-				{
-					return DynValue.NewNumber(d);
-				}
+				double? res = e.CastToNumber();
+				if (res != null) return DynValue.NewNumber(res.Value);
 				return DynValue.Nil;
 			}
 			else
 			{
-                //!COMPAT: tonumber supports only 2,8,10 or 16 as base
-                //UPDATE: added support for 3-9 base numbers
-                DynValue ee;
+				DynValue ee;
 
 				if (args[0].Type != DataType.Number)
 					ee = args.AsType(0, "tonumber", DataType.String, false);
 				else
 					ee = DynValue.NewString(args[0].Number.ToString(CultureInfo.InvariantCulture)); ;
-
+				if (ee.String.Length < 0) return DynValue.Nil;
 				int bb = (int)b.Number;
 
-			    uint uiv = 0;
-                if (bb == 2 || bb == 8 || bb == 10 || bb == 16)
+			    double uiv = 0;
+			    var trimmed = ee.String.Trim();
+			    if (trimmed.Length == 0) return DynValue.Nil;
+			    bool negate = false;
+			    int startIdx = 0;
+			    if (trimmed[0] == '-') {
+				    negate = true;
+				    startIdx = 1;
+			    }
+			    if (trimmed[0] == '+') {
+				    startIdx = 1;
+			    }
+				if (bb <= 36 && bb > 1)
 			    {
-                    uiv = Convert.ToUInt32(ee.String.Trim(), bb);
-                }
-			    else if (bb < 10 && bb > 2) // Support for 3, 4, 5, 6, 7 and 9 based numbers
-			    {
-			        foreach (char digit in ee.String.Trim())
+			        for (int ij = startIdx; ij < trimmed.Length; ij++)
 			        {
-			            int value = digit - 48;
-			            if (value < 0 || value >= bb)
+				        char ch = trimmed[ij];
+				        int value;
+				        if (ch >= 97) value = ch - 87;
+				        else if (ch >= 65) value = ch - 55;
+				        else value = ch - 48;
+				        if (value < 0 || value >= bb)
 			            {
-                            throw new ScriptRuntimeException("bad argument #1 to 'tonumber' (invalid character)");
-                        }
-
-                        uiv = (uint)(uiv * bb) + (uint)value;
+				            return DynValue.Nil;
+			            }
+			            uiv = uiv * bb + value;
 			        }
                 }
 			    else
@@ -277,7 +277,7 @@ namespace MoonSharp.Interpreter.CoreLib
                     throw new ScriptRuntimeException("bad argument #2 to 'tonumber' (base out of range)");
                 }
 
-				return DynValue.NewNumber(uiv);
+                return DynValue.NewNumber(negate ? -uiv : uiv);
 			}
 		}
 

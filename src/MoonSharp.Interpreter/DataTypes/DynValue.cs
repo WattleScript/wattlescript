@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using MoonSharp.Interpreter.Tree;
 
 namespace MoonSharp.Interpreter
 {
@@ -714,18 +715,99 @@ namespace MoonSharp.Interpreter
 			}
 			else if (rv.Type == DataType.String)
 			{
-				if (rv.String.StartsWith("0x"))
+				if (ToNumber(rv.String, out var n))
 				{
-					if (long.TryParse(rv.String, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value))
-						return value;
-					return null;
+					return n;
 				}
-
-				double num;
-				if (double.TryParse(rv.String, NumberStyles.Any, CultureInfo.InvariantCulture, out num))
-					return num;
 			}
 			return null;
+		}
+
+		public static bool ToNumber(string str, out double num)
+		{
+			//Validate characters
+			num = 0.0;
+			bool hex = false;
+			for (int i = 0; i < str.Length; i++)
+			{
+				if (char.IsWhiteSpace(str[i]) ||
+				    char.IsDigit(str[i]) ||
+				    (str[i] >= 'A' && str[i] <= 'F') ||
+				    (str[i] >= 'a' && str[i] <= 'f') ||
+				    str[i] == '-' ||
+				    str[i] == 'p' ||
+				    str[i] == 'P' ||
+				    str[i] == '+' ||
+				    str[i] == '.')
+					continue;
+					
+				if (str[i] == 'x' || str[i] == 'X')
+				{
+					hex = true;
+					continue;
+				}
+
+				return false;
+			}
+			
+			//hex float
+			if (hex)
+			{
+				if (ParseHexFloat(str, out num))
+					return true;
+			}
+			else
+			{
+				if (double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out num))
+					return true;
+			}
+			return false;
+		}
+
+		static bool ParseHexFloat(string s, out double result)
+		{
+			bool negate = false;
+			result = 0.0;
+			s = s.Trim();
+			if (s[0] == '+')
+				s = s.Substring(1);
+			if (s[0] == '-') {
+				negate = true;
+				s = s.Substring(1);
+			}
+			if ((s.Length < 3) || s[0] != '0' || char.ToUpperInvariant(s[1]) != 'X')
+				return false;
+
+			s = s.Substring(2);
+			double value = 0.0;
+			int dummy, exp = 0;
+
+			s = LexerUtils.ReadHexProgressive(s, ref value, out dummy);
+
+			if (s.Length > 0 && s[0] == '.')
+			{
+				s = s.Substring(1);
+				s = LexerUtils.ReadHexProgressive(s, ref value, out exp);
+			}
+			
+			exp *= -4;
+
+			if (s.Length > 0 && char.ToUpper(s[0]) == 'P')
+			{
+				if (s.Length == 1)
+					return false;
+				s = s.Substring(s[1] == '+' ? 2 : 1);
+				int exp1 = int.Parse(s, CultureInfo.InvariantCulture);
+				if (exp1 < 0) return false; //can't add negative exponent
+				exp += exp1;
+				s = "";
+			}
+
+			if (s.Length > 0) return false;
+
+			result = value * Math.Pow(2, exp);
+			if (negate) result = -result;
+			return true;
 		}
 
 

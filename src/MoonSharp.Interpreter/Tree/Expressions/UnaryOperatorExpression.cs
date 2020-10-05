@@ -17,6 +17,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_Exp = subExpression;
 		}
 
+		public bool IsNegativeNumber => m_Exp is LiteralExpression && m_OpText == "-";
+
 
 
 		public override void Compile(ByteCode bc)

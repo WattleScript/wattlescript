@@ -960,8 +960,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if (ln.HasValue && rn.HasValue)
 			{
-				double mod = Math.IEEERemainder(ln.Value, rn.Value);
-				if (mod < 0) mod += rn.Value;
+				var mod = (ln.Value) - Math.Floor((ln.Value) / (rn.Value)) * (rn.Value);
 				m_ValueStack.Push(DynValue.NewNumber(mod));
 				return instructionPtr;
 			}

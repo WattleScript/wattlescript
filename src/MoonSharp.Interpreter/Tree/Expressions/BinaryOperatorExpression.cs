@@ -335,6 +335,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			dv = null;
 			if (!m_Exp1.EvalLiteral(out var v1))
 				return false;
+			bool t1Neg = m_Exp1 is UnaryOperatorExpression uo &&
+			             uo.IsNegativeNumber;
 			v1 = v1.ToScalar();
 			if (!m_Exp2.EvalLiteral(out var v2))
 				return false;
@@ -369,7 +371,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 			else
 			{
-				dv = DynValue.NewNumber(EvalArithmetic(v1, v2));
+				dv = DynValue.NewNumber(EvalArithmetic(v1, v2, t1Neg));
 			}
 			return true;
 		}
@@ -416,7 +418,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
-		private double EvalArithmetic(DynValue v1, DynValue v2)
+		private double EvalArithmetic(DynValue v1, DynValue v2, bool t1Neg = false)
 		{
 			double? nd1 = v1.CastToNumber();
 			double? nd2 = v2.CastToNumber();
@@ -438,13 +440,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				case Operator.Div:
 					return d1 / d2;
 				case Operator.Mod:
-					{
-						double mod = Math.IEEERemainder(d1, d2);
-						if (mod < 0) mod += d2;
-						return mod;
-					}
+					return (d1) - Math.Floor((d1) / (d2)) * (d2);
 				case Operator.Power:
-					return Math.Pow(d1, d2);
+					var res = Math.Pow(t1Neg ? -d1 : d1, d2);
+					return t1Neg ? -res : res;
 				default:
 					throw new DynamicExpressionException("Unsupported operator {0}", m_Operator);
 			}
