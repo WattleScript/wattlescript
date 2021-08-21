@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -23,6 +24,9 @@ namespace MoonSharp.HardwireGen
             "Type could not be resolved",
             "Type '{0}' from AdditionalFile '{1}' could not be resolved.",
             "MoonSharp.HardwireGen", DiagnosticSeverity.Warning, true);
+
+        private static DiagnosticDescriptor Timing = new("MS9999", "Generation duration",
+            "Hardwire generation took '{0}'ms", "MoonSharp.HardwireGen", DiagnosticSeverity.Info, true);
 
         public void Initialize(GeneratorInitializationContext context)
         {
@@ -144,6 +148,7 @@ namespace MoonSharp.HardwireGen
 
         public void Execute(GeneratorExecutionContext context)
         {
+            var sw = Stopwatch.StartNew();
             try
             {
                 var receiver = (UserDataSyntaxReceiver) context.SyntaxReceiver;
@@ -186,9 +191,12 @@ namespace MoonSharp.HardwireGen
                 writer.UnIndent().AppendLine("}");
                 writer.UnIndent().AppendLine("}");
                 context.AddSource($"{name}.g.cs", writer.ToString());
+                sw.Stop();
+                context.ReportDiagnostic(Diagnostic.Create(Timing, null, sw.Elapsed.TotalMilliseconds));
             }
             catch (Exception e)
             {
+                sw.Stop();
                 throw new Exception(e.Message + "> " + e.StackTrace.Replace('\n', ';'));
             }
         }
@@ -406,6 +414,13 @@ namespace MoonSharp.HardwireGen
                 builder.UnIndent();
                 builder.AppendLine("}));");
             }
+            foreach(var kv in fields)
+            {
+                builder.Append("this.AddMember(");
+                builder.Append(kv.Key.ToLiteral());
+                builder.Append(", ");
+                builder.Append("new ").Append(kv.Value.ClassName()).AppendLine("());");
+            }
 
             builder.UnIndent().AppendLine("}");
             builder.UnIndent().AppendLine("}");
@@ -458,7 +473,7 @@ namespace MoonSharp.HardwireGen
                 builder.Append("internal ").Append(m.ClassName(i)).Append("()");
                 builder.AppendLine("{").Indent();
                 //funcName, isStatic, ParameterDescriptor[], isExtensionMethod
-                string isStatic = m.Constructor ? true : false;
+                string isStatic = m.Constructor ? "true" : "false";
                 builder.Append("this.Initialize(").Append(m.Name.ToLiteral()).Append($", {isStatic}, new ")
                     .Append(CLS_PARAMETER).AppendLine("[] {");
                 builder.Indent();
