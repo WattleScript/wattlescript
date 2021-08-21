@@ -458,7 +458,8 @@ namespace MoonSharp.HardwireGen
                 builder.Append("internal ").Append(m.ClassName(i)).Append("()");
                 builder.AppendLine("{").Indent();
                 //funcName, isStatic, ParameterDescriptor[], isExtensionMethod
-                builder.Append("this.Initialize(").Append(m.Name.ToLiteral()).Append(", false, new ")
+                string isStatic = m.Constructor ? true : false;
+                builder.Append("this.Initialize(").Append(m.Name.ToLiteral()).Append($", {isStatic}, new ")
                     .Append(CLS_PARAMETER).AppendLine("[] {");
                 builder.Indent();
                 int j = 0;
