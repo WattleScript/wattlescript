@@ -597,7 +597,7 @@ namespace MoonSharp.HardwireGen
             {
                 if (Overloads.Count < 0) return "[empty]";
                 return Overloads[0].Name + " (" +
-                       string.Join(';', Overloads.Select(x => x.ToDisplayString())) + ")";
+                       string.Join(";", Overloads.Select(x => x.ToDisplayString())) + ")";
             }
 
             public void AddMethod(int level, IMethodSymbol symbol)
