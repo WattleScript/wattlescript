@@ -357,7 +357,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 			else if ((m_Operator & COMPARES) != 0)
 			{
-				dv  = DynValue.NewBoolean(EvalComparison(v1, v2, m_Operator));
+				if (v1.Type == DataType.Number && v2.Type == DataType.Number ||
+				    v1.Type == DataType.String && v2.Type == DataType.String)
+					dv = DynValue.NewBoolean(EvalComparison(v1, v2, m_Operator));
+				else
+					return false;
 			}
 			else if (m_Operator == Operator.StrConcat)
 			{
@@ -365,12 +369,18 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				string s2 = v2.CastToString();
 
 				if (s1 == null || s2 == null)
-					throw new DynamicExpressionException("Attempt to perform concatenation on non-strings.");
+					return false;
 
 				dv = DynValue.NewString(s1 + s2);
 			}
 			else
 			{
+				//Check correct casts
+				double? nd1 = v1.CastToNumber();
+				double? nd2 = v2.CastToNumber();
+				if (nd1 == null || nd2 == null)
+					return false;	
+				//Literal evaluation
 				dv = DynValue.NewNumber(EvalArithmetic(v1, v2, t1Neg));
 			}
 			return true;

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoonSharp.Hardwire", "MoonS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoonSharp.HardwireGen", "MoonSharp.HardwireGen\MoonSharp.HardwireGen.csproj", "{961B856C-A72C-4D89-903C-2B801B348FD2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoonSharp.Tests", "MoonSharp.Tests\MoonSharp.Tests.csproj", "{416B592B-1943-4379-8824-5D9EC62484A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,5 +74,17 @@ Global
 		{961B856C-A72C-4D89-903C-2B801B348FD2}.Release|x64.Build.0 = Release|Any CPU
 		{961B856C-A72C-4D89-903C-2B801B348FD2}.Release|x86.ActiveCfg = Release|Any CPU
 		{961B856C-A72C-4D89-903C-2B801B348FD2}.Release|x86.Build.0 = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|x64.Build.0 = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Debug|x86.Build.0 = Debug|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x64.ActiveCfg = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x64.Build.0 = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x86.ActiveCfg = Release|Any CPU
+		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

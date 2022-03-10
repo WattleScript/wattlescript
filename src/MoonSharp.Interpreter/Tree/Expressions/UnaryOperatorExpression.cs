@@ -90,7 +90,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					}
 					break;
 			}
-			throw new Exception("Invalid literal evaluation");
+			//Could not evaluate literal - give runtime error later
+			return false; 
 		}
 	}
 }
