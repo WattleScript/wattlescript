@@ -36,7 +36,7 @@ namespace MoonSharp.Interpreter.CoreLib
 				{
 					DynValue result = interpreter.Evaluate(s);
 
-					if (result != null && result.Type != DataType.Void)
+					if (result.IsNotNil() && result.Type != DataType.Void)
 						script.Options.DebugPrint(string.Format("{0}", result));
 				}
 				catch (InterpreterException ex)
@@ -58,7 +58,7 @@ namespace MoonSharp.Interpreter.CoreLib
 			if (v.Type != DataType.UserData)
 				return DynValue.Nil;
 
-			return v.UserData.UserValue ?? DynValue.Nil;
+			return v.UserData.UserValue;
 		}
 
 		[MoonSharpModuleMethod]
@@ -125,7 +125,7 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			return DynValue.NewTuple(
 				DynValue.NewString(closure.Symbols[index]),
-				closure[index]);
+				closure[index].Value());
 		}
 
 
@@ -163,7 +163,7 @@ namespace MoonSharp.Interpreter.CoreLib
 			if (index < 0 || index >= closure.Count)
 				return DynValue.Nil;
 
-			closure[index].Assign(args[2]);
+			closure[index].Value() = args[2];
 
 			return DynValue.NewString(closure.Symbols[index]);
 		}

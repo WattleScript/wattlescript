@@ -67,10 +67,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			int exitpoint = bc.GetJumpPointForNextInstruction();
 
-			foreach (Instruction i in L.BreakJumps)
-				i.NumVal = exitpoint;
+			foreach (int i in L.BreakJumps)
+				bc.SetNumVal(i, exitpoint);
 
-			jumpend.NumVal = exitpoint;
+			bc.SetNumVal(jumpend, exitpoint);
 
 			bc.PopSourceRef();
 		}

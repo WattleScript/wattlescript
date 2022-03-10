@@ -62,13 +62,13 @@ namespace MoonSharp.Interpreter
 		/// <param name="r">The right operand (or null).</param>
 		/// <returns>The exception to be raised.</returns>
 		/// <exception cref="InternalErrorException">If both are numbers</exception>
-		public static ScriptRuntimeException ArithmeticOnNonNumber(DynValue l, DynValue r = null)
+		public static ScriptRuntimeException ArithmeticOnNonNumber(DynValue l, DynValue? r = null)
 		{
 			if (l.Type != DataType.Number && l.Type != DataType.String)
 				return new ScriptRuntimeException("attempt to perform arithmetic on a {0} value", l.Type.ToLuaTypeString());
-			else if (r != null && r.Type != DataType.Number && r.Type != DataType.String)
-				return new ScriptRuntimeException("attempt to perform arithmetic on a {0} value", r.Type.ToLuaTypeString());
-			else if (l.Type == DataType.String || (r != null && r.Type == DataType.String))
+			else if (r != null && r.Value.Type != DataType.Number && r.Value.Type != DataType.String)
+				return new ScriptRuntimeException("attempt to perform arithmetic on a {0} value", r.Value.Type.ToLuaTypeString());
+			else if (l.Type == DataType.String || (r != null && r.Value.Type == DataType.String))
 				return new ScriptRuntimeException("attempt to perform arithmetic on a string value");
 			else
 				throw new InternalErrorException("ArithmeticOnNonNumber - both are numbers");
@@ -86,7 +86,7 @@ namespace MoonSharp.Interpreter
 		{
 			if (l.Type != DataType.Number && l.Type != DataType.String)
 				return new ScriptRuntimeException("attempt to concatenate a {0} value", l.Type.ToLuaTypeString());
-			else if (r != null && r.Type != DataType.Number && r.Type != DataType.String)
+			else if (r.IsNotNil() && r.Type != DataType.Number && r.Type != DataType.String)
 				return new ScriptRuntimeException("attempt to concatenate a {0} value", r.Type.ToLuaTypeString());
 			else
 				throw new InternalErrorException("ConcatOnNonString - both are numbers/strings");

@@ -22,13 +22,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			using (bc.EnterSource(m_FunctionCallExpression.SourceRef))
 			{
 				m_FunctionCallExpression.Compile(bc);
-				RemoveBreakpointStop(bc.Emit_Pop());
+				bc.Emit_Pop();
+				bc.SourceRefs[bc.SourceRefs.Count - 1] = null; //Remove breakpoint stop
 			}
 		}
 
-		private void RemoveBreakpointStop(Instruction instruction)
-		{
-			instruction.SourceCodeRef = null;
-		}
+		
 	}
 }

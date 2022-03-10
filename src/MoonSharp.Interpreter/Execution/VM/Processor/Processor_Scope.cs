@@ -9,11 +9,18 @@ namespace MoonSharp.Interpreter.Execution.VM
 			int from = I.NumVal;
 			int to = I.NumVal2;
 
-			var array = this.m_ExecutionStack.Peek().LocalScope;
-
+			int length = to - from + 1;
+			
+			int len = 0;
+			
 			if (to >= 0 && from >= 0 && to >= from)
 			{
-				Array.Clear(array, from, to - from + 1);
+				var array = this.m_ExecutionStack.Peek().LocalScope;
+				var block = new DynValue[length];
+				for (int i = 0; i < length; i++)
+				{
+					array[from + i] = new Upvalue(block, i);
+				}
 			}
 		}
 
@@ -27,9 +34,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Global:
 					return GetGlobalSymbol(GetGenericSymbol(symref.i_Env), symref.i_Name);
 				case SymbolRefType.Local:
-					return GetTopNonClrFunction().LocalScope[symref.i_Index];
+					return GetTopNonClrFunction().LocalScope[symref.i_Index].Value();
 				case SymbolRefType.Upvalue:
-					return GetTopNonClrFunction().ClosureScope[symref.i_Index];
+					return GetTopNonClrFunction().ClosureScope[symref.i_Index].Value();
 				default:
 					throw new InternalErrorException("Unexpected {0} LRef at resolution: {1}", symref.i_Type, symref.i_Name);
 			}
@@ -48,7 +55,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (dynValue.Type != DataType.Table)
 				throw new InvalidOperationException(string.Format("_ENV is not a table but a {0}", dynValue.Type));
 
-			dynValue.Table.Set(name, value ?? DynValue.Nil);
+			dynValue.Table.Set(name, value);
 		}
 
 
@@ -62,23 +69,16 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Local:
 					{
 						var stackframe = GetTopNonClrFunction();
-
-						DynValue v = stackframe.LocalScope[symref.i_Index];
-						if (v == null)
-							stackframe.LocalScope[symref.i_Index] = v = DynValue.NewNil();
-
-						v.Assign(value);
+						stackframe.LocalScope[symref.i_Index].Value() = value;
 					}
 					break;
 				case SymbolRefType.Upvalue:
 					{
 						var stackframe = GetTopNonClrFunction();
-
-						DynValue v = stackframe.ClosureScope[symref.i_Index];
-						if (v == null)
-							stackframe.ClosureScope[symref.i_Index] = v = DynValue.NewNil();
-
-						v.Assign(value);
+						if(stackframe.ClosureScope[symref.i_Index] == null)
+							stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
+						
+						stackframe.ClosureScope[symref.i_Index].Value() = value;
 					}
 					break;
 				case SymbolRefType.DefaultEnv:
@@ -120,7 +120,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 						{
 							var l = stackframe.Debug_Symbols[i];
 
-							if (l.i_Name == name && stackframe.LocalScope[i] != null)
+							if (l.i_Name == name /*&& stackframe.LocalScope[i] != null*/) //should a local scope ever not be inited?
 								return l;
 						}
 					}

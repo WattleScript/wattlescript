@@ -33,7 +33,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				Dictionary<SymbolRef, int> symbolMap = new Dictionary<SymbolRef, int>();
 
-				Instruction meta = FindMeta(ref baseAddress);
+				Instruction? meta = FindMeta(ref baseAddress);
 
 				if (meta == null)
 					throw new ArgumentException("baseAddress");
@@ -41,9 +41,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 				bw.Write(DUMP_CHUNK_MAGIC);
 				bw.Write(DUMP_CHUNK_VERSION);
 				bw.Write(hasUpvalues);
-				bw.Write(meta.NumVal);
+				bw.Write(meta.Value.NumVal);
 
-				for (int i = 0; i <= meta.NumVal; i++)
+				for (int i = 0; i <= meta.Value.NumVal; i++)
 				{
 					SymbolRef[] symbolList;
 					SymbolRef symbol;
@@ -79,10 +79,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 				foreach (SymbolRef sym in allSymbols)
 					sym.WriteBinaryEnv(bw, symbolMap);
 
-				for (int i = 0; i <= meta.NumVal; i++)
+				for (int i = 0; i <= meta.Value.NumVal; i++)
 					m_RootChunk.Code[baseAddress + i].WriteBinary(bw, baseAddress, symbolMap);
 
-				return meta.NumVal + baseAddress + 1;
+				return meta.Value.NumVal + baseAddress + 1;
 			}
 		}
 
@@ -124,8 +124,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 				for (int i = 0; i <= len; i++)
 				{
-					Instruction I = Instruction.ReadBinary(sourceRef, br, baseAddress, envTable, allSymbs);
+					Instruction I = Instruction.ReadBinary(br, baseAddress, envTable, allSymbs);
 					m_RootChunk.Code.Add(I);
+					m_RootChunk.SourceRefs.Add(sourceRef);
 				}
 
 				return baseAddress;

@@ -66,10 +66,10 @@ namespace MoonSharp.Interpreter.Interop
 			{
 				DynValue v = dd.Index(script, obj, index, isNameIndex);
 
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <summary>
@@ -122,10 +122,10 @@ namespace MoonSharp.Interpreter.Interop
 			{
 				DynValue v = dd.MetaIndex(script, obj, metaname);
 
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 

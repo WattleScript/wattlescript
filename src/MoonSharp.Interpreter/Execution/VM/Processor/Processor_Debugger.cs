@@ -10,7 +10,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 	// Same reason for the "sealed" declaration.
 	sealed partial class Processor
 	{
-		internal Instruction FindMeta(ref int baseAddress)
+		internal Instruction? FindMeta(ref int baseAddress)
 		{
 			Instruction meta = m_RootChunk.Code[baseAddress];
 
@@ -45,27 +45,28 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private void ListenDebugger(Instruction instr, int instructionPtr)
 		{
 			bool isOnDifferentRef = false;
-
-			if (instr.SourceCodeRef != null && m_Debug.LastHlRef != null)
+			var instr_SourceCodeRef = m_RootChunk.SourceRefs[instructionPtr];
+			
+			if (instr_SourceCodeRef != null && m_Debug.LastHlRef != null)
 			{
 				if (m_Debug.LineBasedBreakPoints)
 				{
-					isOnDifferentRef = instr.SourceCodeRef.SourceIdx != m_Debug.LastHlRef.SourceIdx ||
-						instr.SourceCodeRef.FromLine != m_Debug.LastHlRef.FromLine;
+					isOnDifferentRef = instr_SourceCodeRef.SourceIdx != m_Debug.LastHlRef.SourceIdx ||
+						instr_SourceCodeRef.FromLine != m_Debug.LastHlRef.FromLine;
 				}
 				else
 				{
-					isOnDifferentRef = instr.SourceCodeRef != m_Debug.LastHlRef;
+					isOnDifferentRef = instr_SourceCodeRef != m_Debug.LastHlRef;
 				}
 			}
 			else if (m_Debug.LastHlRef == null)
 			{
-				isOnDifferentRef = instr.SourceCodeRef != null;
+				isOnDifferentRef = instr_SourceCodeRef != null;
 			}
 
 
 			if (m_Debug.DebuggerAttached.IsPauseRequested() ||
-				(instr.SourceCodeRef != null && instr.SourceCodeRef.Breakpoint && isOnDifferentRef))
+				(instr_SourceCodeRef != null && instr_SourceCodeRef.Breakpoint && isOnDifferentRef))
 			{
 				m_Debug.DebuggerCurrentAction = DebuggerAction.ActionType.None;
 				m_Debug.DebuggerCurrentActionTarget = -1;
@@ -75,7 +76,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				case DebuggerAction.ActionType.Run:
 					if (m_Debug.LineBasedBreakPoints)
-						m_Debug.LastHlRef = instr.SourceCodeRef;
+						m_Debug.LastHlRef = instr_SourceCodeRef;
 					return;
 				case DebuggerAction.ActionType.ByteCodeStepOver:
 					if (m_Debug.DebuggerCurrentActionTarget != instructionPtr) return;
@@ -85,10 +86,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 					if (m_ExecutionStack.Count >= m_Debug.ExStackDepthAtStep) return;
 					break;
 				case DebuggerAction.ActionType.StepIn:
-					if ((m_ExecutionStack.Count >= m_Debug.ExStackDepthAtStep) && (instr.SourceCodeRef == null || instr.SourceCodeRef == m_Debug.LastHlRef)) return;
+					if ((m_ExecutionStack.Count >= m_Debug.ExStackDepthAtStep) && (instr_SourceCodeRef == null || instr_SourceCodeRef == m_Debug.LastHlRef)) return;
 					break;
 				case DebuggerAction.ActionType.StepOver:
-					if (instr.SourceCodeRef == null || instr.SourceCodeRef == m_Debug.LastHlRef || m_ExecutionStack.Count > m_Debug.ExStackDepthAtStep) return;
+					if (instr_SourceCodeRef == null || instr_SourceCodeRef == m_Debug.LastHlRef || m_ExecutionStack.Count > m_Debug.ExStackDepthAtStep) return;
 					break;
 			}
 
@@ -97,7 +98,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			while (true)
 			{
-				var action = m_Debug.DebuggerAttached.GetAction(instructionPtr, instr.SourceCodeRef);
+				var action = m_Debug.DebuggerAttached.GetAction(instructionPtr, instr_SourceCodeRef);
 
 				switch (action.Action)
 				{
@@ -106,7 +107,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					case DebuggerAction.ActionType.StepOut:
 					case DebuggerAction.ActionType.ByteCodeStepOut:
 						m_Debug.DebuggerCurrentAction = action.Action;
-						m_Debug.LastHlRef = instr.SourceCodeRef;
+						m_Debug.LastHlRef = instr_SourceCodeRef;
 						m_Debug.ExStackDepthAtStep = m_ExecutionStack.Count;
 						return;
 					case DebuggerAction.ActionType.ByteCodeStepIn:
@@ -119,7 +120,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 						return;
 					case DebuggerAction.ActionType.Run:
 						m_Debug.DebuggerCurrentAction = DebuggerAction.ActionType.Run;
-						m_Debug.LastHlRef = instr.SourceCodeRef;
+						m_Debug.LastHlRef = instr_SourceCodeRef;
 						m_Debug.DebuggerCurrentActionTarget = -1;
 						return;
 					case DebuggerAction.ActionType.ToggleBreakpoint:
@@ -321,7 +322,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					{
 						IsError = false,
 						LValue = top.Debug_Symbols[i],
-						Value = top.LocalScope[i],
+						Value = top.LocalScope[i].Value(),
 						Name = top.Debug_Symbols[i].i_Name
 					});
 				}
@@ -366,7 +367,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 				var I = m_RootChunk.Code[c.Debug_EntryPoint];
 
-				string callname = I.OpCode == OpCode.Meta ? I.Name : null;
+				string callname = I.OpCode == OpCode.Meta ? I.String : null;
 
 				if (c.ClrFunction != null)
 				{

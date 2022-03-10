@@ -35,7 +35,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 				if (m_State == CoroutineState.NotStarted)
 				{
-					entrypoint = PushClrToScriptStackFrame(CallStackItemFlags.ResumeEntryPoint, null, args);
+					entrypoint = PushClrToScriptStackFrame(CallStackItemFlags.ResumeEntryPoint, DynValue.Nil, args);
 				}
 				else if (m_State == CoroutineState.Suspended)
 				{

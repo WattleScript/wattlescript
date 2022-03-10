@@ -34,7 +34,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 			if (obj is Table)
 				return DynValue.NewTable((Table)obj);
 
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -55,7 +55,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 			if (converter != null)
 			{
 				var v = converter(script, obj);
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
 
@@ -94,7 +94,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 					return DynValue.NewCallback((Func<ScriptExecutionContext, CallbackArguments, DynValue>)d);
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -103,12 +103,15 @@ namespace MoonSharp.Interpreter.Interop.Converters
 		/// </summary>
 		internal static DynValue ObjectToDynValue(Script script, object obj)
 		{
+			if(obj == null) return DynValue.Nil;
+			if (obj is DynValue _dyn) return _dyn;
+			
 			DynValue v = TryObjectToSimpleDynValue(script, obj);
 
-			if (v != null) return v;
+			if (v.IsNotNil()) return v;
 
 			v = UserData.Create(obj);
-			if (v != null) return v;
+			if (v.IsNotNil()) return v;
 
 			if (obj is Type)
 				v = UserData.CreateStatic(obj as Type);
@@ -117,7 +120,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 			if (obj is Enum)
 				return DynValue.NewNumber(NumericConversions.TypeToDouble(Enum.GetUnderlyingType(obj.GetType()), obj));
 
-			if (v != null) return v;
+			if (v.IsNotNil()) return v;
 
 			if (obj is Delegate)
 				return DynValue.NewCallback(CallbackFunction.FromDelegate(script, (Delegate)obj));
@@ -145,7 +148,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 			}
 
 			var enumerator = EnumerationToDynValue(script, obj);
-			if (enumerator != null) return enumerator;
+			if (enumerator.IsNotNil()) return enumerator;
 
 
 			throw ScriptRuntimeException.ConvertObjectFailed(obj);
@@ -171,7 +174,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 				return EnumerableWrapper.ConvertIterator(script, enumer);
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 

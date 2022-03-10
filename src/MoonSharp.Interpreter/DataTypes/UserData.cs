@@ -230,7 +230,7 @@ namespace MoonSharp.Interpreter
 				if (o is Type)
 					return CreateStatic((Type)o);
 
-				return null;
+				return DynValue.Nil;
 			}
 
 			return Create(o, descr);
@@ -243,7 +243,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public static DynValue CreateStatic(IUserDataDescriptor descr)
 		{
-			if (descr == null) return null;
+			if (descr == null) return DynValue.Nil;
 
 			return DynValue.NewUserData(new UserData()
 			{

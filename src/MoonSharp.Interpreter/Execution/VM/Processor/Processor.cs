@@ -84,7 +84,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		// at vstack top.
 		private int PushClrToScriptStackFrame(CallStackItemFlags flags, DynValue function, DynValue[] args)
 		{
-			if (function == null) 
+			if (function.IsNil()) 
 				function = m_ValueStack.Peek();
 			else
 				m_ValueStack.Push(function);  // func val

@@ -195,7 +195,7 @@ namespace MoonSharp.Interpreter
 
 				DynValue package = gtable.RawGet("package");
 
-				if (package == null || package.Type != DataType.Table)
+				if (package.Type != DataType.Table)
 				{
 					gtable.Set("package", package = DynValue.NewTable(gtable.OwnerScript));
 				}
@@ -203,7 +203,7 @@ namespace MoonSharp.Interpreter
 
 				DynValue loaded = package.Table.RawGet("loaded");
 
-				if (loaded == null || loaded.Type != DataType.Table)
+				if (loaded.Type != DataType.Table)
 				{
 					package.Table.Set("loaded", loaded = DynValue.NewTable(gtable.OwnerScript));
 				}

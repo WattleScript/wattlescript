@@ -8,7 +8,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			if (instructionPtr >= 0 && instructionPtr < m_RootChunk.Code.Count)
 			{
-				return m_RootChunk.Code[instructionPtr].SourceCodeRef;
+				return m_RootChunk.SourceRefs[instructionPtr];
 			}
 			return null;
 		}

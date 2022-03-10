@@ -10,23 +10,11 @@ namespace MoonSharp.Interpreter
 	/// <summary>
 	/// A class representing a value in a Lua/MoonSharp script.
 	/// </summary>
-	public sealed class DynValue
+	public struct DynValue
 	{
-		static int s_RefIDCounter = 0;
-
-		private int m_RefID = ++s_RefIDCounter;
-		private int m_HashCode = -1;
-
-		private bool m_ReadOnly;
 		private double m_Number;
 		private object m_Object;
 		private DataType m_Type;
-
-
-		/// <summary>
-		/// Gets a unique reference identifier. This is guaranteed to be unique only for dynvalues created in a single thread as it's not thread-safe.
-		/// </summary>
-		public int ReferenceID { get { return m_RefID; } }
 
 		/// <summary>
 		/// Gets the type of the value.
@@ -78,20 +66,6 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public UserData UserData { get { return m_Object as UserData; } }
 
-		/// <summary>
-		/// Returns true if this instance is write protected.
-		/// </summary>
-		public bool ReadOnly { get { return m_ReadOnly; } }
-
-
-
-		/// <summary>
-		/// Creates a new writable value initialized to Nil.
-		/// </summary>
-		public static DynValue NewNil()
-		{
-			return new DynValue();
-		}
 
 		/// <summary>
 		/// Creates a new writable value initialized to the specified boolean.
@@ -114,7 +88,6 @@ namespace MoonSharp.Interpreter
 			{
 				m_Number = num,
 				m_Type = DataType.Number,
-				m_HashCode = -1,
 			};
 		}
 
@@ -321,7 +294,7 @@ namespace MoonSharp.Interpreter
 		public static DynValue NewTuple(params DynValue[] values)
 		{
 			if (values.Length == 0)
-				return DynValue.NewNil();
+				return DynValue.Nil;
 
 			if (values.Length == 1)
 				return values[0];
@@ -374,53 +347,6 @@ namespace MoonSharp.Interpreter
 			};
 		}
 
-		/// <summary>
-		/// Returns this value as readonly - eventually cloning it in the process if it isn't readonly to start with.
-		/// </summary>
-		public DynValue AsReadOnly()
-		{
-			if (ReadOnly)
-				return this;
-			else
-			{
-				return Clone(true);
-			}
-		}
-
-		/// <summary>
-		/// Clones this instance.
-		/// </summary>
-		/// <returns></returns>
-		public DynValue Clone()
-		{
-			return Clone(this.ReadOnly);
-		}
-
-		/// <summary>
-		/// Clones this instance, overriding the "readonly" status.
-		/// </summary>
-		/// <param name="readOnly">if set to <c>true</c> the new instance is set as readonly, or writeable otherwise.</param>
-		/// <returns></returns>
-		public DynValue Clone(bool readOnly)
-		{
-			DynValue v = new DynValue();
-			v.m_Object = this.m_Object;
-			v.m_Number = this.m_Number;
-			v.m_HashCode = this.m_HashCode;
-			v.m_Type = this.m_Type;
-			v.m_ReadOnly = readOnly;
-			return v;
-		}
-
-		/// <summary>
-		/// Clones this instance, returning a writable copy.
-		/// </summary>
-		/// <exception cref="System.ArgumentException">Can't clone Symbol values</exception>
-		public DynValue CloneAsWritable()
-		{
-			return Clone(false);
-		}
-
 
 		/// <summary>
 		/// A preinitialized, readonly instance, equaling Void
@@ -442,10 +368,10 @@ namespace MoonSharp.Interpreter
 
 		static DynValue()
 		{
-			Nil = new DynValue() { m_Type = DataType.Nil }.AsReadOnly();
-			Void = new DynValue() { m_Type = DataType.Void }.AsReadOnly();
-			True = DynValue.NewBoolean(true).AsReadOnly();
-			False = DynValue.NewBoolean(false).AsReadOnly();
+			Nil = new DynValue() {m_Type = DataType.Nil};
+			Void = new DynValue() {m_Type = DataType.Void};
+			True = DynValue.NewBoolean(true);
+			False = DynValue.NewBoolean(false);
 		}
 
 
@@ -561,6 +487,7 @@ namespace MoonSharp.Interpreter
 			}
 		}
 
+
 		/// <summary>
 		/// Returns a hash code for this instance.
 		/// </summary>
@@ -569,47 +496,20 @@ namespace MoonSharp.Interpreter
 		/// </returns>
 		public override int GetHashCode()
 		{
-			if (m_HashCode != -1)
-				return m_HashCode;
-
 			int baseValue = ((int)(Type)) << 27;
-
 			switch (Type)
 			{
 				case DataType.Void:
 				case DataType.Nil:
-					m_HashCode = 0;
-					break;
+					return 0;
 				case DataType.Boolean:
-					m_HashCode = Boolean ? 1 : 2;
-					break;
+					return Boolean ? 1 : 2;
 				case DataType.Number:
-					m_HashCode = baseValue ^ Number.GetHashCode();
-					break;
-				case DataType.String:
-					m_HashCode = baseValue ^ String.GetHashCode();
-					break;
-				case DataType.Function:
-					m_HashCode = baseValue ^ Function.GetHashCode();
-					break;
-				case DataType.ClrFunction:
-					m_HashCode = baseValue ^ Callback.GetHashCode();
-					break;
-				case DataType.Table:
-					m_HashCode = baseValue ^ Table.GetHashCode();
-					break;
-				case DataType.Tuple:
-				case DataType.TailCallRequest:
-					m_HashCode = baseValue ^ Tuple.GetHashCode();
-					break;
-				case DataType.UserData:
-				case DataType.Thread:
+					return baseValue ^ Number.GetHashCode();
 				default:
-					m_HashCode = 999;
-					break;
+					if (m_Object == null) return 0;
+					else return baseValue ^ m_Object.GetHashCode();
 			}
-
-			return m_HashCode;
 		}
 
 		/// <summary>
@@ -621,10 +521,8 @@ namespace MoonSharp.Interpreter
 		/// </returns>
 		public override bool Equals(object obj)
 		{
-			DynValue other = obj as DynValue;
-
-			if (other == null) return false;
-
+			if (!(obj is DynValue other)) return false;
+			
 			if ((other.Type == DataType.Nil && this.Type == DataType.Void)
 				|| (other.Type == DataType.Void && this.Type == DataType.Nil))
 				return true;
@@ -679,7 +577,7 @@ namespace MoonSharp.Interpreter
 						return false;
 					}
 				default:
-					return object.ReferenceEquals(this, other);
+					return false;
 			}
 		}
 
@@ -848,22 +746,6 @@ namespace MoonSharp.Interpreter
 			return Tuple[0].ToScalar();
 		}
 
-		/// <summary>
-		/// Performs an assignment, overwriting the value with the specified one.
-		/// </summary>
-		/// <param name="value">The value.</param>
-		/// <exception cref="ScriptRuntimeException">If the value is readonly.</exception>
-		public void Assign(DynValue value)
-		{
-			if (this.ReadOnly)
-				throw new ScriptRuntimeException("Assigning on r-value");
-
-			this.m_Number = value.m_Number;
-			this.m_Object = value.m_Object;
-			this.m_Type = value.Type;
-			this.m_HashCode = -1;
-		}
-
 
 
 		/// <summary>
@@ -921,19 +803,7 @@ namespace MoonSharp.Interpreter
 			return (this.Type == DataType.Nil) || (this.Type == DataType.Void) || (this.Type == DataType.Number && double.IsNaN(this.Number));
 		}
 
-		/// <summary>
-		/// Changes the numeric value of a number DynValue.
-		/// </summary>
-		internal void AssignNumber(double num)
-		{
-			if (this.ReadOnly)
-				throw new InternalErrorException(null, "Writing on r-value");
-
-			if (this.Type != DataType.Number)
-				throw new InternalErrorException("Can't assign number to type {0}", this.Type);
-
-			this.m_Number = num;
-		}
+		
 
 		/// <summary>
 		/// Creates a new DynValue from a CLR object

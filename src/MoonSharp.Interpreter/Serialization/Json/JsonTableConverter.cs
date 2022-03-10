@@ -258,7 +258,7 @@ namespace MoonSharp.Interpreter.Serialization.Json
 			{
 				numberValue = -numberValue;
 			}
-			return DynValue.NewNumber(numberValue).AsReadOnly();
+			return DynValue.NewNumber(numberValue);
 		}
 	}
 }

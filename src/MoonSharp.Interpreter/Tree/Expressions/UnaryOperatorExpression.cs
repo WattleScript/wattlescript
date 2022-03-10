@@ -69,7 +69,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public override bool EvalLiteral(out DynValue dv)
 		{
-			dv = null;
+			dv = DynValue.Nil;
 			if (!m_Exp.EvalLiteral(out var v))
 			{
 				return false;

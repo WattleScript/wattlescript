@@ -16,8 +16,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		RuntimeScopeFrame m_StackFrame;
 		List<SymbolRef> m_Closure = new List<SymbolRef>();
 		bool m_HasVarArgs = false;
-		Instruction m_ClosureInstruction = null;
-
+		
+		int m_ClosureInstruction = -1;
+		private ByteCode m_bc = null;
+		
 		bool m_UsesGlobalEnv;
 		SymbolRef m_Env;
 
@@ -177,9 +179,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			m_Closure.Add(symbol);
 
-			if (m_ClosureInstruction != null)
+			if (m_ClosureInstruction != -1)
 			{
-				m_ClosureInstruction.SymbolList = m_Closure.ToArray();
+				var i = m_bc.Code[m_ClosureInstruction];
+				i.SymbolList = m_Closure.ToArray();
+				m_bc.Code[m_ClosureInstruction] = i;
 			}
 
 			return SymbolRef.Upvalue(symbol.i_Name, m_Closure.Count - 1);
@@ -196,10 +200,9 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			bc.PushSourceRef(m_Begin);
 
-			Instruction I = bc.Emit_Jump(OpCode.Jump, -1);
+			int I = bc.Emit_Jump(OpCode.Jump, -1);
 
-			Instruction meta = bc.Emit_Meta(funcName, OpCodeMetadataType.FunctionEntrypoint);
-			int metaip = bc.GetJumpPointForLastInstruction();
+			int meta = bc.Emit_Meta(funcName, OpCodeMetadataType.FunctionEntrypoint);
 
 			bc.Emit_BeginFn(m_StackFrame);
 
@@ -226,8 +229,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			bc.LoopTracker.Loops.Pop();
 
-			I.NumVal = bc.GetJumpPointForNextInstruction();
-			meta.NumVal = bc.GetJumpPointForLastInstruction() - metaip;
+			bc.SetNumVal(I, bc.GetJumpPointForNextInstruction());
+			bc.SetNumVal(meta, bc.GetJumpPointForLastInstruction() - meta);
 
 			bc.PopSourceRef();
 
@@ -242,10 +245,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					//.Select((s, idx) => s.CloneLocalAndSetFrame(m_ClosureFrames[idx]))
 					.ToArray();
 
+				m_bc = bc;
 				m_ClosureInstruction = bc.Emit_Closure(symbs, bc.GetJumpPointForNextInstruction());
 				int ops = afterDecl();
 
-				m_ClosureInstruction.NumVal += 2 + ops;
+				var ins = bc.Code[m_ClosureInstruction];
+				ins.NumVal += 2 + ops;
+				bc.Code[m_ClosureInstruction] = ins;
 			}
 
 			return CompileBody(bc, friendlyName);
@@ -253,7 +259,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public override bool EvalLiteral(out DynValue dv)
 		{
-			dv = null;
+			dv = DynValue.Nil;
 			return false;
 		}
 

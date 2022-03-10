@@ -13,7 +13,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		internal int DefinedVarsCount { get; private set; }
 		internal string LastDefinedVarName { get; private set; }
 
-		Instruction m_Jump;
+		private int m_Jump = -1;
+		private ByteCode m_bc;
 		int m_LabelAddress = -1;
 
 		public GotoStatement(ScriptLoadingContext lcontext)
@@ -32,6 +33,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public override void Compile(ByteCode bc)
 		{
 			m_Jump = bc.Emit_Jump(OpCode.Jump, m_LabelAddress);
+			m_bc = bc;
 		}
 
 		internal void SetDefinedVars(int definedVarsCount, string lastDefinedVarsName)
@@ -45,8 +47,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		{
 			m_LabelAddress = labelAddress;
 
-			if (m_Jump != null)
-				m_Jump.NumVal = labelAddress;
+			if (m_Jump != -1)
+				m_bc.SetNumVal(m_Jump, labelAddress);
 		}
 
 	}

@@ -9,8 +9,8 @@ namespace MoonSharp.Interpreter.Execution
 		None = 0,
 		Symbol = 0x1,
 		SymbolList = 0x2,
-		Name = 0x4,
-		Value = 0x8,
+		String = 0x4,
+		Number = 0x8,
 		NumVal = 0x10,
 		NumVal2 = 0x20,
 		NumValAsCodeAddress = 0x8010
@@ -42,6 +42,9 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Power:
 				case OpCode.CNot:
 				case OpCode.ToBool:
+				case OpCode.PushNil:
+				case OpCode.PushTrue:
+				case OpCode.PushFalse:
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:
@@ -68,15 +71,14 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.IndexSet:
 				case OpCode.IndexSetN:
 				case OpCode.IndexSetL:
-					return InstructionFieldUsage.Symbol | InstructionFieldUsage.Value | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
+					return InstructionFieldUsage.String | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.StoreLcl:
 				case OpCode.StoreUpv:
 					return InstructionFieldUsage.Symbol | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Index:
 				case OpCode.IndexL:
 				case OpCode.IndexN:
-				case OpCode.Literal:
-					return InstructionFieldUsage.Value;
+					return InstructionFieldUsage.String;
 				case OpCode.Args:
 					return InstructionFieldUsage.SymbolList;
 				case OpCode.BeginFn:
@@ -86,14 +88,17 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Nop:
 				case OpCode.Debug:
 				case OpCode.Invalid:
-					return InstructionFieldUsage.Name;
+				case OpCode.PushString:
+					return InstructionFieldUsage.String;
+				case OpCode.PushNumber:
+					return InstructionFieldUsage.Number;
 				case OpCode.Call:
 				case OpCode.ThisCall:
-					return InstructionFieldUsage.NumVal | InstructionFieldUsage.Name;
+					return InstructionFieldUsage.NumVal | InstructionFieldUsage.String;
 				case OpCode.Meta:
-					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2 | InstructionFieldUsage.Value | InstructionFieldUsage.Name;
+					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2 | InstructionFieldUsage.String;
 				default:
-					throw new NotImplementedException(string.Format("InstructionFieldUsage for instruction {0}", (int)op));
+					throw new NotImplementedException(string.Format("InstructionFieldUsage for instruction {0}", op));
 			}
 		}
 	}

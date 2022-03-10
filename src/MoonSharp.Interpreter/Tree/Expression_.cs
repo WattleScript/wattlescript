@@ -26,7 +26,6 @@ namespace MoonSharp.Interpreter.Tree
 		{
 			if (EvalLiteral(out var dv))
 			{
-				if(dv == null) throw new NullReferenceException("Invalid literal: null");
 				bc.Emit_Literal(dv);
 			}
 			else Compile(bc);

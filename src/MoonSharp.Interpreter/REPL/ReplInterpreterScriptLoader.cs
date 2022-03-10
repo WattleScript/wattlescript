@@ -58,7 +58,7 @@ namespace MoonSharp.Interpreter.REPL
 		{
 			DynValue s = globalContext.RawGet("LUA_PATH");
 
-			if (s != null && s.Type == DataType.String)
+			if (s.Type == DataType.String)
 				return ResolveModuleName(modname, UnpackStringPaths(s.String));
 
 			else

@@ -76,7 +76,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (!string.IsNullOrEmpty(m_Name))
 			{
 				bc.Emit_Copy(0);
-				bc.Emit_Index(DynValue.NewString(m_Name), true);
+				bc.Emit_Index(m_Name, true);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
@@ -97,7 +97,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public override bool EvalLiteral(out DynValue dv)
 		{
-			dv = null;
+			dv = DynValue.Nil;
 			return false;
 		}
 

@@ -116,11 +116,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			foreach (string str in m_TableAccessors)
 			{
-				bc.Emit_Index(DynValue.NewString(str), true);
+				bc.Emit_Index(str, true);
 				cnt += 1;
 			}
 
-			bc.Emit_IndexSet(0, 0, DynValue.NewString(m_MethodName), true);
+			bc.Emit_IndexSet(0, 0, m_MethodName, true);
 
 			return 1 + cnt;
 		}

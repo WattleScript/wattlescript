@@ -28,8 +28,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
-			Instruction meta = bc.Emit_Meta("<chunk-root>", OpCodeMetadataType.ChunkEntrypoint);
-			int metaip = bc.GetJumpPointForLastInstruction();
+			int meta = bc.Emit_Meta("<chunk-root>", OpCodeMetadataType.ChunkEntrypoint);
 
 			bc.Emit_BeginFn(m_StackFrame);
 			bc.Emit_Args(m_VarArgs);
@@ -41,7 +40,9 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			m_Block.Compile(bc);
 			bc.Emit_Ret(0);
 
-			meta.NumVal = bc.GetJumpPointForLastInstruction() - metaip;
+			var ins = bc.Code[meta];
+			ins.NumVal = bc.GetJumpPointForLastInstruction() - meta;
+			bc.Code[meta] = ins;
 		}
 
 		public SymbolRef CreateUpvalue(BuildTimeScope scope, SymbolRef symbol)

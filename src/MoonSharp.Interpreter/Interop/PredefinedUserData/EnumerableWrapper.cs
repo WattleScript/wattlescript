@@ -80,7 +80,7 @@ namespace MoonSharp.Interpreter.Interop
 					return DynValue.NewCallback((ctx, args) => { Reset(); return DynValue.Nil; });
 				}
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 		public bool SetIndex(Script script, DynValue index, DynValue value, bool isDirectIndexing)
@@ -93,7 +93,7 @@ namespace MoonSharp.Interpreter.Interop
 			if (metaname == "__call")
 				return DynValue.NewCallback(LuaIteratorCallback);
 			else
-				return null;
+				return DynValue.Nil;
 		}
 	}
 }

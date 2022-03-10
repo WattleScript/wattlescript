@@ -224,27 +224,27 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 					.WithAccessOrNull(MemberDescriptorAccess.CanExecute);
 
 				if (mdesc != null)
-					return ExecuteIndexer(mdesc, script, obj, index, null);
+					return ExecuteIndexer(mdesc, script, obj, index, DynValue.Nil);
 			}
 
 			index = index.ToScalar();
 
 			if (index.Type != DataType.String)
-				return null;
+				return DynValue.Nil;
 
 			DynValue v = TryIndex(script, obj, index.String);
-			if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.UpperFirstLetter) == FuzzySymbolMatchingBehavior.UpperFirstLetter) v = TryIndex(script, obj, UpperFirstLetter(index.String));
-			if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.Camelify) == FuzzySymbolMatchingBehavior.Camelify) v = TryIndex(script, obj, Camelify(index.String));
-			if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.PascalCase) == FuzzySymbolMatchingBehavior.PascalCase)	v = TryIndex(script, obj, UpperFirstLetter(Camelify(index.String)));
+			if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.UpperFirstLetter) == FuzzySymbolMatchingBehavior.UpperFirstLetter) v = TryIndex(script, obj, UpperFirstLetter(index.String));
+			if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.Camelify) == FuzzySymbolMatchingBehavior.Camelify) v = TryIndex(script, obj, Camelify(index.String));
+			if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.PascalCase) == FuzzySymbolMatchingBehavior.PascalCase)	v = TryIndex(script, obj, UpperFirstLetter(Camelify(index.String)));
 
-			if (v == null && m_ExtMethodsVersion < UserData.GetExtensionMethodsChangeVersion())
+			if (v.IsNil() && m_ExtMethodsVersion < UserData.GetExtensionMethodsChangeVersion())
 			{
 				m_ExtMethodsVersion = UserData.GetExtensionMethodsChangeVersion();
 
 				v = TryIndexOnExtMethod(script, obj, index.String);
-				if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.UpperFirstLetter) == FuzzySymbolMatchingBehavior.UpperFirstLetter) v = TryIndexOnExtMethod(script, obj, UpperFirstLetter(index.String));
-				if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.Camelify) == FuzzySymbolMatchingBehavior.Camelify) v = TryIndexOnExtMethod(script, obj, Camelify(index.String));
-				if (v == null && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.PascalCase) == FuzzySymbolMatchingBehavior.PascalCase)	v = TryIndexOnExtMethod(script, obj, UpperFirstLetter(Camelify(index.String)));
+				if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.UpperFirstLetter) == FuzzySymbolMatchingBehavior.UpperFirstLetter) v = TryIndexOnExtMethod(script, obj, UpperFirstLetter(index.String));
+				if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.Camelify) == FuzzySymbolMatchingBehavior.Camelify) v = TryIndexOnExtMethod(script, obj, Camelify(index.String));
+				if (v.IsNil() && (Script.GlobalOptions.FuzzySymbolMatching & FuzzySymbolMatchingBehavior.PascalCase) == FuzzySymbolMatchingBehavior.PascalCase)	v = TryIndexOnExtMethod(script, obj, UpperFirstLetter(Camelify(index.String)));
 			}
 
 			return v;
@@ -271,7 +271,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 				return DynValue.NewCallback(ext.GetCallback(script, obj));
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <summary>
@@ -311,7 +311,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 				return desc.GetValue(script, obj);
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <summary>
@@ -433,7 +433,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 
 			if (index.Type == DataType.Tuple)
 			{
-				if (value == null)
+				if (value.IsNil())
 				{
 					values = index.Tuple;
 				}
@@ -445,7 +445,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			}
 			else
 			{
-				if (value == null)
+				if (value.IsNil())
 				{
 					values = new DynValue[] { index };
 				}
@@ -528,7 +528,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 				case "__iterator":
 					return ClrToScriptConversions.EnumerationToDynValue(script, obj);
 				default:
-					return null;
+					return DynValue.Nil;
 			}
 		}
 
@@ -561,7 +561,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 						DynValue.NewBoolean(PerformComparison(obj, args[0].ToObject(), args[1].ToObject()) <= 0));
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		private DynValue MultiDispatchLessThan(Script script, object obj)
@@ -574,12 +574,12 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 						DynValue.NewBoolean(PerformComparison(obj, args[0].ToObject(), args[1].ToObject()) < 0));
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		private DynValue TryDispatchLength(Script script, object obj)
 		{
-			if (obj == null) return null;
+			if (obj == null) return DynValue.Nil;
 
 			var lenprop = m_Members.GetOrDefault("Length");
 			if (lenprop != null && lenprop.CanRead() && !lenprop.CanExecute()) return lenprop.GetGetterCallbackAsDynValue(script, obj);
@@ -587,7 +587,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			var countprop = m_Members.GetOrDefault("Count");
 			if (countprop != null && countprop.CanRead() && !countprop.CanExecute()) return countprop.GetGetterCallbackAsDynValue(script, obj);
 
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -622,7 +622,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 				return desc.GetValue(script, obj);
 			}
 			else
-				return null;
+				return DynValue.Nil;
 		}
 
 
@@ -632,9 +632,9 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			{
 				var name = t.GetConversionMethodName();
 				var v = DispatchMetaOnMethod(script, obj, name);
-				if (v != null) return v;
+				if (v.IsNotNil()) return v;
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -642,7 +642,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			var name = typeof(bool).GetConversionMethodName();
 			var v = DispatchMetaOnMethod(script, obj, name);
-			if (v != null) return v;
+			if (v.IsNotNil()) return v;
 			return DispatchMetaOnMethod(script, obj, "op_True");
 		}
 

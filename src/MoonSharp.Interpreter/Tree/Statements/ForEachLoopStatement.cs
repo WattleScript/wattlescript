@@ -123,10 +123,13 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			bc.Emit_Pop();
 
-			foreach (Instruction i in L.BreakJumps)
-				i.NumVal = exitpointBreaks;
+			foreach (int i in L.BreakJumps)
+			{
+				bc.SetNumVal(i, exitpointBreaks);
+			}
 
-			endjump.NumVal = exitpointLoopExit;
+			bc.SetNumVal(endjump, exitpointLoopExit);
+			
 
 			bc.PopSourceRef();
 		}

@@ -6,6 +6,7 @@ using System.Text;
 using MoonSharp.Interpreter.CoreLib;
 using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Diagnostics;
+using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Execution.VM;
 using MoonSharp.Interpreter.IO;
 using MoonSharp.Interpreter.Platforms;
@@ -399,18 +400,18 @@ namespace MoonSharp.Interpreter
 
 			if (envTable == null)
 			{
-				Instruction meta = m_MainProcessor.FindMeta(ref address);
+				Instruction? meta = m_MainProcessor.FindMeta(ref address);
 
 				// if we find the meta for a new chunk, we use the value in the meta for the _ENV upvalue
-				if ((meta != null) && (meta.NumVal2 == (int)OpCodeMetadataType.ChunkEntrypoint))
+				if ((meta != null) && (meta.Value.NumVal2 == (int)OpCodeMetadataType.ChunkEntrypoint))
 				{
 					c = new Closure(this, address,
 						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
-						new DynValue[] { meta.Value });
+						new Upvalue[] { null });
 				}
 				else
 				{
-					c = new Closure(this, address, new SymbolRef[0], new DynValue[0]);
+					c = new Closure(this, address, new SymbolRef[0], new Upvalue[0]);
 				}
 			}
 			else
@@ -419,8 +420,8 @@ namespace MoonSharp.Interpreter
 					new SymbolRef() { i_Env = null, i_Index= 0, i_Name = WellKnownSymbols.ENV, i_Type =  SymbolRefType.DefaultEnv },
 				};
 
-				var vals = new DynValue[] {
-					DynValue.NewTable(envTable)
+				var vals = new Upvalue[] {
+					Upvalue.Create(DynValue.NewTable(envTable))
 				};
 
 				c = new Closure(this, address, syms, vals);
@@ -460,7 +461,7 @@ namespace MoonSharp.Interpreter
 			{
 				DynValue metafunction = m_MainProcessor.GetMetamethod(function, "__call");
 
-				if (metafunction != null)
+				if (metafunction.IsNotNil())
 				{
 					DynValue[] metaargs = new DynValue[args.Length + 1];
 					metaargs[0] = function;

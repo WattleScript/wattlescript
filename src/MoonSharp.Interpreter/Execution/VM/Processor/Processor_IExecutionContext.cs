@@ -25,7 +25,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (op1_MetaTable != null)
 			{
 				DynValue meta1 = op1_MetaTable.RawGet(eventName);
-				if (meta1 != null && meta1.IsNotNil())
+				if (meta1.IsNotNil())
 					return meta1;
 			}
 
@@ -33,7 +33,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (op2_MetaTable != null)
 			{
 				DynValue meta2 = op2_MetaTable.RawGet(eventName);
-				if (meta2 != null && meta2.IsNotNil())
+				if (meta2.IsNotNil())
 					return meta2;
 			}
 
@@ -42,7 +42,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				DynValue meta = op1.UserData.Descriptor.MetaIndex(this.m_Script,
 					op1.UserData.Object, eventName);
 
-				if (meta != null)
+				if (meta.IsNotNil())
 					return meta;
 			}
 
@@ -51,11 +51,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 				DynValue meta = op2.UserData.Descriptor.MetaIndex(this.m_Script,
 					op2.UserData.Object, eventName);
 
-				if (meta != null)
+				if (meta.IsNotNil())
 					return meta;
 			}
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		internal DynValue GetMetamethod(DynValue value, string metamethod)
@@ -63,7 +63,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (value.Type == DataType.UserData)
 			{
 				DynValue v = value.UserData.Descriptor.MetaIndex(m_Script, value.UserData.Object, metamethod);
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
 
@@ -76,13 +76,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 			var metatable = GetMetatable(value);
 
 			if (metatable == null)
-				return null;
+				return DynValue.Nil;
 
 			var metameth = metatable.RawGet(metamethod);
 			
-			if (metameth == null || metameth.IsNil())
-				return null;
-
 			return metameth;
 		}
 

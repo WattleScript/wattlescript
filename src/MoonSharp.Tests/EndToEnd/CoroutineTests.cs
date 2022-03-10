@@ -266,7 +266,7 @@ checkresume(6, false, 'cannot resume dead coroutine');
 			coroutine.Coroutine.AutoYieldCounter = 10;
 
 			int cycles = 0;
-			DynValue result = null;
+			DynValue result = DynValue.Nil;
 
 			// Cycle until we get that the coroutine has returned something useful and not an automatic yield..
 			for (result = coroutine.Coroutine.Resume(8); 

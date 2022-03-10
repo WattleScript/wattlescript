@@ -12,6 +12,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 	internal class ByteCode : RefIdObject
 	{
 		public List<Instruction> Code = new List<Instruction>();
+		public List<SourceRef> SourceRefs = new List<SourceRef>();
 		public Script Script { get; private set; }
 		private List<SourceRef> m_SourceRefStack = new List<SourceRef>();
 		private SourceRef m_CurrentSourceRef = null;
@@ -85,66 +86,83 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return Code.Count - 1;
 		}
 
-		public Instruction GetLastInstruction()
-		{
-			return Code[Code.Count - 1];
-		}
-
-		private Instruction AppendInstruction(Instruction c)
+		private int AppendInstruction(Instruction c)
 		{
 			Code.Add(c);
-			return c;
+			SourceRefs.Add(m_CurrentSourceRef);
+			return Code.Count - 1;
 		}
 
-		public Instruction Emit_Nop(string comment)
+		public void SetNumVal(int instruction, int val)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Nop, Name = comment });
+			var ins = Code[instruction];
+			ins.NumVal = val;
+			Code[instruction] = ins;
 		}
 
-		public Instruction Emit_Invalid(string type)
+		public int Emit_Nop(string comment)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Invalid, Name = type });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Nop, String = comment });
 		}
 
-		public Instruction Emit_Pop(int num = 1)
+		public int Emit_Invalid(string type)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Pop, NumVal = num });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Invalid, String = type });
+		}
+
+		public int Emit_Pop(int num = 1)
+		{
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Pop, NumVal = num });
 		}
 
 		public void Emit_Call(int argCount, string debugName)
 		{
-			AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Call, NumVal = argCount, Name = debugName });
+			AppendInstruction(new Instruction() { OpCode = OpCode.Call, NumVal = argCount, String = debugName });
 		}
 
 		public void Emit_ThisCall(int argCount, string debugName)
 		{
-			AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.ThisCall, NumVal = argCount, Name = debugName });
+			AppendInstruction(new Instruction() { OpCode = OpCode.ThisCall, NumVal = argCount, String = debugName });
 		}
 
-		public Instruction Emit_Literal(DynValue value)
+		public int Emit_Literal(DynValue value)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Literal, Value = value });
+			switch (value.Type)
+			{
+				case DataType.Nil:
+					return AppendInstruction(new Instruction() {OpCode = OpCode.PushNil});
+				case DataType.Boolean:
+					if (value.Boolean)
+						return AppendInstruction(new Instruction() {OpCode = OpCode.PushTrue});
+					else
+						return AppendInstruction(new Instruction() {OpCode = OpCode.PushFalse});
+				case DataType.Number:
+					return AppendInstruction(new Instruction() {OpCode = OpCode.PushNumber, Number = value.Number});
+				case DataType.String:
+					return AppendInstruction(new Instruction() {OpCode = OpCode.PushString, String = value.String});
+			}
+			throw new InvalidOperationException(value.Type.ToString());
 		}
 
-		public Instruction Emit_Jump(OpCode jumpOpCode, int idx, int optPar = 0)
+		public int Emit_Jump(OpCode jumpOpCode, int idx, int optPar = 0)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = jumpOpCode, NumVal = idx, NumVal2 = optPar });
+			return AppendInstruction(new Instruction() { OpCode = jumpOpCode, NumVal = idx, NumVal2 = optPar });
 		}
 
-		public Instruction Emit_MkTuple(int cnt)
+		public int Emit_MkTuple(int cnt)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.MkTuple, NumVal = cnt });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.MkTuple, NumVal = cnt });
 		}
 
-		public Instruction Emit_Operator(OpCode opcode)
+		public int Emit_Operator(OpCode opcode)
 		{
-			var i = AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = opcode });
+			var i = AppendInstruction(new Instruction() { OpCode = opcode });
 
 			if (opcode == OpCode.LessEq)
-				AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.CNot });
+				AppendInstruction(new Instruction() { OpCode = OpCode.CNot });
 
 			if (opcode == OpCode.Eq || opcode == OpCode.Less)
-				AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.ToBool });
+				AppendInstruction(new Instruction() { OpCode = OpCode.ToBool });
 
 			return i;
 		}
@@ -153,89 +171,88 @@ namespace MoonSharp.Interpreter.Execution.VM
 		[Conditional("EMIT_DEBUG_OPS")]
 		public void Emit_Debug(string str)
 		{
-			AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Debug, Name = str.Substring(0, Math.Min(32, str.Length)) });
+			AppendInstruction(new Instruction() { OpCode = OpCode.Debug, String = str.Substring(0, Math.Min(32, str.Length)) });
 		}
 
-		public Instruction Emit_Enter(RuntimeScopeBlock runtimeScopeBlock)
+		public int Emit_Enter(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.ToInclusive });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.ToInclusive });
 		}
 
-		public Instruction Emit_Leave(RuntimeScopeBlock runtimeScopeBlock)
+		public int Emit_Leave(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.To });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.To });
 		}
 
-		public Instruction Emit_Exit(RuntimeScopeBlock runtimeScopeBlock)
+		public int Emit_Exit(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.ToInclusive });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.From, NumVal2 = runtimeScopeBlock.ToInclusive });
 		}
 
-		public Instruction Emit_Clean(RuntimeScopeBlock runtimeScopeBlock)
+		public int Emit_Clean(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.To + 1, NumVal2 = runtimeScopeBlock.ToInclusive });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.To + 1, NumVal2 = runtimeScopeBlock.ToInclusive });
 		}
 
-		public Instruction Emit_Closure(SymbolRef[] symbols, int jmpnum)
+		public int Emit_Closure(SymbolRef[] symbols, int jmpnum)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Closure, SymbolList = symbols, NumVal = jmpnum });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Closure, SymbolList = symbols, NumVal = jmpnum });
 		}
 
-		public Instruction Emit_Args(params SymbolRef[] symbols)
+		public int Emit_Args(params SymbolRef[] symbols)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Args, SymbolList = symbols });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Args, SymbolList = symbols });
 		}
 
-		public Instruction Emit_Ret(int retvals)
+		public int Emit_Ret(int retvals)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Ret, NumVal = retvals });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Ret, NumVal = retvals });
 		}
 
-		public Instruction Emit_ToNum(int stage = 0)
+		public int Emit_ToNum(int stage = 0)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.ToNum, NumVal = stage });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.ToNum, NumVal = stage });
 		}
 
-		public Instruction Emit_Incr(int i)
+		public int Emit_Incr(int i)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Incr, NumVal = i });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Incr, NumVal = i });
 		}
 
-		public Instruction Emit_NewTable(bool shared)
+		public int Emit_NewTable(bool shared)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.NewTable, NumVal = shared ? 1 : 0 });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.NewTable, NumVal = shared ? 1 : 0 });
 		}
 
-		public Instruction Emit_IterPrep()
+		public int Emit_IterPrep()
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.IterPrep });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.IterPrep });
 		}
 
-		public Instruction Emit_ExpTuple(int stackOffset)
+		public int Emit_ExpTuple(int stackOffset)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.ExpTuple, NumVal = stackOffset });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.ExpTuple, NumVal = stackOffset });
 		}
 
-		public Instruction Emit_IterUpd()
+		public int Emit_IterUpd()
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.IterUpd });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.IterUpd });
 		}
 
-		public Instruction Emit_Meta(string funcName, OpCodeMetadataType metaType, DynValue value = null)
+		public int Emit_Meta(string funcName, OpCodeMetadataType metaType)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef)
+			return AppendInstruction(new Instruction()
 			{
 				OpCode = OpCode.Meta,
-				Name = funcName,
-				NumVal2 = (int)metaType,
-				Value = value
+				String = funcName,
+				NumVal2 = (int)metaType
 			});
 		}
 
 
-		public Instruction Emit_BeginFn(RuntimeScopeFrame stackFrame)
+		public int Emit_BeginFn(RuntimeScopeFrame stackFrame)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef)
+			return AppendInstruction(new Instruction()
 			{
 				OpCode = OpCode.BeginFn,
 				SymbolList = stackFrame.DebugSymbols.ToArray(),
@@ -244,9 +261,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 			});
 		}
 
-		public Instruction Emit_Scalar()
+		public int Emit_Scalar()
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Scalar });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Scalar });
 		}
 
 		public int Emit_Load(SymbolRef sym)
@@ -255,13 +272,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				case SymbolRefType.Global:
 					Emit_Load(sym.i_Env);
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Index, Value = DynValue.NewString(sym.i_Name) });
+					AppendInstruction(new Instruction() { OpCode = OpCode.Index, String = sym.i_Name });
 					return 2;
 				case SymbolRefType.Local:
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Local, Symbol = sym });
+					AppendInstruction(new Instruction() { OpCode = OpCode.Local, Symbol = sym });
 					return 1;
 				case SymbolRefType.Upvalue:
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Upvalue, Symbol = sym });
+					AppendInstruction(new Instruction() { OpCode = OpCode.Upvalue, Symbol = sym });
 					return 1;
 				default:
 					throw new InternalErrorException("Unexpected symbol type : {0}", sym);
@@ -274,57 +291,57 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				case SymbolRefType.Global:
 					Emit_Load(sym.i_Env);
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.IndexSet, Symbol = sym, NumVal = stackofs, NumVal2 = tupleidx, Value = DynValue.NewString(sym.i_Name) });
+					AppendInstruction(new Instruction() { OpCode = OpCode.IndexSet, NumVal = stackofs, NumVal2 = tupleidx, String = sym.i_Name });
 					return 2;
 				case SymbolRefType.Local:
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.StoreLcl, Symbol = sym, NumVal = stackofs, NumVal2 = tupleidx });
+					AppendInstruction(new Instruction() { OpCode = OpCode.StoreLcl, Symbol = sym, NumVal = stackofs, NumVal2 = tupleidx });
 					return 1;
 				case SymbolRefType.Upvalue:
-					AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.StoreUpv, Symbol = sym, NumVal = stackofs, NumVal2 = tupleidx });
+					AppendInstruction(new Instruction() { OpCode = OpCode.StoreUpv, Symbol = sym, NumVal = stackofs, NumVal2 = tupleidx });
 					return 1;
 				default:
 					throw new InternalErrorException("Unexpected symbol type : {0}", sym);
 			}
 		}
 
-		public Instruction Emit_TblInitN()
+		public int Emit_TblInitN()
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.TblInitN });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.TblInitN });
 		}
 
-		public Instruction Emit_TblInitI(bool lastpos)
+		public int Emit_TblInitI(bool lastpos)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.TblInitI, NumVal = lastpos ? 1 : 0 });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.TblInitI, NumVal = lastpos ? 1 : 0 });
 		}
 
-		public Instruction Emit_Index(DynValue index = null, bool isNameIndex = false, bool isExpList = false)
+		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false)
 		{
 			OpCode o;
 			if (isNameIndex) o = OpCode.IndexN;
 			else if (isExpList) o = OpCode.IndexL;
 			else o = OpCode.Index;
 
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = o, Value = index });
+			return AppendInstruction(new Instruction() { OpCode = o, String = index });
 		}
 
-		public Instruction Emit_IndexSet(int stackofs, int tupleidx, DynValue index = null, bool isNameIndex = false, bool isExpList = false)
+		public int Emit_IndexSet(int stackofs, int tupleidx, string index = null, bool isNameIndex = false, bool isExpList = false)
 		{
 			OpCode o;
 			if (isNameIndex) o = OpCode.IndexSetN;
 			else if (isExpList) o = OpCode.IndexSetL;
 			else o = OpCode.IndexSet;
 
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = o, NumVal = stackofs, NumVal2 = tupleidx, Value = index });
+			return AppendInstruction(new Instruction() { OpCode = o, NumVal = stackofs, NumVal2 = tupleidx, String = index });
 		}
 
-		public Instruction Emit_Copy(int numval)
+		public int Emit_Copy(int numval)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Copy, NumVal = numval });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Copy, NumVal = numval });
 		}
 
-		public Instruction Emit_Swap(int p1, int p2)
+		public int Emit_Swap(int p1, int p2)
 		{
-			return AppendInstruction(new Instruction(m_CurrentSourceRef) { OpCode = OpCode.Swap, NumVal = p1, NumVal2 = p2 });
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Swap, NumVal = p1, NumVal2 = p2 });
 		}
 
 	}

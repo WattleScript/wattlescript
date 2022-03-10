@@ -16,7 +16,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		public int BasePointer;
 		public int ReturnAddress;
-		public DynValue[] LocalScope;
+
+		public DynValue[] LatestBlock;
+		public int StorePtr;
+		
+		public Upvalue[] LocalScope;
 		public ClosureContext ClosureScope;
 
 		public CallStackItemFlags Flags;

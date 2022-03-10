@@ -39,7 +39,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// <inheritdoc/>
 		public DynValue Index(Script script, object obj, DynValue index, bool isDirectIndexing)
 		{
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <inheritdoc/>
@@ -57,7 +57,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// <inheritdoc/>
 		public DynValue MetaIndex(Script script, object obj, string metaname)
 		{
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <inheritdoc/>

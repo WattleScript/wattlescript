@@ -14,7 +14,7 @@ namespace MoonSharp.Interpreter.CoreLib.IO
 		{
 			List<DynValue> readLines = new List<DynValue>();
 
-			DynValue readValue = null;
+			DynValue readValue;
 
 			do
 			{

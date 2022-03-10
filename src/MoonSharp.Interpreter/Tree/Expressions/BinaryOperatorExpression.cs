@@ -304,17 +304,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			if (m_Operator == Operator.Or)
 			{
-				Instruction i = bc.Emit_Jump(OpCode.JtOrPop, -1);
+				int i = bc.Emit_Jump(OpCode.JtOrPop, -1);
 				m_Exp2.CompilePossibleLiteral(bc);
-				i.NumVal = bc.GetJumpPointForNextInstruction();
+				bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
 				return;
 			}
 
 			if (m_Operator == Operator.And)
 			{
-				Instruction i = bc.Emit_Jump(OpCode.JfOrPop, -1);
+				int i = bc.Emit_Jump(OpCode.JfOrPop, -1);
 				m_Exp2.CompilePossibleLiteral(bc);
-				i.NumVal = bc.GetJumpPointForNextInstruction();
+				bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
 				return;
 			}
 
@@ -332,7 +332,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public override bool EvalLiteral(out DynValue dv)
 		{
-			dv = null;
+			dv = DynValue.Nil;
 			if (!m_Exp1.EvalLiteral(out var v1))
 				return false;
 			bool t1Neg = m_Exp1 is UnaryOperatorExpression uo &&

@@ -46,10 +46,10 @@ namespace MoonSharp.Interpreter.DataStructs
 			m_Storage[index] = default(T);
 		}
 
-		public T Peek(int idxofs = 0)
+		public ref T Peek(int idxofs = 0)
 		{
-			T item = m_Storage[m_HeadIdx - 1 - idxofs];
-			return item;
+			ref T item = ref m_Storage[m_HeadIdx - 1 - idxofs];
+			return ref item;
 		}
 
 		public void Set(int idxofs, T item)

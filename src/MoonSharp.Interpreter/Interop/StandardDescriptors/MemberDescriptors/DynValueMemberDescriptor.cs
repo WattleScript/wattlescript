@@ -32,7 +32,7 @@ namespace MoonSharp.Interpreter.Interop
 		protected DynValueMemberDescriptor(string name)
 		{
 			MemberAccess = MemberDescriptorAccess.CanRead;
-			m_Value = null;
+			m_Value = DynValue.Nil;
 			Name = name;
 		}
 
