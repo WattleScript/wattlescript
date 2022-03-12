@@ -5,11 +5,10 @@ namespace MoonSharp.Interpreter.Execution
     /// <summary>
     /// Holds a reference to a local in another function
     /// </summary>
-    internal class Upvalue
+    internal struct Upvalue
     {
         public DynValue[] ParentScope;
         public int Index;
-
         private static int s = 1;
         private int _refID;
         public int ReferenceID { get => _refID; }
@@ -20,6 +19,8 @@ namespace MoonSharp.Interpreter.Execution
             Index = index;
             _refID = Interlocked.Increment(ref s);
         }
+
+        public bool Valid => ParentScope != null;
 
         public ref DynValue Value() => ref ParentScope[Index];
 

@@ -171,8 +171,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 							ExecBeginFn(i);
 							break;
 						case OpCode.ToBool:
-							m_ValueStack.Push(DynValue.NewBoolean(m_ValueStack.Pop().ToScalar().CastToBool()));
+						{
+							ref var top = ref m_ValueStack.Peek();
+							top = DynValue.NewBoolean(top.CastToBool());
 							break;
+						}
 						case OpCode.Args:
 							ExecArgs(i);
 							break;
@@ -184,9 +187,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 							break;
 						case OpCode.Incr:
 							ExecIncr(i);
-							break;
-						case OpCode.ToNum:
-							ExecToNum(i);
 							break;
 						case OpCode.JFor:
 							instructionPtr = ExecJFor(i, instructionPtr);
@@ -209,13 +209,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 							break;
 						case OpCode.Local:
 							var scope = m_ExecutionStack.Peek().LocalScope;
-							var index = i.Symbol.i_Index;
-							m_ValueStack.Push(scope[index].Value());
+							m_ValueStack.Push(scope[i.NumVal].Value());
 							break;
 						case OpCode.Upvalue:
 						{
 							var cs = m_ExecutionStack.Peek().ClosureScope;
-							m_ValueStack.Push(cs[i.Symbol.i_Index].Value());
+							m_ValueStack.Push(cs[i.NumVal].Value());
 							break;
 						}
 						case OpCode.StoreUpv:
@@ -387,7 +386,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			var stackframe = m_ExecutionStack.Peek();
 			
-			if(stackframe.ClosureScope[symref.i_Index] == null)
+			if(!stackframe.ClosureScope[symref.i_Index].Valid)
 				stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
 			
 			stackframe.ClosureScope[symref.i_Index].Value() = value;
@@ -450,16 +449,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			m_ValueStack.Push(DynValue.NewTuple(v));
 		}
-
-		private void ExecToNum(Instruction i)
-		{
-			double? v = m_ValueStack.Pop().ToScalar().CastToNumber();
-			if (v.HasValue)
-				m_ValueStack.Push(DynValue.NewNumber(v.Value));
-			else
-				throw ScriptRuntimeException.ConvertToNumberFailed(i.NumVal);
-		}
-
 
 		private void ExecIterUpd(Instruction i)
 		{
@@ -537,9 +526,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecJFor(Instruction i, int instructionPtr)
 		{
-			double val = m_ValueStack.Peek(0).Number;
-			double step = m_ValueStack.Peek(1).Number;
-			double stop = m_ValueStack.Peek(2).Number;
+			double val = m_ValueStack.Peek(0).AssertNumber(1);
+			double step = m_ValueStack.Peek(1).AssertNumber(2);
+			double stop = m_ValueStack.Peek(2).AssertNumber(3);
 
 			bool whileCond = (step > 0) ? val <= stop : val >= stop;
 
@@ -892,19 +881,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecAdd(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(ln.Value + rn.Value));
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__add", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -913,19 +900,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecSub(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(ln.Value - rn.Value));
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(ln - rn));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__sub", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -935,19 +920,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecMul(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(ln.Value * rn.Value));
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(ln * rn));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__mul", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -956,20 +939,18 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecMod(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				var mod = (ln.Value) - Math.Floor((ln.Value) / (rn.Value)) * (rn.Value);
-				m_ValueStack.Push(DynValue.NewNumber(mod));
+				var mod = ln - Math.Floor(ln / rn) * rn;
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(mod));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__mod", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -978,19 +959,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecDiv(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(ln.Value / rn.Value));
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(ln / rn));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__div", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -998,19 +977,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 		}
 		private int ExecPower(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			double? rn = r.CastToNumber();
-			double? ln = l.CastToNumber();
-
-			if (ln.HasValue && rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(Math.Pow(ln.Value, rn.Value)));
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(Math.Pow(ln,rn)));
 				return instructionPtr;
 			}
 			else
 			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__pow", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
@@ -1020,16 +997,14 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecNeg(Instruction i, int instructionPtr)
 		{
-			DynValue r = m_ValueStack.Pop().ToScalar();
-			double? rn = r.CastToNumber();
-
-			if (rn.HasValue)
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn))
 			{
-				m_ValueStack.Push(DynValue.NewNumber(-rn.Value));
+				m_ValueStack.Set(0, DynValue.NewNumber(-rn));
 				return instructionPtr;
 			}
 			else
 			{
+				DynValue r = m_ValueStack.Pop().ToScalar();
 				int ip = Internal_InvokeUnaryMetaMethod(r, "__unm", instructionPtr);
 				if (ip >= 0) return ip;
 				else throw ScriptRuntimeException.ArithmeticOnNonNumber(r);

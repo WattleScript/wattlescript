@@ -209,11 +209,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Ret, NumVal = retvals });
 		}
 
-		public int Emit_ToNum(int stage = 0)
-		{
-			return AppendInstruction(new Instruction() { OpCode = OpCode.ToNum, NumVal = stage });
-		}
-
 		public int Emit_Incr(int i)
 		{
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Incr, NumVal = i });
@@ -275,10 +270,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 					AppendInstruction(new Instruction() { OpCode = OpCode.Index, String = sym.i_Name });
 					return 2;
 				case SymbolRefType.Local:
-					AppendInstruction(new Instruction() { OpCode = OpCode.Local, Symbol = sym });
+					AppendInstruction(new Instruction() { OpCode = OpCode.Local, NumVal = sym.i_Index });
 					return 1;
 				case SymbolRefType.Upvalue:
-					AppendInstruction(new Instruction() { OpCode = OpCode.Upvalue, Symbol = sym });
+					AppendInstruction(new Instruction() { OpCode = OpCode.Upvalue, NumVal = sym.i_Index });
 					return 1;
 				default:
 					throw new InternalErrorException("Unexpected symbol type : {0}", sym);

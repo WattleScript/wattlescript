@@ -588,7 +588,7 @@ namespace MoonSharp.Interpreter
 		/// <returns>The string representation, or null if not number, not string.</returns>
 		public string CastToString()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Number)
 			{
 				return rv.Number.ToString();
@@ -606,7 +606,7 @@ namespace MoonSharp.Interpreter
 		/// <returns>The string representation, or null if not number, not string or non-convertible-string.</returns>
 		public double? CastToNumber()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Number)
 			{
 				return rv.Number;
@@ -619,6 +619,32 @@ namespace MoonSharp.Interpreter
 				}
 			}
 			return null;
+		}
+
+		internal double AssertNumber(int stage)
+		{
+			if (!TryCastToNumber(out var num))
+				throw ScriptRuntimeException.ConvertToNumberFailed(stage);
+			return num;
+		}
+		
+		public bool TryCastToNumber(out double d)
+		{
+			ref DynValue rv = ref ScalarReference(ref this);
+			if (rv.Type == DataType.Number)
+			{
+				d = rv.Number;
+				return true;
+			}
+			else if (rv.Type == DataType.String)
+			{
+				if (ToNumber(rv.String, out d))
+				{
+					return true;
+				}
+			}
+			d = 0.0;
+			return false;
 		}
 
 		public static bool ToNumber(string str, out double num)
@@ -715,7 +741,7 @@ namespace MoonSharp.Interpreter
 		/// <returns>False if value is false or nil, true otherwise.</returns>
 		public bool CastToBool()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Boolean)
 				return rv.Boolean;
 			else return (rv.Type != DataType.Nil && rv.Type != DataType.Void);
@@ -744,6 +770,16 @@ namespace MoonSharp.Interpreter
 				return DynValue.Void;
 
 			return Tuple[0].ToScalar();
+		}
+
+		static internal ref DynValue ScalarReference(ref DynValue d)
+		{
+			if (d.Type != DataType.Tuple)
+				return ref d;
+			if (d.Tuple.Length == 0) {
+				return ref d;
+			}
+			return ref ScalarReference(ref d.Tuple[0]);
 		}
 
 

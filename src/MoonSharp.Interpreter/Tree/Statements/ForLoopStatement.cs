@@ -61,16 +61,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			bc.LoopTracker.Loops.Push(L);
 
 			m_End.CompilePossibleLiteral(bc);
-			bc.Emit_ToNum(3);
 			m_Step.Compile(bc);
-			bc.Emit_ToNum(2);
 			m_Start.CompilePossibleLiteral(bc);
-			bc.Emit_ToNum(1);
 
 			int start = bc.GetJumpPointForNextInstruction();
 			var jumpend = bc.Emit_Jump(OpCode.JFor, -1);
 			bc.Emit_Enter(m_StackFrame);
-			//bc.Emit_SymStorN(m_VarName);
 
 			bc.Emit_Store(m_VarName, 0, 0);
 

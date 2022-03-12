@@ -12,7 +12,7 @@ namespace MoonSharp.Interpreter
 		readonly LinkedList<TablePair> m_Values;
 		readonly LinkedListIndex<DynValue, TablePair> m_ValueMap;
 		readonly LinkedListIndex<string, TablePair> m_StringMap;
-		readonly LinkedListIndex<int, TablePair> m_ArrayMap;
+		readonly LinkedListArrayIndex<TablePair> m_ArrayMap;
 		readonly Script m_Owner;
 
 		int m_InitArray = 0;
@@ -27,7 +27,7 @@ namespace MoonSharp.Interpreter
 		{
 			m_Values = new LinkedList<TablePair>();
 			m_StringMap = new LinkedListIndex<string, TablePair>(m_Values);
-			m_ArrayMap = new LinkedListIndex<int, TablePair>(m_Values);
+			m_ArrayMap = new LinkedListArrayIndex<TablePair>(m_Values);
 			m_ValueMap = new LinkedListIndex<DynValue, TablePair>(m_Values);
 			m_Owner = owner;
 		}

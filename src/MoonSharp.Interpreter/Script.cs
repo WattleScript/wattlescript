@@ -407,7 +407,7 @@ namespace MoonSharp.Interpreter
 				{
 					c = new Closure(this, address,
 						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
-						new Upvalue[] { null });
+						new Upvalue[1]);
 				}
 				else
 				{

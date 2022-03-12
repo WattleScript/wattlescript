@@ -75,7 +75,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Upvalue:
 					{
 						var stackframe = GetTopNonClrFunction();
-						if(stackframe.ClosureScope[symref.i_Index] == null)
+						if(!stackframe.ClosureScope[symref.i_Index].Valid)
 							stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
 						
 						stackframe.ClosureScope[symref.i_Index].Value() = value;

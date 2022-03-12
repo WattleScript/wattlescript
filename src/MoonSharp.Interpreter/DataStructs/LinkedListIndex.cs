@@ -11,7 +11,7 @@ namespace MoonSharp.Interpreter.DataStructs
 	/// <typeparam name="TValue">The type of the values contained in the linked list.</typeparam>
 	internal class LinkedListIndex<TKey, TValue>
 	{
-		LinkedList<TValue> m_LinkedList;
+		protected LinkedList<TValue> m_LinkedList;
 		Dictionary<TKey, LinkedListNode<TValue>> m_Map = null;
 
 		/// <summary>
@@ -27,7 +27,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// Finds the node indexed by the specified key, or null.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		public LinkedListNode<TValue> Find(TKey key)
+		public virtual LinkedListNode<TValue> Find(TKey key)
 		{
 			LinkedListNode<TValue> node;
 
@@ -46,7 +46,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <param name="key">The key.</param>
 		/// <param name="value">The value.</param>
 		/// <returns>The previous value of the element</returns>
-		public TValue Set(TKey key, TValue value)
+		public virtual TValue Set(TKey key, TValue value)
 		{
 			LinkedListNode<TValue> node = Find(key);
 
@@ -68,7 +68,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="value">The value.</param>
-		public void Add(TKey key, TValue value)
+		public virtual void Add(TKey key, TValue value)
 		{
 			var node = m_LinkedList.AddLast(value);
 
@@ -82,7 +82,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// Removes the specified key from the index, and the node indexed by the key from the linked list.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		public bool Remove(TKey key)
+		public virtual bool Remove(TKey key)
 		{
 			LinkedListNode<TValue> node = Find(key);
 
@@ -100,7 +100,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// Determines whether the index contains the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		public bool ContainsKey(TKey key)
+		public virtual bool ContainsKey(TKey key)
 		{
 			if (m_Map == null)
 				return false;
@@ -111,7 +111,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <summary>
 		/// Clears this instance (removes all elements)
 		/// </summary>
-		public void Clear()
+		public virtual void Clear()
 		{
             if(m_Map != null)
 			    m_Map.Clear();
