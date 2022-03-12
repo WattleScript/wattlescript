@@ -209,7 +209,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 							break;
 						case OpCode.Local:
 							var scope = m_ExecutionStack.Peek().LocalScope;
-							m_ValueStack.Push(scope[i.NumVal].Value());
+							m_ValueStack.Push(scope[i.NumVal]);
 							break;
 						case OpCode.Upvalue:
 						{
@@ -368,7 +368,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private void AssignLocal(SymbolRef symref, DynValue value)
 		{
 			var stackframe = m_ExecutionStack.Peek();
-			stackframe.LocalScope[symref.i_Index].Value() = value;
+			stackframe.LocalScope[symref.i_Index] = value;
 		}
 
 		private void ExecStoreLcl(Instruction i)
@@ -386,7 +386,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			var stackframe = m_ExecutionStack.Peek();
 			
-			if(!stackframe.ClosureScope[symref.i_Index].Valid)
+			if(stackframe.ClosureScope[symref.i_Index] == null)
 				stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
 			
 			stackframe.ClosureScope[symref.i_Index].Value() = value;
@@ -429,9 +429,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private Upvalue GetUpvalueSymbol(SymbolRef s)
 		{
-			if (s.Type == SymbolRefType.Local) {
-				var uv = m_ExecutionStack.Peek().LocalScope[s.i_Index];
-				return uv;
+			if (s.Type == SymbolRefType.Local)
+			{
+				var ex = m_ExecutionStack.Peek();
+				var upval = new Upvalue(ex.LocalScope, s.i_Index);
+				ex.OpenClosures.Add(upval);
+				return upval;
 			}
 			else if (s.Type == SymbolRefType.Upvalue)
 				return m_ExecutionStack.Peek().ClosureScope[s.i_Index];
@@ -574,10 +577,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			CallStackItem cur = m_ExecutionStack.Peek();
 
 			cur.Debug_Symbols = i.SymbolList;
-			var defaultScope = new DynValue[i.NumVal];
-			cur.LocalScope = new Upvalue[i.NumVal];
-			for (int k = 0; k < cur.LocalScope.Length; k++)
-				cur.LocalScope[k] = new Upvalue(defaultScope, k);
+			cur.LocalScope = new DynValue[i.NumVal];
 
 			ClearBlockData(i);
 		}

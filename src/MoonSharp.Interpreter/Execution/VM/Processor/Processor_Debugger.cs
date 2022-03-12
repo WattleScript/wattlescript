@@ -322,7 +322,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					{
 						IsError = false,
 						LValue = top.Debug_Symbols[i],
-						Value = top.LocalScope[i].Value(),
+						Value = top.LocalScope[i],
 						Name = top.Debug_Symbols[i].i_Name
 					});
 				}

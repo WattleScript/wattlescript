@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.Debugging;
+﻿using System.Collections.Generic;
+using MoonSharp.Interpreter.Debugging;
 
 namespace MoonSharp.Interpreter.Execution.VM
 {
@@ -17,10 +18,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 		public int BasePointer;
 		public int ReturnAddress;
 
-		public DynValue[] LatestBlock;
 		public int StorePtr;
 		
-		public Upvalue[] LocalScope;
+		public DynValue[] LocalScope;
+		public List<Upvalue> OpenClosures = new List<Upvalue>();
 		public ClosureContext ClosureScope;
 
 		public CallStackItemFlags Flags;

@@ -15,12 +15,15 @@ namespace MoonSharp.Interpreter.Execution.VM
 			
 			if (to >= 0 && from >= 0 && to >= from)
 			{
-				var array = this.m_ExecutionStack.Peek().LocalScope;
-				var block = new DynValue[length];
-				for (int i = 0; i < length; i++)
+				var exStack = this.m_ExecutionStack.Peek();
+				for (int i = exStack.OpenClosures.Count - 1; i >= 0; i--)
 				{
-					array[from + i] = new Upvalue(block, i);
+					if (exStack.OpenClosures[i].Index >= from && exStack.OpenClosures[i].Index <= to) {
+						exStack.OpenClosures[i].Close();
+						exStack.OpenClosures.RemoveAt(i);
+					}
 				}
+				Array.Clear(exStack.LocalScope, from, length);
 			}
 		}
 
@@ -34,7 +37,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Global:
 					return GetGlobalSymbol(GetGenericSymbol(symref.i_Env), symref.i_Name);
 				case SymbolRefType.Local:
-					return GetTopNonClrFunction().LocalScope[symref.i_Index].Value();
+					return GetTopNonClrFunction().LocalScope[symref.i_Index];
 				case SymbolRefType.Upvalue:
 					return GetTopNonClrFunction().ClosureScope[symref.i_Index].Value();
 				default:
@@ -69,13 +72,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Local:
 					{
 						var stackframe = GetTopNonClrFunction();
-						stackframe.LocalScope[symref.i_Index].Value() = value;
+						stackframe.LocalScope[symref.i_Index] = value;
 					}
 					break;
 				case SymbolRefType.Upvalue:
 					{
 						var stackframe = GetTopNonClrFunction();
-						if(!stackframe.ClosureScope[symref.i_Index].Valid)
+						if(stackframe.ClosureScope[symref.i_Index] == null)
 							stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
 						
 						stackframe.ClosureScope[symref.i_Index].Value() = value;
