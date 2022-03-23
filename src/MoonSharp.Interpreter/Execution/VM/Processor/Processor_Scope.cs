@@ -11,8 +11,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			int length = to - from + 1;
 			
-			int len = 0;
-			
 			if (to >= 0 && from >= 0 && to >= from)
 			{
 				var exStack = this.m_ExecutionStack.Peek();

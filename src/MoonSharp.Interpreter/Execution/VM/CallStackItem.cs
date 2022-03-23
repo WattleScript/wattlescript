@@ -17,8 +17,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		public int BasePointer;
 		public int ReturnAddress;
-
-		public int StorePtr;
 		
 		public DynValue[] LocalScope;
 		public List<Upvalue> OpenClosures = new List<Upvalue>();

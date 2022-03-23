@@ -20,7 +20,6 @@ namespace MoonSharp.Interpreter.DataStructs
         /// <param name="key">The key.</param>
         public override LinkedListNode<TValue> Find(int key)
         {
-            LinkedListNode<TValue> node;
             if (key >= 0)
             {
                 if (positive != null && key < positive.Length)
