@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using MoonSharp.Interpreter.IO;
 
 namespace MoonSharp.Interpreter
 {
@@ -94,39 +95,39 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Writes this instance to a binary stream
 		/// </summary>
-		internal void WriteBinary(BinaryWriter bw)
+		internal void WriteBinary(BinDumpWriter bw)
 		{
-			bw.Write((byte)this.i_Type);
-			bw.Write(i_Index);
-			bw.Write(i_Name);
+			bw.WriteByte((byte)this.i_Type);
+			bw.WriteVarInt32(i_Index);
+			bw.WriteString(i_Name);
 		}
 
 		/// <summary>
 		/// Reads a symbolref from a binary stream 
 		/// </summary>
-		internal static SymbolRef ReadBinary(BinaryReader br)
+		internal static SymbolRef ReadBinary(BinDumpReader br)
 		{
 			SymbolRef that = new SymbolRef();
 			that.i_Type = (SymbolRefType)br.ReadByte();
-			that.i_Index = br.ReadInt32();
+			that.i_Index = br.ReadVarInt32();
 			that.i_Name = br.ReadString();
 			return that;
 		}
 
-		internal void WriteBinaryEnv(BinaryWriter bw, Dictionary<SymbolRef, int> symbolMap)
+		internal void WriteBinaryEnv(BinDumpWriter bw, Dictionary<SymbolRef, int> symbolMap)
 		{
 			if (this.i_Env != null)
-				bw.Write(symbolMap[i_Env]);
+				bw.WriteVarUInt32((uint)(symbolMap[i_Env] + 1));
 			else
-				bw.Write(-1);
+				bw.WriteVarUInt32(0);
 		}
 
-		internal void ReadBinaryEnv(BinaryReader br, SymbolRef[] symbolRefs)
+		internal void ReadBinaryEnv(BinDumpReader br, SymbolRef[] symbolRefs)
 		{
-			int idx = br.ReadInt32();
+			uint idx = br.ReadVarUInt32();
 
-			if (idx >= 0)
-				i_Env = symbolRefs[idx];
+			if (idx >= 1)
+				i_Env = symbolRefs[idx - 1];
 		}
 	}
 }

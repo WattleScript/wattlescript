@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using MoonSharp.Interpreter.Debugging;
+using MoonSharp.Interpreter.IO;
+using MoonSharp.Interpreter.Serialization;
 
 namespace MoonSharp.Interpreter.Execution.VM
 {
@@ -55,7 +57,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				append += " " + NumVal2.ToString();
 
 			if ((usage & ((int)InstructionFieldUsage.String)) != 0)
-				append += " " + String;
+				append += " " + (String == null ? "<no string arg>" : DynValue.NewString(String).SerializeValue());
 
 			if ((usage & ((int)InstructionFieldUsage.Symbol)) != 0)
 				append += " " + Symbol;
@@ -71,56 +73,71 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return new string(' ', 10 - this.OpCode.ToString().Length);
 		}
 
-		internal void WriteBinary(BinaryWriter wr, int baseAddress, Dictionary<SymbolRef, int> symbolMap)
+		internal void WriteBinary(BinDumpWriter wr, int baseAddress, Dictionary<SymbolRef, int> symbolMap)
 		{
-			wr.Write((byte)this.OpCode);
+			wr.WriteByte((byte)this.OpCode);
 
 			int usage = (int)OpCode.GetFieldUsage();
 
+			if ((usage & (int) InstructionFieldUsage.Number) == 0
+			    && (usage & (int) InstructionFieldUsage.NumVal2) == 0 &&
+			    (usage & (int) InstructionFieldUsage.NumVal) == 0 &&
+			    (usage & (int) InstructionFieldUsage.NumValAsCodeAddress) == 0 &&
+			    (NumVal != 0 || NumVal2 != 0))
+				throw new Exception("NumVal usage");
+			
+			if ((usage & ((int)InstructionFieldUsage.String)) == 0 &&
+				(usage & ((int)InstructionFieldUsage.Symbol)) == 0 && 
+					(usage & ((int)InstructionFieldUsage.SymbolList)) == 0 &&
+				_object != null)
+			{
+				throw new Exception("Object usage");
+			}
+						
 			if ((usage & ((int) InstructionFieldUsage.Number)) == (int) InstructionFieldUsage.Number)
 			{
-				wr.Write(this.Number);
+				wr.WriteDouble(this.Number);
 			}
 			else
 			{
 				if ((usage & ((int) InstructionFieldUsage.NumValAsCodeAddress)) ==
 				    (int) InstructionFieldUsage.NumValAsCodeAddress)
-					wr.Write(this.NumVal - baseAddress);
+					wr.WriteVarInt32(this.NumVal - baseAddress);
 				else if ((usage & ((int) InstructionFieldUsage.NumVal)) != 0)
-					wr.Write(this.NumVal);
+					wr.WriteVarInt32(this.NumVal);
 				if ((usage & ((int) InstructionFieldUsage.NumVal2)) != 0)
-					wr.Write(this.NumVal2);
+					wr.WriteVarInt32(this.NumVal2);
 			}
 
 			if ((usage & ((int)InstructionFieldUsage.String)) != 0)
-				wr.Write(String ?? "");
+				wr.WriteString(String);
 
 			if ((usage & ((int)InstructionFieldUsage.Symbol)) != 0)
 				WriteSymbol(wr, Symbol, symbolMap);
 
 			if ((usage & ((int)InstructionFieldUsage.SymbolList)) != 0)
 			{
-				wr.Write(this.SymbolList.Length);
+				wr.WriteVarUInt32((uint)this.SymbolList.Length);
 				for (int i = 0; i < this.SymbolList.Length; i++)
 					WriteSymbol(wr, SymbolList[i], symbolMap);
 			}
 		}
 
-		private static void WriteSymbol(BinaryWriter wr, SymbolRef symbolRef, Dictionary<SymbolRef, int> symbolMap)
+		private static void WriteSymbol(BinDumpWriter wr, SymbolRef symbolRef, Dictionary<SymbolRef, int> symbolMap)
 		{
-			int id = (symbolRef == null) ? -1 : symbolMap[symbolRef];
-			wr.Write(id);
+			int id = (symbolRef == null) ? 0 : symbolMap[symbolRef] + 1;
+			wr.WriteVarUInt32((uint)id);
 		}
 
-		private static SymbolRef ReadSymbol(BinaryReader rd, SymbolRef[] deserializedSymbols)
+		private static SymbolRef ReadSymbol(BinDumpReader rd, SymbolRef[] deserializedSymbols)
 		{
-			int id = rd.ReadInt32();
+			uint id = rd.ReadVarUInt32();
 
-			if (id < 0) return null;
-			return deserializedSymbols[id];
+			if (id < 1) return null;
+			return deserializedSymbols[id - 1];
 		}
 
-		internal static Instruction ReadBinary(BinaryReader rd, int baseAddress, Table envTable, SymbolRef[] deserializedSymbols)
+		internal static Instruction ReadBinary(BinDumpReader rd, int baseAddress, Table envTable, SymbolRef[] deserializedSymbols)
 		{
 			Instruction that = new Instruction();
 
@@ -136,12 +153,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				if ((usage & ((int) InstructionFieldUsage.NumValAsCodeAddress)) ==
 				    (int) InstructionFieldUsage.NumValAsCodeAddress)
-					that.NumVal = rd.ReadInt32() + baseAddress;
+					that.NumVal = rd.ReadVarInt32() + baseAddress;
 				else if ((usage & ((int) InstructionFieldUsage.NumVal)) != 0)
-					that.NumVal = rd.ReadInt32();
+					that.NumVal = rd.ReadVarInt32();
 
 				if ((usage & ((int) InstructionFieldUsage.NumVal2)) != 0)
-					that.NumVal2 = rd.ReadInt32();
+					that.NumVal2 = rd.ReadVarInt32();
 			}
 
 			if ((usage & ((int)InstructionFieldUsage.String)) != 0)
@@ -152,7 +169,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if ((usage & ((int)InstructionFieldUsage.SymbolList)) != 0)
 			{
-				int len = rd.ReadInt32();
+				int len = (int)rd.ReadVarUInt32();
 				that.SymbolList = new SymbolRef[len];
 
 				for (int i = 0; i < that.SymbolList.Length; i++)
@@ -174,7 +191,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if ((usage & ((int)InstructionFieldUsage.SymbolList)) != 0)
 				symbolList = this.SymbolList;
-
 		}
 	}
 }

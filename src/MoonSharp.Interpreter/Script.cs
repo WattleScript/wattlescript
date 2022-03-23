@@ -202,12 +202,10 @@ namespace MoonSharp.Interpreter
 		public DynValue LoadStream(Stream stream, Table globalTable = null, string codeFriendlyName = null)
 		{
 			this.CheckScriptOwnership(globalTable);
-
-			Stream codeStream = new UndisposableStream(stream);
-
-			if (!Processor.IsDumpStream(codeStream))
+			
+			if (!Processor.IsDumpStream(stream))
 			{
-				using (StreamReader sr = new StreamReader(codeStream))
+				using (StreamReader sr = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
 				{
 					string scriptCode = sr.ReadToEnd();
 					return LoadString(scriptCode, globalTable, codeFriendlyName);
@@ -224,7 +222,7 @@ namespace MoonSharp.Interpreter
 				m_Sources.Add(source);
 
 				bool hasUpvalues;
-				int address = m_MainProcessor.Undump(codeStream, m_Sources.Count - 1, globalTable ?? m_GlobalTable, out hasUpvalues);
+				int address = m_MainProcessor.Undump(stream, m_Sources.Count - 1, globalTable ?? m_GlobalTable, out hasUpvalues);
 
 				SignalSourceCodeChange(source);
 				SignalByteCodeChange();
@@ -241,6 +239,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		/// <param name="function">The function.</param>
 		/// <param name="stream">The stream.</param>
+		/// <param name="writeSourceRefs">Write referenced line numbers</param>
 		/// <exception cref="System.ArgumentException">
 		/// function arg is not a function!
 		/// or
@@ -248,7 +247,7 @@ namespace MoonSharp.Interpreter
 		/// or
 		/// function arg has upvalues other than _ENV
 		/// </exception>
-		public void Dump(DynValue function, Stream stream)
+		public void Dump(DynValue function, Stream stream, bool writeSourceRefs = true)
 		{
 			this.CheckScriptOwnership(function);
 
@@ -263,8 +262,21 @@ namespace MoonSharp.Interpreter
 			if (upvaluesType == Closure.UpvaluesType.Closure)
 				throw new ArgumentException("function arg has upvalues other than _ENV");
 
-			UndisposableStream outStream = new UndisposableStream(stream);
-			m_MainProcessor.Dump(outStream, function.Function.EntryPointByteCodeLocation, upvaluesType == Closure.UpvaluesType.Environment);
+			m_MainProcessor.Dump(stream, function.Function.EntryPointByteCodeLocation, upvaluesType == Closure.UpvaluesType.Environment, writeSourceRefs);
+			
+		}
+
+		/// <summary>
+		/// Dumps the bytecode for a function to a human-readable string
+		/// </summary>
+		/// <param name="function"></param>
+		public string DumpString(DynValue function)
+		{
+			this.CheckScriptOwnership(function);
+
+			if (function.Type != DataType.Function)
+				throw new ArgumentException("function arg is not a function!");
+			return m_MainProcessor.DumpString(function.Function.EntryPointByteCodeLocation);
 		}
 
 
@@ -361,6 +373,7 @@ namespace MoonSharp.Interpreter
 		public DynValue DoFile(string filename, Table globalContext = null, string codeFriendlyName = null)
 		{
 			DynValue func = LoadFile(filename, globalContext, codeFriendlyName);
+			File.WriteAllText("/home/cmcging/output.txt", m_ByteCode.Dump());
 			return Call(func);
 		}
 

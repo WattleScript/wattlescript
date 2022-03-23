@@ -1,4 +1,5 @@
 ﻿using System;
+using MoonSharp.Interpreter.IO;
 
 namespace MoonSharp.Interpreter.Debugging
 {
@@ -59,6 +60,55 @@ namespace MoonSharp.Interpreter.Debugging
 			FromLine = src.FromLine;
 			ToLine = src.ToLine;
 			IsStepStop = isStepStop;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if(obj is SourceRef r)
+			{
+				return Equals(r);
+			}
+			return false;
+		}
+
+		protected bool Equals(SourceRef other)
+		{
+			return Breakpoint == other.Breakpoint && 
+			       IsClrLocation == other.IsClrLocation && 
+			       SourceIdx == other.SourceIdx && 
+			       FromChar == other.FromChar && 
+			       ToChar == other.ToChar && 
+			       FromLine == other.FromLine && 
+			       ToLine == other.ToLine && 
+			       IsStepStop == other.IsStepStop && 
+			       CannotBreakpoint == other.CannotBreakpoint;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = Breakpoint.GetHashCode();
+				hashCode = (hashCode * 397) ^ IsClrLocation.GetHashCode();
+				hashCode = (hashCode * 397) ^ SourceIdx;
+				hashCode = (hashCode * 397) ^ FromChar;
+				hashCode = (hashCode * 397) ^ ToChar;
+				hashCode = (hashCode * 397) ^ FromLine;
+				hashCode = (hashCode * 397) ^ ToLine;
+				hashCode = (hashCode * 397) ^ IsStepStop.GetHashCode();
+				hashCode = (hashCode * 397) ^ CannotBreakpoint.GetHashCode();
+				return hashCode;
+			}
+		}
+
+		public static bool operator ==(SourceRef left, SourceRef right)
+		{
+			return Equals(left, right);
+		}
+
+		public static bool operator !=(SourceRef left, SourceRef right)
+		{
+			return !Equals(left, right);
 		}
 
 
@@ -201,6 +251,21 @@ namespace MoonSharp.Interpreter.Debugging
 			{
 				return string.Format("{0}:({1},{2}-{3},{4})", sc.Name, this.FromLine, this.FromChar, this.ToLine, this.ToChar);
 			}
+		}
+
+		internal void WriteBinary(BinDumpWriter writer)
+		{
+			writer.WriteVarInt32(FromChar);
+			writer.WriteVarInt32(ToChar);
+			writer.WriteVarInt32(FromLine);
+			writer.WriteVarInt32(ToLine);
+			writer.WriteBoolean(IsStepStop);
+		}
+
+		internal static SourceRef ReadBinary(BinDumpReader reader, int sourceID)
+		{
+			return new SourceRef(sourceID, reader.ReadVarInt32(), reader.ReadVarInt32(),
+					reader.ReadVarInt32(), reader.ReadVarInt32(), reader.ReadBoolean());
 		}
 	}
 }
