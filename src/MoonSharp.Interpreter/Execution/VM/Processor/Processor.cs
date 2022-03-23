@@ -10,8 +10,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 	{
 		ByteCode m_RootChunk;
 
-		FastStack<DynValue> m_ValueStack = new FastStack<DynValue>(131072);
-		FastStack<CallStackItem> m_ExecutionStack = new FastStack<CallStackItem>(131072);
+		FastStack<DynValue> m_ValueStack = new FastStack<DynValue>(8192, 131072);
+		FastStack<CallStackItem> m_ExecutionStack = new FastStack<CallStackItem>(512, 131072);
 		List<Processor> m_CoroutinesStack;
 
 		Table m_GlobalTable;
