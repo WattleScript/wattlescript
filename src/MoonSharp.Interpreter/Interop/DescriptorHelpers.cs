@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Interop
 {
@@ -44,7 +43,7 @@ namespace MoonSharp.Interpreter.Interop
 
 		public static bool IsDelegateType(this Type t)
 		{
-			return Framework.Do.IsAssignableFrom(typeof(Delegate), t);
+			return typeof(Delegate).IsAssignableFrom(t);
 		}
 
 		/// <summary>
@@ -52,11 +51,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// </summary>
 		public static string GetClrVisibility(this Type type)
 		{
-#if NETFX_CORE
-			var t = type.GetTypeInfo();
-#else
 			Type t = type;
-#endif
 			if (t.IsPublic || t.IsNestedPublic)
 				return "public";
 			if ((t.IsNotPublic && (!t.IsNested)) || (t.IsNestedAssembly))
@@ -94,8 +89,8 @@ namespace MoonSharp.Interpreter.Interop
 		/// </summary>
 		public static string GetClrVisibility(this PropertyInfo info)
 		{
-			MethodInfo gm = Framework.Do.GetGetMethod(info);
-			MethodInfo sm = Framework.Do.GetSetMethod(info);
+			MethodInfo gm = info.GetGetMethod(true);
+			MethodInfo sm = info.GetSetMethod(true);
 
 			string gv = (gm != null) ? GetClrVisibility(gm) : "private";
 			string sv = (sm != null) ? GetClrVisibility(sm) : "private";
@@ -137,8 +132,8 @@ namespace MoonSharp.Interpreter.Interop
 		/// <returns></returns>
 		public static bool IsPropertyInfoPublic(this PropertyInfo pi)
 		{
-			MethodInfo getter = Framework.Do.GetGetMethod(pi);
-			MethodInfo setter = Framework.Do.GetSetMethod(pi);
+			MethodInfo getter = pi.GetGetMethod(true);
+			MethodInfo setter = pi.GetSetMethod(true);
 
 			return (getter != null && getter.IsPublic) || (setter != null && setter.IsPublic);
 		}
@@ -166,7 +161,7 @@ namespace MoonSharp.Interpreter.Interop
 		{
 			try
 			{
-				return Framework.Do.GetAssemblyTypes(asm);
+				return asm.GetTypes();
 			}
 			catch (ReflectionTypeLoadException)
 			{
@@ -200,10 +195,12 @@ namespace MoonSharp.Interpreter.Interop
 		/// <returns></returns>
 		public static IEnumerable<Type> GetAllImplementedTypes(this Type t)
 		{
-			for (Type ot = t; ot != null; ot = Framework.Do.GetBaseType(ot))
+			for (Type ot = t; ot != null; ot = t.BaseType) {
 				yield return ot;
+				if (ot == typeof(object)) break;
+			}
 
-			foreach (Type it in Framework.Do.GetInterfaces(t))
+			foreach (Type it in t.GetInterfaces())
 				yield return it;
 		}
 

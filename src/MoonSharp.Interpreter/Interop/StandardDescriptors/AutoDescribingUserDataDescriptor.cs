@@ -1,5 +1,4 @@
 ﻿using System;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop;
 
 namespace MoonSharp.Interpreter
@@ -124,7 +123,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public bool IsTypeCompatible(Type type, object obj)
 		{
-			return Framework.Do.IsInstanceOfType(type, obj);
+			return type.IsInstanceOfType(obj);
 		}
 	}
 }

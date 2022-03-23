@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.Converters;
 
@@ -349,7 +348,7 @@ namespace MoonSharp.Interpreter.Interop
 					{
 						if (firstArg.Type == DataType.UserData && firstArg.UserData.Object != null)
 						{
-							if (Framework.Do.IsAssignableFrom(method.VarArgsArrayType, firstArg.UserData.Object.GetType()))
+							if (method.VarArgsArrayType.IsAssignableFrom(firstArg.UserData.Object.GetType()))
 							{
 								totalScore = scoreBeforeVargars;
 								continue;

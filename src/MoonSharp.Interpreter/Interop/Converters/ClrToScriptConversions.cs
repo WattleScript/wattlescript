@@ -82,13 +82,9 @@ namespace MoonSharp.Interpreter.Interop.Converters
 			if (obj is Delegate)
 			{
 				Delegate d = (Delegate)obj;
-
-
-#if NETFX_CORE
-				MethodInfo mi = d.GetMethodInfo();
-#else
+				
 				MethodInfo mi = d.Method;
-#endif
+
 
 				if (CallbackFunction.CheckCallbackSignature(mi, false))
 					return DynValue.NewCallback((Func<ScriptExecutionContext, CallbackArguments, DynValue>)d);

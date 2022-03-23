@@ -53,7 +53,7 @@ namespace MoonSharp.Interpreter.CoreLib
 
 		// collectgarbage  ([opt [, arg]])
 		// ----------------------------------------------------------------------------------------------------------------
-		// This function is mostly a stub towards the CLR GC. If mode is nil, "collect" or "restart", a GC is forced.
+		// This function is a stub. Lua scripts cannot force a .NET GC
 		[MoonSharpModuleMethod]
 		public static DynValue collectgarbage(ScriptExecutionContext executionContext, CallbackArguments args)
 		{
@@ -61,14 +61,10 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			string mode = opt.CastToString();
 
-			if (mode == null || mode == "collect" || mode == "restart")
+			/*if (mode == null || mode == "collect" || mode == "restart")
 			{
-#if PCL || ENABLE_DOTNET
 				GC.Collect();
-#else
-				GC.Collect(2, GCCollectionMode.Forced);
-#endif
-			}
+			}*/
 
 			return DynValue.Nil;
 		}

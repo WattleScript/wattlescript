@@ -132,11 +132,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		int GetThreadId()
 		{
-			#if ENABLE_DOTNET || NETFX_CORE
-				return 1;
-			#else
-				return Thread.CurrentThread.ManagedThreadId;
-			#endif
+			return Thread.CurrentThread.ManagedThreadId;
 		}
 
 		private void EnterProcessor()

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop;
 using MoonSharp.Interpreter.Loaders;
 using NUnit.Framework;
@@ -300,7 +300,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
 			var ov = new OverloadedMethodMemberDescriptor("Method1", this.GetType());
 
 			// Iterate over the two methods through reflection
-			foreach(var method in Framework.Do.GetMethods(this.GetType())
+			foreach(var method in this.GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Instance)
 				.Where(mi => mi.Name == "Method1" && mi.IsPrivate && !mi.IsStatic))
 			{
 				ov.AddOverload(new MethodMemberDescriptor(method));

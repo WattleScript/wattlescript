@@ -2,7 +2,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Diagnostics;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.Converters;
@@ -179,12 +178,10 @@ namespace MoonSharp.Interpreter.Interop
 				// optimized setters fall here
 				throw ScriptRuntimeException.UserDataArgumentTypeMismatch(v.Type, FieldInfo.FieldType);
 			}
-#if !(PCL || ENABLE_DOTNET || NETFX_CORE)
 			catch (FieldAccessException ex)
 			{
 				throw new ScriptRuntimeException(ex);
 			}
-#endif
 		}
 
 
@@ -223,7 +220,7 @@ namespace MoonSharp.Interpreter.Interop
 			t.Set("const", DynValue.NewBoolean(this.IsConst));
 			t.Set("readonly", DynValue.NewBoolean(this.IsReadonly));
 			t.Set("decltype", DynValue.NewString(this.FieldInfo.DeclaringType.FullName));
-			t.Set("declvtype", DynValue.NewBoolean(Framework.Do.IsValueType(this.FieldInfo.DeclaringType)));
+			t.Set("declvtype", DynValue.NewBoolean(this.FieldInfo.DeclaringType.IsValueType));
 			t.Set("type", DynValue.NewString(this.FieldInfo.FieldType.FullName));
 			t.Set("read", DynValue.NewBoolean(true));
 			t.Set("write", DynValue.NewBoolean(!(this.IsConst || this.IsReadonly)));

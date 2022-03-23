@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Diagnostics;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 
@@ -156,7 +155,7 @@ namespace MoonSharp.Interpreter.Interop
 					return false;
 				}
 
-				if (Framework.Do.IsGenericTypeDefinition(mi.ReturnType))
+				if (mi.ReturnType.IsGenericTypeDefinition)
 				{
 					if (throwException) throw new ArgumentException("Method cannot have an unresolved generic return type");
 					return false;

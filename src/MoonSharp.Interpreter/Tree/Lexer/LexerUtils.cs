@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Tree
 {
@@ -138,7 +137,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		public static string UnescapeLuaString(Token token, string str)
 		{
-			if (!Framework.Do.StringContainsChar(str, '\\'))
+			if (!str.Contains('\\'))
 				return str;
 
 			StringBuilder sb = new StringBuilder();
@@ -284,11 +283,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		private static string ConvertUtf32ToChar(int i)
 		{
-#if PCL || ENABLE_DOTNET
-			return ((char)i).ToString();
-#else
 			return char.ConvertFromUtf32(i);
-#endif
 		}
 
 	}

@@ -144,11 +144,7 @@ namespace MoonSharp.Interpreter
 		{
 			if (asm == null)
 			{
-				#if NETFX_CORE || DOTNET_CORE
-					throw new NotSupportedException("Assembly.GetCallingAssembly is not supported on target framework.");
-				#else
-					asm = Assembly.GetCallingAssembly();
-				#endif
+				asm = Assembly.GetCallingAssembly();
 			}
 
 			TypeDescriptorRegistry.RegisterAssembly(asm, includeExtensionTypes);

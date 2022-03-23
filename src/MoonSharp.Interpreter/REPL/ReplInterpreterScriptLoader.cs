@@ -1,5 +1,4 @@
-﻿#if !(PCL || ENABLE_DOTNET || NETFX_CORE)
-using System;
+﻿using System;
 using MoonSharp.Interpreter.Loaders;
 
 namespace MoonSharp.Interpreter.REPL
@@ -66,6 +65,3 @@ namespace MoonSharp.Interpreter.REPL
 		}
 	}
 }
-
-
-#endif

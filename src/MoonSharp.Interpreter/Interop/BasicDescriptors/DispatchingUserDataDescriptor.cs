@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.Converters;
 
 namespace MoonSharp.Interpreter.Interop.BasicDescriptors
@@ -659,7 +658,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// <returns></returns>
 		public virtual bool IsTypeCompatible(Type type, object obj)
 		{
-			return Framework.Do.IsInstanceOfType(type, obj);
+			return type.IsInstanceOfType(obj);
 		}
 	}
 }

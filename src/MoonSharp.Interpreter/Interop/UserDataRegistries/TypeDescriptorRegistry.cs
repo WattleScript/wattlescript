@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.RegistrationPolicies;
 
@@ -29,17 +28,13 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 		{
 			if (asm == null)
 			{
-				#if NETFX_CORE || DOTNET_CORE
-					throw new NotSupportedException("Assembly.GetCallingAssembly is not supported on target framework.");
-				#else
-					asm = Assembly.GetCallingAssembly();
-				#endif
+				asm = Assembly.GetCallingAssembly();
 			}
 
 			if (includeExtensionTypes)
 			{
 				var extensionTypes = from t in asm.SafeGetTypes()
-									 let attributes = Framework.Do.GetCustomAttributes(t, typeof(ExtensionAttribute), true)
+									 let attributes = t.GetCustomAttributes(typeof(ExtensionAttribute), true)
 									 where attributes != null && attributes.Length > 0
 									 select new { Attributes = attributes, DataType = t };
 
@@ -51,7 +46,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 
 
 			var userDataTypes = from t in asm.SafeGetTypes()
-								let attributes = Framework.Do.GetCustomAttributes(t, typeof(MoonSharpUserDataAttribute), true)
+								let attributes = t.GetCustomAttributes(typeof(MoonSharpUserDataAttribute), true)
 								where attributes != null && attributes.Length > 0
 								select new { Attributes = attributes, DataType = t };
 
@@ -152,17 +147,17 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 					if (IsTypeBlacklisted(type))
 						return null;
 
-					if (Framework.Do.GetInterfaces(type).Any(ii => ii == typeof(IUserDataType)))
+					if (type.GetInterfaces().Any(ii => ii == typeof(IUserDataType)))
 					{
 						AutoDescribingUserDataDescriptor audd = new AutoDescribingUserDataDescriptor(type, friendlyName);
 						return PerformRegistration(type, audd, oldDescriptor);
 					}
-					else if (Framework.Do.IsGenericTypeDefinition(type))
+					else if (type.IsGenericTypeDefinition)
 					{
 						StandardGenericsUserDataDescriptor typeGen = new StandardGenericsUserDataDescriptor(type, accessMode);
 						return PerformRegistration(type, typeGen, oldDescriptor);
 					}
-					else if (Framework.Do.IsEnum(type))
+					else if (type.IsEnum)
 					{
 						var enumDescr = new StandardEnumUserDataDescriptor(type, friendlyName);
 						return PerformRegistration(type, enumDescr, oldDescriptor);
@@ -173,11 +168,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 
 						if (accessMode == InteropAccessMode.BackgroundOptimized)
 						{
-#if NETFX_CORE
-							System.Threading.Tasks.Task.Run(() => ((IOptimizableDescriptor)udd).Optimize());
-#else
 							ThreadPool.QueueUserWorkItem(o => ((IOptimizableDescriptor)udd).Optimize());
-#endif
 						}
 
 						return PerformRegistration(type, udd, oldDescriptor);
@@ -221,7 +212,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 		{
 			if (accessMode == InteropAccessMode.Default)
 			{
-				MoonSharpUserDataAttribute attr = Framework.Do.GetCustomAttributes(type, true).OfType<MoonSharpUserDataAttribute>()
+				MoonSharpUserDataAttribute attr = type.GetCustomAttributes(true).OfType<MoonSharpUserDataAttribute>()
 					.SingleOrDefault();
 
 				if (attr != null)
@@ -256,14 +247,14 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 				if (RegistrationPolicy.AllowTypeAutoRegistration(type))
 				{
 					// no autoreg of delegates
-					if (!Framework.Do.IsAssignableFrom((typeof(Delegate)), type))
+					if (!typeof(Delegate).IsAssignableFrom(type))
 					{
 						return RegisterType_Impl(type, DefaultAccessMode, type.FullName, null);
 					}
 				}
 
 				// search for the base object descriptors
-				for (Type t = type; t != null; t = Framework.Do.GetBaseType(t))
+				for (Type t = type; t != null; t = t.BaseType)
 				{
 					IUserDataDescriptor u;
 
@@ -272,7 +263,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 						typeDescriptor = u;
 						break;
 					}
-					else if (Framework.Do.IsGenericType(t))
+					else if (t.IsGenericType)
 					{
 						if (s_TypeRegistry.TryGetValue(t.GetGenericTypeDefinition(), out u))
 						{
@@ -298,7 +289,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 
 				if (searchInterfaces)
 				{
-					foreach (Type interfaceType in Framework.Do.GetInterfaces(type))
+					foreach (Type interfaceType in type.GetInterfaces())
 					{
 						IUserDataDescriptor interfaceDescriptor;
 
@@ -310,7 +301,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 							if (interfaceDescriptor != null)
 								descriptors.Add(interfaceDescriptor);
 						}
-						else if (Framework.Do.IsGenericType(interfaceType))
+						else if (interfaceType.IsGenericType)
 						{
 							if (s_TypeRegistry.TryGetValue(interfaceType.GetGenericTypeDefinition(), out interfaceDescriptor))
 							{
@@ -349,7 +340,7 @@ namespace MoonSharp.Interpreter.Interop.UserDataRegistries
 		/// <returns></returns>
 		public static bool IsTypeBlacklisted(Type t)
 		{
-			if (Framework.Do.IsValueType(t) && Framework.Do.GetInterfaces(t).Contains(typeof(System.Collections.IEnumerator)))
+			if (t.IsValueType && t.GetInterfaces().Contains(typeof(System.Collections.IEnumerator)))
 				return true;
 
 			return false;
