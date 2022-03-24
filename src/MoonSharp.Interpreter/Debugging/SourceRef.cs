@@ -255,17 +255,21 @@ namespace MoonSharp.Interpreter.Debugging
 
 		internal void WriteBinary(BinDumpWriter writer)
 		{
-			writer.WriteVarInt32(FromChar);
-			writer.WriteVarInt32(ToChar);
-			writer.WriteVarInt32(FromLine);
-			writer.WriteVarInt32(ToLine);
+			writer.WriteVarUInt32((uint)FromChar);
+			writer.WriteVarInt32(ToChar - FromChar);
+			writer.WriteVarUInt32((uint)FromLine);
+			writer.WriteVarInt32(ToLine - FromLine);
 			writer.WriteBoolean(IsStepStop);
 		}
 
 		internal static SourceRef ReadBinary(BinDumpReader reader, int sourceID)
 		{
-			return new SourceRef(sourceID, reader.ReadVarInt32(), reader.ReadVarInt32(),
-					reader.ReadVarInt32(), reader.ReadVarInt32(), reader.ReadBoolean());
+			var fromChar = (int) reader.ReadVarUInt32();
+			int toChar = fromChar + reader.ReadVarInt32();
+			var fromLine = (int) reader.ReadVarUInt32();
+			int toLine = fromLine + reader.ReadVarInt32();
+
+			return new SourceRef(sourceID, fromChar, toChar, fromLine, toLine, reader.ReadBoolean());
 		}
 	}
 }
