@@ -45,15 +45,39 @@ namespace MoonSharp.Interpreter.IO
 
 		public void WriteVarUInt32(uint u)
 		{
-			do
+			if (u <= 127) 
 			{
-				var b = (byte) (u & 0x7f);
-				u >>= 7;
-				if (u != 0) {
-					b |= 0x80;
-				}
-				stream.WriteByte(b);
-			} while (u != 0);
+				stream.WriteByte((byte)u);
+			} 
+			else if (u <= 16511) 
+			{
+				u -= 128;
+				stream.WriteByte((byte)((u & 0x7f) | 0x80));
+				stream.WriteByte((byte)((u >> 7) & 0x7f));
+			} 
+			else if (u <= 2113662) 
+			{
+				u -= 16512;
+				stream.WriteByte((byte)((u & 0x7f) | 0x80));
+				stream.WriteByte((byte) (((u >> 7) & 0x7f) | 0x80));
+				stream.WriteByte((byte)((u >> 14) & 0x7f));
+			} 
+			else if (u <= 270549118)
+			{
+				u -= 2113663;
+				stream.WriteByte((byte)((u & 0x7f) | 0x80));
+				stream.WriteByte((byte)(((u >> 7) & 0x7f) | 0x80));
+				stream.WriteByte((byte)(((u >> 14) & 0x7f) | 0x80));
+				stream.WriteByte((byte)((u >> 21) & 0x7f));
+			}
+			else
+			{
+				stream.WriteByte((byte)((u & 0x7f) | 0x80));
+				stream.WriteByte((byte)(((u >> 7) & 0x7f) | 0x80));
+				stream.WriteByte((byte)(((u >> 14) & 0x7f) | 0x80));
+				stream.WriteByte((byte)(((u >> 21) & 0x7f) | 0x80));
+				stream.WriteByte((byte)((u >> 28) & 0x7f));
+			}
 		}
 
 		public void WriteVarInt32(int i)

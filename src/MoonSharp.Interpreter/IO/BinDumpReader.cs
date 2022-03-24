@@ -51,29 +51,39 @@ namespace MoonSharp.Interpreter.IO
 			int b = stream.ReadByte();
 			if (b == -1) throw new EndOfStreamException();
 			a = (uint) (b & 0x7f);
+			int extraCount = 0;
 			//first extra
 			if ((b & 0x80) == 0x80) {
 				b = stream.ReadByte();
 				if (b == -1) throw new EndOfStreamException();
 				a |= (uint) ((b & 0x7f) << 7);
+				extraCount++;
 			}
 			//second extra
 			if ((b & 0x80) == 0x80) {
 				b = stream.ReadByte();
 				if (b == -1) throw new EndOfStreamException();
 				a |= (uint) ((b & 0x7f) << 14);
+				extraCount++;
 			}
 			//third extra
 			if ((b & 0x80) == 0x80) {
 				b = stream.ReadByte();
 				if (b == -1) throw new EndOfStreamException();
 				a |= (uint) ((b & 0x7f) << 21);
+				extraCount++;
 			}
 			//fourth extra
 			if ((b & 0x80) == 0x80) {
 				b = stream.ReadByte();
 				if (b == -1) throw new EndOfStreamException();
 				a |= (uint) ((b & 0xf) << 28);
+				extraCount++;
+			}
+			switch (extraCount) {
+				case 1: a += 128; break;
+				case 2: a += 16512; break;
+				case 3: a += 2113663; break;
 			}
 			return a;
 		}
