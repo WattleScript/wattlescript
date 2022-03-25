@@ -46,39 +46,41 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
 		[Test]
 		public void BinDump_VarUInt()
 		{
-			var stream = new MemoryStream();
-			var writer = new BinDumpWriter(stream);
-			var reader = new BinDumpReader(stream);
+			using (var stream = new MemoryStream())
+			{
+				var writer = new BinDumpWriter(stream);
+				var reader = new BinDumpReader(stream);
 
-			writer.WriteVarUInt32(12);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), 12);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(12);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), 12);
+				stream.Seek(0, SeekOrigin.Begin);
 
-			writer.WriteVarUInt32(200);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), 200);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(200);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), 200);
+				stream.Seek(0, SeekOrigin.Begin);
 
-			writer.WriteVarUInt32(17000);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), 17000);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(17000);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), 17000);
+				stream.Seek(0, SeekOrigin.Begin);
 
-			writer.WriteVarUInt32(2100000);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), 2100000);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(2100000);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), 2100000);
+				stream.Seek(0, SeekOrigin.Begin);
 
-			writer.WriteVarUInt32(200000118);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), 200000118);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(200000118);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), 200000118);
+				stream.Seek(0, SeekOrigin.Begin);
 
-			writer.WriteVarUInt32(uint.MaxValue - 1);
-			stream.Seek(0, SeekOrigin.Begin);
-			Assert.AreEqual(reader.ReadVarUInt32(), uint.MaxValue - 1);
-			stream.Seek(0, SeekOrigin.Begin);
+				writer.WriteVarUInt32(uint.MaxValue - 1);
+				stream.Seek(0, SeekOrigin.Begin);
+				Assert.AreEqual(reader.ReadVarUInt32(), uint.MaxValue - 1);
+				stream.Seek(0, SeekOrigin.Begin);
+			}
 		}
 
 
