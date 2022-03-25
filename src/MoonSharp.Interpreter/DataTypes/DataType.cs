@@ -64,6 +64,11 @@ namespace MoonSharp.Interpreter
 		/// A request to coroutine.yield
 		/// </summary>
 		YieldRequest,
+		
+		/// <summary>
+		/// A request to await a task
+		/// </summary>
+		AwaitRequest
 	}
 
 	/// <summary>

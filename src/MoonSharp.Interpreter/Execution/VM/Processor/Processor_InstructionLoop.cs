@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Debugging;
@@ -10,10 +11,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 	sealed partial class Processor
 	{
 		const int YIELD_SPECIAL_TRAP = -99;
+		const int YIELD_SPECIAL_AWAIT = -100;
 
 		internal long AutoYieldCounter = 0;
 
-		private DynValue Processing_Loop(int instructionPtr)
+		private DynValue Processing_Loop(int instructionPtr, bool canAwait = false)
 		{
 			// This is the main loop of the processor, has a weird control flow and needs to be as fast as possible.
 			// This sentence is just a convoluted way to say "don't complain about gotos".
@@ -124,8 +126,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 							break;
 						case OpCode.Call:
 						case OpCode.ThisCall:
-							instructionPtr = Internal_ExecCall(i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, i.String);
+							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, i.String);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
 							break;
 						case OpCode.Scalar:
 							m_ValueStack.Push(m_ValueStack.Pop().ToScalar());
@@ -258,6 +261,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 					throw ScriptRuntimeException.CannotYieldMain();
 				else
 					throw ScriptRuntimeException.CannotYield();
+				
+			yield_to_await:
+				DynValue awaitRequest = m_ValueStack.Pop().ToScalar();
+				return awaitRequest;
 
 			}
 			catch (InterpreterException ex)
@@ -659,7 +666,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 
 
-		private int Internal_ExecCall(int argsCount, int instructionPtr, CallbackFunction handler = null,
+		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
 			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
 		{
 			DynValue fn = m_ValueStack.Peek(argsCount);
@@ -715,13 +722,20 @@ namespace MoonSharp.Interpreter.Execution.VM
 					Flags = flags,
 				});
 
-				var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref), args, isMethodCall: thisCall);
+				var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
 				m_ValueStack.RemoveLast(argsCount + 1);
+				if (m_Script.Options.AutoAwait && 
+				    ret.Type == DataType.UserData &&
+				    ret.UserData?.Object is TaskWrapper tw)
+				{
+					ret = tw.@await(
+						new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, null);
+				}
 				m_ValueStack.Push(ret);
 
 				m_ExecutionStack.Pop();
 
-				return Internal_CheckForTailRequests(instructionPtr);
+				return Internal_CheckForTailRequests(canAwait, instructionPtr);
 			}
 			else if (fn.Type == DataType.Function)
 			{
@@ -755,7 +769,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				for (int i = argsCount; i >= 0; i--)
 					m_ValueStack.Push(tmp[i]);
 
-				return Internal_ExecCall(argsCount + 1, instructionPtr, handler, continuation);
+				return Internal_ExecCall(canAwait, argsCount + 1, instructionPtr, handler, continuation);
 			}
 
 			throw ScriptRuntimeException.AttemptToCallNonFunc(fn.Type, debugText);
@@ -806,7 +820,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				var argscnt = (int)(m_ValueStack.Pop().Number);
 				m_ValueStack.RemoveLast(argscnt + 1);
 				m_ValueStack.Push(retval);
-				retpoint = Internal_CheckForTailRequests(retpoint);
+				retpoint = Internal_CheckForTailRequests(false, retpoint);
 			}
 			else
 			{
@@ -822,7 +836,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 
 
-		private int Internal_CheckForTailRequests(int instructionPtr)
+		private int Internal_CheckForTailRequests(bool canAwait, int instructionPtr)
 		{
 			DynValue tail = m_ValueStack.Peek(0);
 
@@ -837,12 +851,19 @@ namespace MoonSharp.Interpreter.Execution.VM
 				for (int ii = 0; ii < tcd.Args.Length; ii++)
 					m_ValueStack.Push(tcd.Args[ii]);
 
-				return Internal_ExecCall(tcd.Args.Length, instructionPtr, tcd.ErrorHandler, tcd.Continuation, false, null, tcd.ErrorHandlerBeforeUnwind);
+				return Internal_ExecCall(canAwait, tcd.Args.Length, instructionPtr, tcd.ErrorHandler, tcd.Continuation, false, null, tcd.ErrorHandlerBeforeUnwind);
 			}
 			else if (tail.Type == DataType.YieldRequest)
 			{
 				m_SavedInstructionPtr = instructionPtr;
 				return YIELD_SPECIAL_TRAP;
+			} else if (tail.Type == DataType.AwaitRequest)
+			{
+				if (!canAwait)
+					throw new ScriptRuntimeException(
+						"Await Request happened when it shouldn't have. Internal state corruption?");
+				m_SavedInstructionPtr = instructionPtr;
+				return YIELD_SPECIAL_AWAIT;
 			}
 
 
@@ -1256,7 +1277,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					m_ValueStack.Push(obj);
 					m_ValueStack.Push(idx);
 					m_ValueStack.Push(value);
-					return Internal_ExecCall(3, instructionPtr);
+					return Internal_ExecCall(false, 3, instructionPtr);
 				}
 				else
 				{
@@ -1342,7 +1363,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					m_ValueStack.Push(h);
 					m_ValueStack.Push(obj);
 					m_ValueStack.Push(idx);
-					return Internal_ExecCall(2, instructionPtr);
+					return Internal_ExecCall(false, 2, instructionPtr);
 				}
 				else
 				{

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using MoonSharp.Interpreter.Interop.RegistrationPolicies;
 
 namespace MoonSharp.Interpreter.Interop.Converters
@@ -101,7 +102,8 @@ namespace MoonSharp.Interpreter.Interop.Converters
 		{
 			if(obj == null) return DynValue.Nil;
 			if (obj is DynValue _dyn) return _dyn;
-			
+			if (obj is Task task) return ObjectToDynValue(script, new TaskWrapper(task));
+				
 			DynValue v = TryObjectToSimpleDynValue(script, obj);
 
 			if (v.IsNotNil()) return v;

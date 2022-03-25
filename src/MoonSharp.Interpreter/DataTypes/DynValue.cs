@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using MoonSharp.Interpreter.Interop;
 using MoonSharp.Interpreter.Tree;
 
 namespace MoonSharp.Interpreter
@@ -65,7 +67,8 @@ namespace MoonSharp.Interpreter
 		/// Gets the tail call data.
 		/// </summary>
 		public UserData UserData { get { return m_Object as UserData; } }
-
+		
+		internal Task Task { get { return m_Object as Task; } }
 
 		/// <summary>
 		/// Creates a new writable value initialized to the specified boolean.
@@ -285,6 +288,15 @@ namespace MoonSharp.Interpreter
 			{
 				m_Object = new YieldRequest() { Forced = true },
 				m_Type = DataType.YieldRequest,
+			};
+		}
+
+		internal static DynValue NewAwaitReq(System.Threading.Tasks.Task task)
+		{
+			return new DynValue()
+			{
+				m_Object = task,
+				m_Type = DataType.AwaitRequest
 			};
 		}
 

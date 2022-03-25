@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using MoonSharp.Interpreter.CoreLib;
 using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Diagnostics;
 using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Execution.VM;
+using MoonSharp.Interpreter.Interop;
 using MoonSharp.Interpreter.IO;
 using MoonSharp.Interpreter.Platforms;
 using MoonSharp.Interpreter.Tree.Expressions;
@@ -344,6 +346,12 @@ namespace MoonSharp.Interpreter
 			return Call(func);
 		}
 
+		public Task<DynValue> DoStringAsync(string code, Table globalContext = null, string codeFriendlyName = null)
+		{
+			DynValue func = LoadString(code, globalContext, codeFriendlyName);
+			return CallAsync(func);
+		}
+
 
 		/// <summary>
 		/// Loads and executes a stream containing a Lua/MoonSharp script.
@@ -456,6 +464,11 @@ namespace MoonSharp.Interpreter
 			return Call(function, new DynValue[0]);
 		}
 
+		public Task<DynValue> CallAsync(DynValue function)
+		{
+			return CallAsync(function, new DynValue[0]);
+		}
+
 		/// <summary>
 		/// Calls the specified function.
 		/// </summary>
@@ -495,6 +508,39 @@ namespace MoonSharp.Interpreter
 			}
 
 			return m_MainProcessor.Call(function, args);
+		}
+
+		public Task<DynValue> CallAsync(DynValue function, params DynValue[] args)
+		{
+			this.CheckScriptOwnership(function);
+			this.CheckScriptOwnership(args);
+
+			if (function.Type != DataType.Function && function.Type != DataType.ClrFunction)
+			{
+				DynValue metafunction = m_MainProcessor.GetMetamethod(function, "__call");
+
+				if (metafunction.IsNotNil())
+				{
+					DynValue[] metaargs = new DynValue[args.Length + 1];
+					metaargs[0] = function;
+					for (int i = 0; i < args.Length; i++)
+						metaargs[i + 1] = args[i];
+
+					function = metafunction;
+					args = metaargs;
+				}
+				else
+				{
+					throw new ArgumentException("function is not a function and has no __call metamethod.");
+				}
+			}
+			else if (function.Type == DataType.ClrFunction)
+			{
+				return Task.FromResult(function.Callback.ClrCallback(
+					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, false)));
+			}
+
+			return m_MainProcessor.CallAsync(function, args);
 		}
 
 		/// <summary>
@@ -537,6 +583,29 @@ namespace MoonSharp.Interpreter
 		public DynValue Call(object function, params object[] args)
 		{
 			return Call(DynValue.FromObject(this, function), args);
+		}
+		
+		
+		public Task<DynValue> CallAsync(DynValue function, params object[] args)
+		{
+			DynValue[] dargs = new DynValue[args.Length];
+
+			for (int i = 0; i < dargs.Length; i++)
+				dargs[i] = DynValue.FromObject(this, args[i]);
+
+			return CallAsync(function, dargs);
+		}
+
+	
+		public  Task<DynValue> CallAsync(object function)
+		{
+			return CallAsync(DynValue.FromObject(this, function));
+		}
+
+		
+		public Task<DynValue> CallAsync(object function, params object[] args)
+		{
+			return CallAsync(DynValue.FromObject(this, function), args);
 		}
 
 		/// <summary>

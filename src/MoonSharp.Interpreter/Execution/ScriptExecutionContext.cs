@@ -12,6 +12,8 @@ namespace MoonSharp.Interpreter
 	{
 		Processor m_Processor;
 		CallbackFunction m_Callback;
+		
+		internal bool CanAwait { get; set; }
 
 		internal ScriptExecutionContext(Processor p, CallbackFunction callBackFunction, SourceRef sourceRef, bool isDynamic = false)
 		{

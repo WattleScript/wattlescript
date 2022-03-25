@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Debugging;
+using MoonSharp.Interpreter.Interop;
 
 namespace MoonSharp.Interpreter.Execution.VM
 {
@@ -79,6 +81,49 @@ namespace MoonSharp.Interpreter.Execution.VM
 				LeaveProcessor();
 			}
 		}
+		
+		public async Task<DynValue> CallAsync(DynValue function, DynValue[] args)
+		{
+			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
+
+			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
+				return coroutinesStack[coroutinesStack.Count - 1].Call(function, args);
+
+			EnterProcessor();
+
+			try
+			{
+				var stopwatch = this.m_Script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Execution);
+
+				m_CanYield = false;
+
+				try
+				{
+					
+					m_SavedInstructionPtr  = PushClrToScriptStackFrame(CallStackItemFlags.CallEntryPoint, function, args);
+					DynValue retval;
+					while ((retval = Processing_Loop(m_SavedInstructionPtr, true)).Type == DataType.AwaitRequest)
+					{
+						await retval.Task;
+						m_ValueStack.Push(TaskWrapper.TaskResultToDynValue(m_Script, retval.Task));
+					}
+					return retval;
+				}
+				finally
+				{
+					m_CanYield = true;
+
+					if (stopwatch != null)
+						stopwatch.Dispose();
+				}
+			}
+			finally
+			{
+				LeaveProcessor();
+			}
+		}
+		
+		
 
 		// pushes all what's required to perform a clr-to-script function call. function can be null if it's already
 		// at vstack top.

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using MoonSharp.Interpreter.Execution;
 
 namespace MoonSharp.Interpreter
@@ -100,6 +101,21 @@ namespace MoonSharp.Interpreter
 		public DynValue Call(params DynValue[] args)
 		{
 			return OwnerScript.Call(this, args);
+		}
+		
+		public Task<DynValue> CallAsync()
+		{
+			return OwnerScript.CallAsync(this);
+		}
+
+		public Task<DynValue> CallAsync(params object[] args)
+		{
+			return OwnerScript.CallAsync(this, args);
+		}
+
+		public Task<DynValue> CallAsync(params DynValue[] args)
+		{
+			return OwnerScript.CallAsync(this, args);
 		}
 
 
