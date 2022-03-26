@@ -583,8 +583,19 @@ namespace MoonSharp.Interpreter
 		{
 			return Call(DynValue.FromObject(this, function), args);
 		}
-		
-		
+
+		/// <summary>
+		/// Calls the specified function.
+		/// </summary>
+		/// <param name="function">The Lua/MoonSharp function to be called </param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
+		public DynValue Call(object function, params DynValue[] args)
+		{
+			return Call(DynValue.FromObject(this, function), args);
+		}
+
 		public Task<DynValue> CallAsync(DynValue function, params object[] args)
 		{
 			DynValue[] dargs = new DynValue[args.Length];
