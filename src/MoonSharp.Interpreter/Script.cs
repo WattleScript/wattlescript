@@ -381,7 +381,6 @@ namespace MoonSharp.Interpreter
 		public DynValue DoFile(string filename, Table globalContext = null, string codeFriendlyName = null)
 		{
 			DynValue func = LoadFile(filename, globalContext, codeFriendlyName);
-			File.WriteAllText("/home/cmcging/output.txt", m_ByteCode.Dump());
 			return Call(func);
 		}
 
