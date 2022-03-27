@@ -1,4 +1,5 @@
 using System.Threading;
+using MoonSharp.Interpreter.DataStructs;
 
 namespace MoonSharp.Interpreter.Execution
 {
@@ -7,7 +8,7 @@ namespace MoonSharp.Interpreter.Execution
     /// </summary>
     internal class Upvalue
     {
-        public DynValue[] ParentScope;
+        public FastStack<DynValue> ParentScope;
         public int Index;
         private DynValue storage;
         
@@ -15,7 +16,7 @@ namespace MoonSharp.Interpreter.Execution
         private int _refID;
         public int ReferenceID { get => _refID; }
         
-        public Upvalue(DynValue[] parentScope, int index)
+        public Upvalue(FastStack<DynValue> parentScope, int index)
         {
             ParentScope = parentScope;
             Index = index;
@@ -39,7 +40,7 @@ namespace MoonSharp.Interpreter.Execution
             return ref storage;
         }
 
-        public static Upvalue NewNil() => new Upvalue(new DynValue[1], 0);
-        public static Upvalue Create(DynValue obj) => new Upvalue(new DynValue[] {obj}, 0);
+        public static Upvalue NewNil() => new Upvalue();
+        public static Upvalue Create(DynValue obj) => new Upvalue() {storage = obj};
     }
 }

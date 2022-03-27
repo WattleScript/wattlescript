@@ -312,9 +312,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 			List<WatchItem> locals = new List<WatchItem>();
 			var top = this.m_ExecutionStack.Peek();
 
-			if (top != null && top.Debug_Symbols != null && top.LocalScope != null)
+			if (top != null && top.Debug_Symbols != null && top.LocalCount != 0)
 			{
-				int len = Math.Min(top.Debug_Symbols.Length, top.LocalScope.Length);
+				int len = Math.Min(top.Debug_Symbols.Length, top.LocalCount);
 
 				for (int i = 0; i < len; i++)
 				{
@@ -322,7 +322,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					{
 						IsError = false,
 						LValue = top.Debug_Symbols[i],
-						Value = top.LocalScope[i],
+						Value = m_ValueStack[top.BasePointer + i],
 						Name = top.Debug_Symbols[i].i_Name
 					});
 				}

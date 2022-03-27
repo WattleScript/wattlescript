@@ -16,9 +16,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 		public DynValue ErrorHandlerBeforeUnwind;
 
 		public int BasePointer;
+		public int LocalBase;
+		public int LocalCount;
 		public int ReturnAddress;
 		
-		public DynValue[] LocalScope;
 		public List<Upvalue> OpenClosures = new List<Upvalue>();
 		public ClosureContext ClosureScope;
 
