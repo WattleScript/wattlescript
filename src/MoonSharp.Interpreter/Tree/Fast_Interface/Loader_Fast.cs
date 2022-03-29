@@ -37,15 +37,18 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 			{
 				Scope = new BuildTimeScope(),
 				Source = source,
-				Lexer = new Lexer(source.SourceID, source.Code, true)
+				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.EnableCSyntax),
+				CSyntax = script.Options.EnableCSyntax
 			};
 		}
 
 		internal static int LoadChunk(Script script, SourceCode source, ByteCode bytecode)
 		{
 			ScriptLoadingContext lcontext = CreateLoadingContext(script, source);
+	#if !DEBUG_PARSER
 			try
 			{
+	#endif
 				Statement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
@@ -67,6 +70,8 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				//Debug_DumpByteCode(bytecode, source.SourceID);
 
 				return beginIp;
+#if !DEBUG_PARSER
+
 			}
 			catch (SyntaxErrorException ex)
 			{
@@ -74,6 +79,7 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				ex.Rethrow();
 				throw;
 			}
+#endif
 		}
 
 		internal static int LoadFunction(Script script, SourceCode source, ByteCode bytecode, bool usesGlobalEnv)

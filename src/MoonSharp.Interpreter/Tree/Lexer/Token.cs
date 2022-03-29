@@ -35,8 +35,17 @@ namespace MoonSharp.Interpreter.Tree
 			return string.Format("{0}  - {1} - '{2}'", tokenTypeString, location, this.Text ?? "");
 		}
 
-		public static TokenType? GetReservedTokenType(string reservedWord)
+		public static TokenType? GetReservedTokenType(string reservedWord, bool extended)
 		{
+			if (extended)
+			{
+				switch (reservedWord)
+				{
+					case "let":
+					case "var":
+						return TokenType.Local;
+				}
+			}
 			switch (reservedWord)
 			{
 				case "and":

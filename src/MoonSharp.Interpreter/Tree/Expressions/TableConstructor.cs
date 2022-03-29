@@ -22,11 +22,15 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				switch (lcontext.Lexer.Current.Type)
 				{
+					case TokenType.String:
+						if (lcontext.CSyntax) goto case TokenType.Name;
+						else goto default;
 					case TokenType.Name:
 						{
 							Token assign = lcontext.Lexer.PeekNext();
 
-							if (assign.Type == TokenType.Op_Assignment)
+							if (assign.Type == TokenType.Op_Assignment || 
+							    lcontext.CSyntax && assign.Type == TokenType.Colon)
 								StructField(lcontext);
 							else
 								ArrayField(lcontext);
@@ -75,7 +79,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			Expression key = new LiteralExpression(lcontext, DynValue.NewString(lcontext.Lexer.Current.Text));
 			lcontext.Lexer.Next();
 
-			CheckTokenType(lcontext, TokenType.Op_Assignment);
+			CheckTokenTypeEx(lcontext, TokenType.Op_Assignment, TokenType.Colon);
 
 			Expression value = Expr(lcontext);
 

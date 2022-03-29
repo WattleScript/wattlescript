@@ -23,21 +23,29 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public IfStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			while (lcontext.Lexer.Current.Type != TokenType.Else && lcontext.Lexer.Current.Type != TokenType.End)
+			bool openedCurly = false;
+			while (lcontext.Lexer.Current.Type != TokenType.Else 
+			       && lcontext.Lexer.Current.Type != TokenType.End 
+			       && lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly)
 			{
-				m_Ifs.Add(CreateIfBlock(lcontext));
+				m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
+			}
+			
+			if (openedCurly) {
+				m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+			}
+			
+			if (lcontext.Lexer.Current.Type == TokenType.Else) {
+				m_Else = CreateElseBlock(lcontext, out openedCurly);
+				m_End = CheckTokenType(lcontext, openedCurly ? TokenType.Brk_Close_Curly : TokenType.End).GetSourceRef();
+			} else if (!openedCurly) {
+				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			}
 
-			if (lcontext.Lexer.Current.Type == TokenType.Else)
-			{
-				m_Else = CreateElseBlock(lcontext);
-			}
-
-			m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			lcontext.Source.Refs.Add(m_End);
 		}
 
-		IfBlock CreateIfBlock(ScriptLoadingContext lcontext)
+		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool curlyOpen)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.If, TokenType.ElseIf);
 
@@ -46,8 +54,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			var ifblock = new IfBlock();
 
 			ifblock.Exp = Expression.Expr(lcontext);
-			ifblock.Source = type.GetSourceRef(CheckTokenType(lcontext, TokenType.Then));
-			ifblock.Block = new CompositeStatement(lcontext);
+			var open = CheckTokenType(lcontext, TokenType.Then, TokenType.Brk_Open_Curly);
+			curlyOpen = open.Type == TokenType.Brk_Open_Curly;
+			ifblock.Source = type.GetSourceRef(open);
+			ifblock.Block = new CompositeStatement(lcontext, open.Type == TokenType.Brk_Open_Curly ? BlockEndType.CloseCurly : BlockEndType.Normal);
 			ifblock.StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(ifblock.Source);
 
@@ -55,14 +65,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			return ifblock;
 		}
 
-		IfBlock CreateElseBlock(ScriptLoadingContext lcontext)
+		IfBlock CreateElseBlock(ScriptLoadingContext lcontext, out bool openedCurly)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.Else);
 
 			lcontext.Scope.PushBlock();
 
 			var ifblock = new IfBlock();
-			ifblock.Block = new CompositeStatement(lcontext);
+			openedCurly = lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly;
+			if(openedCurly) lcontext.Lexer.Next();
+			ifblock.Block = new CompositeStatement(lcontext, openedCurly ? BlockEndType.CloseCurly : BlockEndType.Normal);
 			ifblock.StackFrame = lcontext.Scope.PopBlock();
 			ifblock.Source = type.GetSourceRef();
 			lcontext.Source.Refs.Add(ifblock.Source);

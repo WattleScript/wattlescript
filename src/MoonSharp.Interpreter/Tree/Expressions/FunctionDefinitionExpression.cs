@@ -42,9 +42,37 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				CheckTokenType(lcontext, TokenType.Function);
 
 			// here lexer should be at the '(' or at the '|'
-			Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
+			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
 
-			List<string> paramnames = BuildParamList(lcontext, pushSelfParam, openRound, isLambda);
+			Token openRound;
+			List<string> paramnames;
+			bool openCurly = false;
+			if (isLambda)
+			{
+				openRound = lcontext.Lexer.Current;
+				lcontext.Lexer.Next();
+				if (openRound.Type == TokenType.Name)
+					paramnames = new List<string>(new[] {openRound.Text});
+				else
+					paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
+			}
+			else
+			{
+				openRound = CheckTokenType(lcontext, TokenType.Brk_Open_Round);
+				paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
+				if (lcontext.CSyntax && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly) {
+					openCurly = true;
+					lcontext.Lexer.Next();
+				}
+			}
+			
+			// skip arrow
+			bool arrowFunc = false;
+			if (lcontext.Lexer.Current.Type == TokenType.Arrow) {
+				arrowFunc = true;
+				lcontext.Lexer.Next();
+			}
+			
 			// here lexer is at first token of body
 
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
@@ -64,9 +92,9 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_ParamNames = DefineArguments(paramnames, lcontext);
 
 			if(isLambda)
-				m_Statement = CreateLambdaBody(lcontext);
+				m_Statement = CreateLambdaBody(lcontext, arrowFunc);
 			else
-				m_Statement = CreateBody(lcontext);
+				m_Statement = CreateBody(lcontext, openCurly);
 
 			m_StackFrame = lcontext.Scope.PopFunction();
 
@@ -76,36 +104,55 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		}
 
 
-		private Statement CreateLambdaBody(ScriptLoadingContext lcontext)
+		private Statement CreateLambdaBody(ScriptLoadingContext lcontext, bool arrowFunc)
 		{
 			Token start = lcontext.Lexer.Current;
-			Expression e = Expression.Expr(lcontext);
-			Token end = lcontext.Lexer.Current;
-			SourceRef sref = start.GetSourceRefUpTo(end);
-			Statement s = new ReturnStatement(lcontext, e, sref);
-			return s;
+			if (lcontext.CSyntax && start.Type == TokenType.Brk_Open_Curly)
+			{
+				lcontext.Lexer.Next();
+				return CreateBody(lcontext, true);
+			}
+			else
+			{
+				Expression e = Expression.Expr(lcontext);
+				Token end = lcontext.Lexer.Current;
+				SourceRef sref = start.GetSourceRefUpTo(end);
+				Statement s = new ReturnStatement(lcontext, e, sref);
+				return s;
+			}
 		}
 
 
-		private Statement CreateBody(ScriptLoadingContext lcontext)
+		private Statement CreateBody(ScriptLoadingContext lcontext, bool openCurly)
 		{
-			Statement s = new CompositeStatement(lcontext);
+			Statement s = new CompositeStatement(lcontext, openCurly ? BlockEndType.CloseCurly : BlockEndType.Normal);
 
-			if (lcontext.Lexer.Current.Type != TokenType.End)
-				throw new SyntaxErrorException(lcontext.Lexer.Current, "'end' expected near '{0}'", lcontext.Lexer.Current.Text)
+			if (openCurly) {
+				if(lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly) {
+					throw new SyntaxErrorException(lcontext.Lexer.Current, "'}' expected near '{0}'",
+						lcontext.Lexer.Current.Text)
+					{
+						IsPrematureStreamTermination = (lcontext.Lexer.Current.Type == TokenType.Eof)
+					};
+				}
+			}
+			else if (lcontext.Lexer.Current.Type != TokenType.End)
+			{
+				throw new SyntaxErrorException(lcontext.Lexer.Current, "'end' expected near '{0}'",
+					lcontext.Lexer.Current.Text)
 				{
 					IsPrematureStreamTermination = (lcontext.Lexer.Current.Type == TokenType.Eof)
 				};
-
+			}
 			m_End = lcontext.Lexer.Current.GetSourceRef();
 
 			lcontext.Lexer.Next();
 			return s;
 		}
 
-		private List<string> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken, bool isLambda)
+		private List<string> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
 		{
-			TokenType closeToken = isLambda ? TokenType.Lambda : TokenType.Brk_Close_Round;
+			TokenType closeToken = openBracketToken.Type == TokenType.Lambda ? TokenType.Lambda : TokenType.Brk_Close_Round;
 
 			List<string> paramnames = new List<string>();
 
@@ -139,7 +186,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				}
 				else
 				{
-					CheckMatch(lcontext, openBracketToken, closeToken, isLambda ? "|" : ")");
+					CheckMatch(lcontext, openBracketToken, closeToken, openBracketToken.Type == TokenType.Lambda ? "|" : ")");
 					break;
 				}
 			}

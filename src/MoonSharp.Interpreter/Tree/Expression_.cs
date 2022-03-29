@@ -164,6 +164,25 @@ namespace MoonSharp.Interpreter.Tree
 					return new FunctionDefinitionExpression(lcontext, false, false);
 				case TokenType.Lambda:
 					return new FunctionDefinitionExpression(lcontext, false, true);
+				case TokenType.Brk_Open_Round:
+				{
+					if (!lcontext.CSyntax) return PrimaryExp(lcontext);
+					//Scan to see if this is an arrow lambda
+					lcontext.Lexer.SavePos();
+					lcontext.Lexer.Next(); // skip bracket
+					while (lcontext.Lexer.PeekNext().Type != TokenType.Eof &&
+					       lcontext.Lexer.PeekNext().Type != TokenType.Brk_Close_Round &&
+					       lcontext.Lexer.PeekNext().Type != TokenType.Brk_Open_Round) {
+						lcontext.Lexer.Next();
+					}
+					lcontext.Lexer.Next();
+					bool arrowLambda = lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
+					lcontext.Lexer.RestorePos();
+					if (arrowLambda) 					
+						return new FunctionDefinitionExpression(lcontext, false, true);
+					else
+						return PrimaryExp(lcontext);
+				}
 				default:
 					return PrimaryExp(lcontext);
 			}
@@ -177,6 +196,11 @@ namespace MoonSharp.Interpreter.Tree
 		/// <returns></returns>
 		internal static Expression PrimaryExp(ScriptLoadingContext lcontext)
 		{
+			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow &&
+			    lcontext.Lexer.Current.Type == TokenType.Name)
+			{
+				return new FunctionDefinitionExpression(lcontext, false, true);
+			}
 			Expression e = PrefixExp(lcontext);
 
 			while (true)
@@ -217,8 +241,13 @@ namespace MoonSharp.Interpreter.Tree
 					case TokenType.Brk_Open_Round:
 					case TokenType.String:
 					case TokenType.String_Long:
-					case TokenType.Brk_Open_Curly:
 					case TokenType.Brk_Open_Curly_Shared:
+						e = new FunctionCallExpression(lcontext, e, thisCallName);
+						break;
+					case TokenType.Brk_Open_Curly:
+						if (e is AdjustmentExpression) {
+							return e;
+						}
 						e = new FunctionCallExpression(lcontext, e, thisCallName);
 						break;
 					default:

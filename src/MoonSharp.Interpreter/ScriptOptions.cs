@@ -102,6 +102,11 @@ namespace MoonSharp.Interpreter
 		/// When set to false, the call returns a task object that can have await() called on it.
 		/// </summary>
 		public bool AutoAwait { get; set; }
+		
+		/// <summary>
+		/// Gets or sets a value indicating whether or not C Syntax extensions are enabled.
+		/// </summary>
+		public bool EnableCSyntax { get; set; }
 
 	}
 }

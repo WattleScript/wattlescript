@@ -40,7 +40,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Scope.PushBlock();
 			m_VarName = lcontext.Scope.DefineLocal(nameToken.Text);
 			m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
-			m_InnerBlock = new CompositeStatement(lcontext);
+			m_InnerBlock = new CompositeStatement(lcontext, BlockEndType.Normal);
 			m_RefEnd = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			m_StackFrame = lcontext.Scope.PopBlock();
 

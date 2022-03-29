@@ -11,6 +11,8 @@ namespace MoonSharp.Interpreter.Execution
 		public bool Anonymous { get; set; }
 		public bool IsDynamicExpression { get; set; }
 		public Lexer Lexer { get; set; }
+		
+		public bool CSyntax { get; set; }
 
 		public ScriptLoadingContext(Script s)
 		{

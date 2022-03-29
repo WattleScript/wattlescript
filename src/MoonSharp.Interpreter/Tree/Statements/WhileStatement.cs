@@ -26,7 +26,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			lcontext.Scope.PushBlock();
 			CheckTokenType(lcontext, TokenType.Do);
-			m_Block = new CompositeStatement(lcontext);
+			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 			m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			m_StackFrame = lcontext.Scope.PopBlock();
 

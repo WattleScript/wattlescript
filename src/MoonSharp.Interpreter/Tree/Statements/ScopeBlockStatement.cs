@@ -16,7 +16,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			m_Do = CheckTokenType(lcontext, TokenType.Do).GetSourceRef();
 
-			m_Block = new CompositeStatement(lcontext);
+			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 
 			m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 

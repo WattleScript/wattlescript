@@ -18,7 +18,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			m_Repeat = CheckTokenType(lcontext, TokenType.Repeat).GetSourceRef();
 
 			lcontext.Scope.PushBlock();
-			m_Block = new CompositeStatement(lcontext);
+			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 
 			Token until = CheckTokenType(lcontext, TokenType.Until);
 
