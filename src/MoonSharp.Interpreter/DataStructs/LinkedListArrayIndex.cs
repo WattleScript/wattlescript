@@ -20,11 +20,13 @@ namespace MoonSharp.Interpreter.DataStructs
         /// <param name="key">The key.</param>
         public override LinkedListNode<TValue> Find(int key)
         {
-            if (key >= 0)
+            if (key < 0)
             {
-                if (positive != null && key < positive.Length)
-                    return positive[key];
+                return base.Find(key);
             }
+            
+            if (positive != null && key < positive.Length)
+                return positive[key];
             return base.Find(key);
         }
         
@@ -41,14 +43,12 @@ namespace MoonSharp.Interpreter.DataStructs
             if (node == null)
             {
                 Add(key, value);
-                return default(TValue);
+                return default;
             }
-            else
-            {
-                TValue val = node.Value;
-                node.Value = value;
-                return val;
-            }
+
+            TValue val = node.Value;
+            node.Value = value;
+            return val;
         }
 
         /// <summary>
@@ -92,15 +92,18 @@ namespace MoonSharp.Interpreter.DataStructs
         /// <param name="key">The key.</param>
         public override bool Remove(int key)
         {
-            if (key >= 0 && positive != null && key < positive.Length)
+            if (key < 0 || positive == null || key >= positive.Length)
             {
-                if (positive[key] != null)
-                {
-                    positive[key] = null;
-                    return true;
-                }
+                return base.Remove(key);
             }
-            return base.Remove(key);
+
+            if (positive[key] == null)
+            {
+                return base.Remove(key);
+            }
+            
+            positive[key] = null;
+            return true;
         }
         
         /// <summary>
@@ -114,14 +117,12 @@ namespace MoonSharp.Interpreter.DataStructs
 
         public override bool ContainsKey(int key)
         {
-            if (key >= 0 && positive != null && key < positive.Length)
+            if (key < 0 || positive == null || key >= positive.Length)
             {
-                if (positive[key] != null)
-                {
-                    return true;
-                }
+                return base.ContainsKey(key);
             }
-            return base.ContainsKey(key);
+            
+            return positive[key] != null || base.ContainsKey(key);
         }
     }
 }

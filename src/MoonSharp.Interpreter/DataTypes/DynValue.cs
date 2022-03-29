@@ -21,54 +21,59 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Gets the type of the value.
 		/// </summary>
-		public DataType Type { get { return m_Type; } }
+		public DataType Type => m_Type;
+		
 		/// <summary>
 		/// Gets the function (valid only if the <see cref="Type"/> is <see cref="DataType.Function"/>)
 		/// </summary>
-		public Closure Function { get { return m_Object as Closure; } }
+		public Closure Function => m_Object as Closure;
 		/// <summary>
 		/// Gets the numeric value (valid only if the <see cref="Type"/> is <see cref="DataType.Number"/>)
 		/// </summary>
-		public double Number { get { return m_Number; } }
+		public double Number => m_Number;
+		/// <summary>
+		/// Gets the numeric value casted to int. Shorthand for (int)Number (valid only if the <see cref="Type"/> is <see cref="DataType.Number"/>)
+		/// </summary>
+		public int Int => (int) Number;
 		/// <summary>
 		/// Gets the values in the tuple (valid only if the <see cref="Type"/> is Tuple).
 		/// This field is currently also used to hold arguments in values whose <see cref="Type"/> is <see cref="DataType.TailCallRequest"/>.
 		/// </summary>
-		public DynValue[] Tuple { get { return m_Object as DynValue[]; } }
+		public DynValue[] Tuple => m_Object as DynValue[];
 		/// <summary>
 		/// Gets the coroutine handle. (valid only if the <see cref="Type"/> is Thread).
 		/// </summary>
-		public Coroutine Coroutine { get { return m_Object as Coroutine; } }
+		public Coroutine Coroutine => m_Object as Coroutine;
 		/// <summary>
 		/// Gets the table (valid only if the <see cref="Type"/> is <see cref="DataType.Table"/>)
 		/// </summary>
-		public Table Table { get { return m_Object as Table; } }
+		public Table Table => m_Object as Table;
 		/// <summary>
 		/// Gets the boolean value (valid only if the <see cref="Type"/> is <see cref="DataType.Boolean"/>)
 		/// </summary>
-		public bool Boolean { get { return Number != 0; } }
+		public bool Boolean => Number != 0;
 		/// <summary>
 		/// Gets the string value (valid only if the <see cref="Type"/> is <see cref="DataType.String"/>)
 		/// </summary>
-		public string String { get { return m_Object as string; } }
+		public string String => m_Object as string;
 		/// <summary>
 		/// Gets the CLR callback (valid only if the <see cref="Type"/> is <see cref="DataType.ClrFunction"/>)
 		/// </summary>
-		public CallbackFunction Callback { get { return m_Object as CallbackFunction; } }
+		public CallbackFunction Callback => m_Object as CallbackFunction;
 		/// <summary>
 		/// Gets the tail call data.
 		/// </summary>
-		public TailCallData TailCallData { get { return m_Object as TailCallData; } }
+		public TailCallData TailCallData => m_Object as TailCallData;
 		/// <summary>
 		/// Gets the yield request data.
 		/// </summary>
-		public YieldRequest YieldRequest { get { return m_Object as YieldRequest; } }
+		public YieldRequest YieldRequest => m_Object as YieldRequest;
 		/// <summary>
 		/// Gets the tail call data.
 		/// </summary>
-		public UserData UserData { get { return m_Object as UserData; } }
-		
-		internal Task Task { get { return m_Object as Task; } }
+		public UserData UserData => m_Object as UserData;
+
+		internal Task Task => m_Object as Task;
 
 		/// <summary>
 		/// Creates a new writable value initialized to the specified boolean.
@@ -323,7 +328,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public static DynValue NewTupleNested(params DynValue[] values)
 		{
-			if (!values.Any(v => v.Type == DataType.Tuple))
+			if (values.All(v => v.Type != DataType.Tuple))
 				return NewTuple(values);
 
 			if (values.Length == 1)

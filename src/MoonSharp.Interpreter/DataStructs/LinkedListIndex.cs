@@ -86,13 +86,13 @@ namespace MoonSharp.Interpreter.DataStructs
 		{
 			LinkedListNode<TValue> node = Find(key);
 
-			if (node != null)
+			if (node == null)
 			{
-				m_LinkedList.Remove(node);
-				return m_Map.Remove(key);
+				return false;
 			}
-
-			return false;
+			
+			m_LinkedList.Remove(node);
+			return m_Map.Remove(key);
 		}
 
 

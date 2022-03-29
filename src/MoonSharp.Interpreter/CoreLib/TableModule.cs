@@ -41,7 +41,7 @@ namespace MoonSharp.Interpreter.CoreLib
 			DynValue v = DynValue.NewTable(t);
 
 			for (int i = 0; i < args.Count; i++)
-				t.Set(i + 1, args[i]);
+				t.Set(i + executionContext.OwnerScript.Options.IndexTablesFrom, args[i]);
 
 			t.Set("n", DynValue.NewNumber(args.Count));
 
@@ -61,7 +61,7 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			List<DynValue> values = new List<DynValue>();
 
-			for (int i = 1; i <= end; i++)
+			for (int i = executionContext.OwnerScript.Options.IndexTablesFrom; i < end + executionContext.OwnerScript.Options.IndexTablesFrom; i++)
 				values.Add(vlist.Table.Get(i));
 
 			try
@@ -76,7 +76,7 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			for (int i = 0; i < values.Count; i++)
 			{
-				vlist.Table.Set(i + 1, values[i]);
+				vlist.Table.Set(i + executionContext.OwnerScript.Options.IndexTablesFrom, values[i]);
 			}
 
 			return vlist;
@@ -84,31 +84,26 @@ namespace MoonSharp.Interpreter.CoreLib
 
 		private static int SortComparer(ScriptExecutionContext executionContext, DynValue a, DynValue b, DynValue lt)
 		{
-			if (lt.IsNil())
-			{
-				lt = executionContext.GetBinaryMetamethod(a, b, "__lt");
-
-				if (lt.IsNil())
-				{
-					if (a.Type == DataType.Number && b.Type == DataType.Number)
-						return a.Number.CompareTo(b.Number);
-					if (a.Type == DataType.String && b.Type == DataType.String)
-						return a.String.CompareTo(b.String);
-
-					throw ScriptRuntimeException.CompareInvalidType(a, b);
-				}
-				else
-				{
-					return LuaComparerToClrComparer(
-						executionContext.GetScript().Call(lt, a, b),
-						executionContext.GetScript().Call(lt, b, a));
-				}
-			}
-			else
-			{
+			if (!lt.IsNil())
 				return LuaComparerToClrComparer(
 					executionContext.GetScript().Call(lt, a, b),
 					executionContext.GetScript().Call(lt, b, a));
+			
+			lt = executionContext.GetBinaryMetamethod(a, b, "__lt");
+
+			if (!lt.IsNil())
+				return LuaComparerToClrComparer(
+					executionContext.GetScript().Call(lt, a, b),
+					executionContext.GetScript().Call(lt, b, a));
+				
+			switch (a.Type)
+			{
+				case DataType.Number when b.Type == DataType.Number:
+					return a.Number.CompareTo(b.Number);
+				case DataType.String when b.Type == DataType.String:
+					return a.String.CompareTo(b.String);
+				default:
+					throw ScriptRuntimeException.CompareInvalidType(a, b);
 			}
 		}
 
@@ -144,20 +139,20 @@ namespace MoonSharp.Interpreter.CoreLib
 			if (vvalue.IsNil())
 			{
 				vvalue = vpos;
-				vpos = DynValue.NewNumber(len + 1);
+				vpos = DynValue.NewNumber(len + executionContext.OwnerScript.Options.IndexTablesFrom);
 			}
 
 			if (vpos.Type != DataType.Number)
 				throw ScriptRuntimeException.BadArgument(1, "table.insert", DataType.Number, vpos.Type, false);
 
-			int pos = (int)vpos.Number;
+			int pos = vpos.Int;
 
-			if (pos > len + 1 || pos < 1)
+			if (pos > len + 1 || pos < executionContext.OwnerScript.Options.IndexTablesFrom)
 				throw new ScriptRuntimeException("bad argument #2 to 'insert' (position out of bounds)");
 
 			for (int i = len; i >= pos; i--)
 			{
-				list.Set(i + 1, list.Get(i));
+				list.Set(i + executionContext.OwnerScript.Options.IndexTablesFrom, list.Get(i));
 			}
 
 			list.Set(pos, vvalue);
@@ -181,7 +176,7 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			int pos = vpos.IsNil() ? len : (int)vpos.Number;
 
-			if (pos >= len + 1 || (pos < 1 && len > 0))
+			if (pos >= len + 1 || (pos < executionContext.OwnerScript.Options.IndexTablesFrom && len > 0))
 				throw new ScriptRuntimeException("bad argument #1 to 'remove' (position out of bounds)");
 
 			for (int i = pos; i <= len; i++)
@@ -210,24 +205,15 @@ namespace MoonSharp.Interpreter.CoreLib
 
 			Table list = vlist.Table;
 			string sep = vsep.IsNil() ? "" : vsep.String;
-			int start = vstart.IsNilOrNan() ? 1 : (int)vstart.Number;
-			int end; 
-
-			if (vend.IsNilOrNan())
-			{
-				end = GetTableLength(executionContext, vlist);
-			}
-			else 
-			{
-				end = (int)vend.Number;
-			}
+			int start = vstart.IsNilOrNan() ? executionContext.OwnerScript.Options.IndexTablesFrom : vstart.Int;
+			int end = vend.IsNilOrNan() ? GetTableLength(executionContext, vlist) : vend.Int;
 
 			if (end < start)
 				return DynValue.NewString(string.Empty);
 
 			StringBuilder sb = new StringBuilder();
 
-			for (int i = start; i <= end; i++)
+			for (int i = start; i < end + executionContext.OwnerScript.Options.IndexTablesFrom; i++)
 			{
 				DynValue v = list.Get(i);
 
@@ -250,21 +236,20 @@ namespace MoonSharp.Interpreter.CoreLib
 		{
 			DynValue __len = executionContext.GetMetamethod(vlist, "__len");
 
-			if (__len.IsNotNil())
+			if (!__len.IsNotNil())
 			{
-				DynValue lenv = executionContext.GetScript().Call(__len, vlist);
-
-				double? len = lenv.CastToNumber();
-
-				if (len == null)
-					throw new ScriptRuntimeException("object length is not a number");
-
-				return (int)len;
+				return vlist.Table.Length;
 			}
-			else
-			{
-				return (int)vlist.Table.Length;
-			}
+			
+			DynValue lenv = executionContext.GetScript().Call(__len, vlist);
+
+			double? len = lenv.CastToNumber();
+
+			if (len == null)
+				throw new ScriptRuntimeException("object length is not a number");
+
+			return (int)len;
+
 		}
 	}
 
