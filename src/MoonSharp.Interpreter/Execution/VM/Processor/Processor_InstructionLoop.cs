@@ -204,7 +204,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
 							break;
 						case OpCode.IterPrep:
-							ExecIterPrep(i);
+							ExecIterPrep();
 							break;
 						case OpCode.IterUpd:
 							ExecIterUpd();
