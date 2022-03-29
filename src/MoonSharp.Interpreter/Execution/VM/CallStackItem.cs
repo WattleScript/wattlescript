@@ -19,11 +19,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 		public int LocalBase;
 		public int LocalCount;
 		public int ReturnAddress;
-		
-		public List<Upvalue> OpenClosures = new List<Upvalue>();
-		public ClosureContext ClosureScope;
 
+		public List<Upvalue> OpenClosures;
+		public ClosureContext ClosureScope;
 		public CallStackItemFlags Flags;
 	}
-
 }

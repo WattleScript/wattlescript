@@ -310,7 +310,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private List<WatchItem> Debugger_RefreshLocals(ScriptExecutionContext context)
 		{
 			List<WatchItem> locals = new List<WatchItem>();
-			var top = this.m_ExecutionStack.Peek();
+			var top = m_ExecutionStack.Peek();
 
 			if (top != null && top.Debug_Symbols != null && top.LocalCount != 0)
 			{

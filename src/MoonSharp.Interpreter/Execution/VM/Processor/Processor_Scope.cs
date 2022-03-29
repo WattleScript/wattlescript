@@ -14,12 +14,15 @@ namespace MoonSharp.Interpreter.Execution.VM
 			
 			if (to >= 0 && from >= 0 && to >= from)
 			{
-				for (int i = exStack.OpenClosures.Count - 1; i >= 0; i--)
+				if (exStack.OpenClosures != null)
 				{
-					if (exStack.OpenClosures[i].Index >= from && exStack.OpenClosures[i].Index <= to) {
-						exStack.OpenClosures[i].Close();
-						exStack.OpenClosures.RemoveAt(i);
-					}
+					for (int i = exStack.OpenClosures.Count - 1; i >= 0; i--)
+					{
+						if (exStack.OpenClosures[i].Index >= from && exStack.OpenClosures[i].Index <= to) {
+							exStack.OpenClosures[i].Close();
+							exStack.OpenClosures.RemoveAt(i);
+						}
+					}	
 				}
 				m_ValueStack.ClearSection(from, length);
 			}

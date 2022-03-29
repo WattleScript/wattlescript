@@ -311,7 +311,7 @@ namespace MoonSharp.Interpreter
 		public static DynValue NewTuple(params DynValue[] values)
 		{
 			if (values.Length == 0)
-				return DynValue.Nil;
+				return Nil;
 
 			if (values.Length == 1)
 				return values[0];
