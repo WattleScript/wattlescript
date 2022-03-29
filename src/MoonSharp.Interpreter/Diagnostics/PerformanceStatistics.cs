@@ -11,7 +11,7 @@ namespace MoonSharp.Interpreter.Diagnostics
 	{
 		IPerformanceStopwatch[] m_Stopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
 		static IPerformanceStopwatch[] m_GlobalStopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
-		bool m_Enabled = false;
+		private bool m_Enabled;
 
 
 		/// <summary>
@@ -22,28 +22,29 @@ namespace MoonSharp.Interpreter.Diagnostics
 		/// </value>
 		public bool Enabled
 		{
-			get { return m_Enabled; }
+			get => m_Enabled;
 			set
 			{
-				if (value && !m_Enabled)
+				switch (value)
 				{
-					if (m_GlobalStopwatches[(int)PerformanceCounter.AdaptersCompilation] == null)
-						m_GlobalStopwatches[(int)PerformanceCounter.AdaptersCompilation] = new GlobalPerformanceStopwatch(PerformanceCounter.AdaptersCompilation);
+					case true when !m_Enabled:
+					{
+						m_GlobalStopwatches[(int) PerformanceCounter.AdaptersCompilation] ??= new GlobalPerformanceStopwatch(PerformanceCounter.AdaptersCompilation);
 
-					for (int i = 0; i < (int)PerformanceCounter.LastValue; i++)
-						m_Stopwatches[i] = m_GlobalStopwatches[i] ?? new PerformanceStopwatch((PerformanceCounter)i);
-				}
-				else if (!value && m_Enabled)
-				{
-					m_Stopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
-					m_GlobalStopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
+						for (int i = 0; i < (int)PerformanceCounter.LastValue; i++)
+							m_Stopwatches[i] = m_GlobalStopwatches[i] ?? new PerformanceStopwatch((PerformanceCounter)i);
+						break;
+					}
+					case false when m_Enabled:
+						m_Stopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
+						m_GlobalStopwatches = new IPerformanceStopwatch[(int)PerformanceCounter.LastValue];
+						break;
 				}
 
 				m_Enabled = value;
 			}
 		}
-
-
+		
 		/// <summary>
 		/// Gets the result of the specified performance counter .
 		/// </summary>
@@ -52,7 +53,7 @@ namespace MoonSharp.Interpreter.Diagnostics
 		public PerformanceResult GetPerformanceCounterResult(PerformanceCounter pc)
 		{
 			var pco = m_Stopwatches[(int)pc];
-			return (pco != null) ? pco.GetResult() : null;
+			return pco?.GetResult();
 		}
 
 		/// <summary>
@@ -62,7 +63,7 @@ namespace MoonSharp.Interpreter.Diagnostics
 		internal IDisposable StartStopwatch(PerformanceCounter pc)
 		{
 			var pco = m_Stopwatches[(int)pc];
-			return (pco != null) ? pco.Start() : null;
+			return pco?.Start();
 		}
 
 		/// <summary>
@@ -72,7 +73,7 @@ namespace MoonSharp.Interpreter.Diagnostics
 		internal static IDisposable StartGlobalStopwatch(PerformanceCounter pc)
 		{
 			var pco = m_GlobalStopwatches[(int)pc];
-			return (pco != null) ? pco.Start() : null;
+			return pco?.Start();
 		}
 
 		/// <summary>
@@ -85,7 +86,7 @@ namespace MoonSharp.Interpreter.Diagnostics
 
 			for (int i = 0; i < (int)PerformanceCounter.LastValue; i++)
 			{
-				var res = this.GetPerformanceCounterResult((PerformanceCounter)i);
+				var res = GetPerformanceCounterResult((PerformanceCounter)i);
 				if (res != null)
 					sb.AppendLine(res.ToString());
 			}

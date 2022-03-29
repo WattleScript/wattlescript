@@ -11,23 +11,22 @@ namespace MoonSharp.Interpreter.Execution.VM
 	sealed partial class Processor
 	{
 		ByteCode m_RootChunk;
-
 		FastStack<DynValue> m_ValueStack = new FastStack<DynValue>(8192, 131072);
 		FastStack<CallStackItem> m_ExecutionStack = new FastStack<CallStackItem>(512, 131072);
 		List<Processor> m_CoroutinesStack;
-
 		Table m_GlobalTable;
 		Script m_Script;
-		Processor m_Parent = null;
+		Processor m_Parent;
 		CoroutineState m_State;
 		bool m_CanYield = true;
 		int m_SavedInstructionPtr = -1;
 		DebugContext m_Debug;
+		private int m_OwningThreadID = -1;
+		private int m_ExecutionNesting;
 
 		public Processor(Script script, Table globalContext, ByteCode byteCode)
 		{
 			m_CoroutinesStack = new List<Processor>();
-
 			m_Debug = new DebugContext();
 			m_RootChunk = byteCode;
 			m_GlobalTable = globalContext;
@@ -45,12 +44,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 			m_Parent = parentProcessor;
 			m_State = CoroutineState.NotStarted;
 		}
-
-
-
+		
 		public DynValue Call(DynValue function, DynValue[] args)
 		{
-			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
+			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : m_CoroutinesStack;
 
 			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
 				return coroutinesStack[coroutinesStack.Count - 1].Call(function, args);
@@ -59,7 +56,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			try
 			{
-				var stopwatch = this.m_Script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Execution);
+				IDisposable stopwatch = null;
+				if (m_Script.PerformanceStats.Enabled)
+				{
+					stopwatch = m_Script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Execution);
+				}
 
 				m_CanYield = false;
 
@@ -71,9 +72,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				finally
 				{
 					m_CanYield = true;
-
-					if (stopwatch != null)
-						stopwatch.Dispose();
+					stopwatch?.Dispose();
 				}
 			}
 			finally
@@ -84,23 +83,26 @@ namespace MoonSharp.Interpreter.Execution.VM
 		
 		public async Task<DynValue> CallAsync(DynValue function, DynValue[] args)
 		{
-			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
+			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : m_CoroutinesStack;
 
 			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
-				return coroutinesStack[coroutinesStack.Count - 1].Call(function, args);
+				return await coroutinesStack[coroutinesStack.Count - 1].CallAsync(function, args);
 
 			EnterProcessor();
 
 			try
 			{
-				var stopwatch = this.m_Script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Execution);
+				IDisposable stopwatch = null;
+				if (m_Script.PerformanceStats.Enabled)
+				{
+					stopwatch = m_Script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Execution);
+				}
 
 				m_CanYield = false;
 
 				try
 				{
-					
-					m_SavedInstructionPtr  = PushClrToScriptStackFrame(CallStackItemFlags.CallEntryPoint, function, args);
+					m_SavedInstructionPtr = PushClrToScriptStackFrame(CallStackItemFlags.CallEntryPoint, function, args);
 					DynValue retval;
 					while ((retval = Processing_Loop(m_SavedInstructionPtr, true)).Type == DataType.AwaitRequest)
 					{
@@ -112,9 +114,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				finally
 				{
 					m_CanYield = true;
-
-					if (stopwatch != null)
-						stopwatch.Dispose();
+					stopwatch?.Dispose();
 				}
 			}
 			finally
@@ -123,8 +123,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 			}
 		}
 		
-		
-
 		// pushes all what's required to perform a clr-to-script function call. function can be null if it's already
 		// at vstack top.
 		private int PushClrToScriptStackFrame(CallStackItemFlags flags, DynValue function, DynValue[] args)
@@ -154,28 +152,20 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return function.Function.EntryPointByteCodeLocation;
 		}
 
-
-		int m_OwningThreadID = -1;
-		int m_ExecutionNesting = 0;
-
 		private void LeaveProcessor()
 		{
 			m_ExecutionNesting -= 1;
 			m_OwningThreadID = -1;
 
-			if (m_Parent != null)
-			{
-				m_Parent.m_CoroutinesStack.RemoveAt(m_Parent.m_CoroutinesStack.Count - 1);
-			}
+			m_Parent?.m_CoroutinesStack.RemoveAt(m_Parent.m_CoroutinesStack.Count - 1);
 
-			if (m_ExecutionNesting == 0 && m_Debug != null && m_Debug.DebuggerEnabled 
-				&& m_Debug.DebuggerAttached != null)
+			if (m_ExecutionNesting == 0 && m_Debug is {DebuggerEnabled: true, DebuggerAttached: { }})
 			{
 				m_Debug.DebuggerAttached.SignalExecutionEnded();
 			}
 		}
 
-		int GetThreadId()
+		static int GetThreadId()
 		{
 			return Thread.CurrentThread.ManagedThreadId;
 		}
@@ -186,18 +176,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if (m_OwningThreadID >= 0 && m_OwningThreadID != threadID && m_Script.Options.CheckThreadAccess)
 			{
-				string msg = string.Format("Cannot enter the same MoonSharp processor from two different threads : {0} and {1}", m_OwningThreadID, threadID);
+				string msg = $"Cannot enter the same MoonSharp processor from two different threads : {m_OwningThreadID} and {threadID}";
 				throw new InvalidOperationException(msg);
 			}
 
 			m_OwningThreadID = threadID;
-
 			m_ExecutionNesting += 1;
-
-			if (m_Parent != null)
-			{
-				m_Parent.m_CoroutinesStack.Add(this);
-			}
+			m_Parent?.m_CoroutinesStack.Add(this);
 		}
 
 		internal SourceRef GetCoroutineSuspendedLocation()

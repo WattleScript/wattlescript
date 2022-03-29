@@ -387,8 +387,8 @@ namespace MoonSharp.Interpreter
 		{
 			Nil = new DynValue() {m_Type = DataType.Nil};
 			Void = new DynValue() {m_Type = DataType.Void};
-			True = DynValue.NewBoolean(true);
-			False = DynValue.NewBoolean(false);
+			True = NewBoolean(true);
+			False = NewBoolean(false);
 		}
 
 

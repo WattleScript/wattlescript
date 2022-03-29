@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace MoonSharp.Interpreter.Execution.VM
 {
@@ -7,7 +8,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private DynValue[] Internal_AdjustTuple(IList<DynValue> values)
 		{
 			if (values == null || values.Count == 0)
-				return new DynValue[0];
+				return Array.Empty<DynValue>();
 
 			if (values[values.Count - 1].Type == DataType.Tuple)
 			{

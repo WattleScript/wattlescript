@@ -4,9 +4,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 {
 	sealed partial class Processor
 	{
+		private CallStackItem Nil = new CallStackItem() {BasePointer = -100};
+		
 		private void ClearBlockData(Instruction I)
 		{
-			var exStack = this.m_ExecutionStack.Peek();
+			ref var exStack = ref m_ExecutionStack.Peek();
 			int from = exStack.LocalBase + I.NumVal;
 			int to = exStack.LocalBase + I.NumVal2;
 
@@ -78,7 +80,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					break;
 				case SymbolRefType.Upvalue:
 					{
-						var stackframe = GetTopNonClrFunction();
+						ref var stackframe = ref GetTopNonClrFunction();
 						if(stackframe.ClosureScope[symref.i_Index] == null)
 							stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
 						
@@ -94,19 +96,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 			}
 		}
 
-		CallStackItem GetTopNonClrFunction()
+		ref CallStackItem GetTopNonClrFunction()
 		{
-			CallStackItem stackframe = null;
-
 			for (int i = 0; i < m_ExecutionStack.Count; i++)
 			{
-				stackframe = m_ExecutionStack.Peek(i);
+				ref CallStackItem stackframe = ref m_ExecutionStack.Peek(i);
 
 				if (stackframe.ClrFunction == null)
-					break;
+					return ref stackframe;
 			}
 
-			return stackframe;
+			return ref Nil;
 		}
 
 
@@ -116,7 +116,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				CallStackItem stackframe = GetTopNonClrFunction();
 
-				if (stackframe != null)
+				if (stackframe.IsNil)
 				{
 					if (stackframe.Debug_Symbols != null)
 					{

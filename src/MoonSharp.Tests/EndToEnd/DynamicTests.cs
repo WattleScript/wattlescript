@@ -81,8 +81,8 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
 
 			DynValue res = Script.RunString(script);
 
-			Assert.AreEqual(DataType.Nil, res.Type);
-			//Assert.AreEqual(6, res.Number);
+			//Assert.AreEqual(DataType.Nil, res.Type);
+			Assert.AreEqual(5, res.Number);
 		}
 
 		[Test]

@@ -310,9 +310,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private List<WatchItem> Debugger_RefreshLocals(ScriptExecutionContext context)
 		{
 			List<WatchItem> locals = new List<WatchItem>();
-			var top = m_ExecutionStack.Peek();
+			ref var top = ref m_ExecutionStack.Peek();
 
-			if (top != null && top.Debug_Symbols != null && top.LocalCount != 0)
+			if (!top.IsNil && top.Debug_Symbols != null && top.LocalCount != 0)
 			{
 				int len = Math.Min(top.Debug_Symbols.Length, top.LocalCount);
 

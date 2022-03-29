@@ -431,7 +431,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				case SymbolRefType.Local:
 				{
-					var ex = m_ExecutionStack.Peek();
+					ref var ex = ref m_ExecutionStack.Peek();
 					for (int i = 0; i < ex.OpenClosures?.Count; i++) {
 						if (ex.OpenClosures[i].Index == ex.LocalBase + s.i_Index) return ex.OpenClosures[i];
 					}
@@ -563,7 +563,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private void ExecBeginFn(Instruction i)
 		{
-			CallStackItem cur = m_ExecutionStack.Peek();
+			ref CallStackItem cur = ref m_ExecutionStack.Peek();
 
 			cur.Debug_Symbols = i.SymbolList;
 			cur.LocalCount = i.NumVal;
@@ -646,113 +646,112 @@ namespace MoonSharp.Interpreter.Execution.VM
 				}
 			}
 		}
-		
-		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
-			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
+
+		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null, CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
 		{
-			DynValue fn = m_ValueStack.Peek(argsCount);
-			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
-
-			// if TCO threshold reached
-			if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
-				|| (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
+			while (true)
 			{
-				// and the "will-be" return address is valid (we don't want to crash here)
-				if (instructionPtr >= 0 && instructionPtr < m_RootChunk.Code.Count)
+				DynValue fn = m_ValueStack.Peek(argsCount);
+				CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
+
+				// if TCO threshold reached
+				if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1) || (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
 				{
-					Instruction I = m_RootChunk.Code[instructionPtr];
-
-					// and we are followed *exactly* by a RET 1
-					if (I.OpCode == OpCode.Ret && I.NumVal == 1)
+					// and the "will-be" return address is valid (we don't want to crash here)
+					if (instructionPtr >= 0 && instructionPtr < m_RootChunk.Code.Count)
 					{
-						CallStackItem csi = m_ExecutionStack.Peek();
+						Instruction I = m_RootChunk.Code[instructionPtr];
 
-						// if the current stack item has no "odd" things pending and neither has the new coming one..
-						if (csi.ClrFunction == null && csi.Continuation == null && csi.ErrorHandler == null
-							&& csi.ErrorHandlerBeforeUnwind.IsNil() && continuation == null && unwindHandler.IsNil() && handler == null)
+						// and we are followed *exactly* by a RET 1
+						if (I.OpCode == OpCode.Ret && I.NumVal == 1)
 						{
-							instructionPtr = PerformTCO(instructionPtr, argsCount);
-							flags |= CallStackItemFlags.TailCall;
+							ref CallStackItem csi = ref m_ExecutionStack.Peek();
+
+							// if the current stack item has no "odd" things pending and neither has the new coming one..
+							if (csi.ClrFunction == null && csi.Continuation == null && csi.ErrorHandler == null && csi.ErrorHandlerBeforeUnwind.IsNil() && continuation == null && unwindHandler.IsNil() && handler == null)
+							{
+								instructionPtr = PerformTCO(instructionPtr, argsCount);
+								flags |= CallStackItemFlags.TailCall;
+							}
 						}
 					}
 				}
-			}
-			
-			switch (fn.Type)
-			{
-				case DataType.ClrFunction:
+
+				switch (fn.Type)
 				{
-					//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
-					IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
-					// we expand tuples before callbacks
-					// args = DynValue.ExpandArgumentsToList(args);
-
-					// instructionPtr - 1: instructionPtr already points to the next instruction at this moment
-					// but we need the current instruction here
-					SourceRef sref = GetCurrentSourceRef(instructionPtr - 1);
-
-					m_ExecutionStack.Push(new CallStackItem()
+					case DataType.ClrFunction:
 					{
-						ClrFunction = fn.Callback,
-						ReturnAddress = instructionPtr,
-						CallingSourceRef = sref,
-						BasePointer = -1,
-						ErrorHandler = handler,
-						Continuation = continuation,
-						ErrorHandlerBeforeUnwind = unwindHandler,
-						Flags = flags,
-					});
+						//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
+						IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
+						// we expand tuples before callbacks
+						// args = DynValue.ExpandArgumentsToList(args);
 
-					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
-					m_ValueStack.RemoveLast(argsCount + 1);
-					if (m_Script.Options.AutoAwait && 
-					    ret.Type == DataType.UserData &&
-					    ret.UserData?.Object is TaskWrapper tw)
-					{
-						ret = tw.await(
-							new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, null);
+						// instructionPtr - 1: instructionPtr already points to the next instruction at this moment
+						// but we need the current instruction here
+						SourceRef sref = GetCurrentSourceRef(instructionPtr - 1);
+
+						m_ExecutionStack.Push(new CallStackItem()
+						{
+							ClrFunction = fn.Callback,
+							ReturnAddress = instructionPtr,
+							CallingSourceRef = sref,
+							BasePointer = -1,
+							ErrorHandler = handler,
+							Continuation = continuation,
+							ErrorHandlerBeforeUnwind = unwindHandler,
+							Flags = flags,
+						});
+
+						var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, args, isMethodCall: thisCall);
+						m_ValueStack.RemoveLast(argsCount + 1);
+
+						if (m_Script.Options.AutoAwait && ret.Type == DataType.UserData && ret.UserData?.Object is TaskWrapper tw)
+						{
+							ret = tw.await(new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, null);
+						}
+
+						m_ValueStack.Push(ret);
+						m_ExecutionStack.Pop();
+
+						return Internal_CheckForTailRequests(canAwait, instructionPtr);
 					}
-					m_ValueStack.Push(ret);
-
-					m_ExecutionStack.Pop();
-
-					return Internal_CheckForTailRequests(canAwait, instructionPtr);
+					case DataType.Function:
+						m_ValueStack.Push(DynValue.NewNumber(argsCount));
+						m_ExecutionStack.Push(new CallStackItem()
+						{
+							BasePointer = m_ValueStack.Count,
+							ReturnAddress = instructionPtr,
+							Debug_EntryPoint = fn.Function.EntryPointByteCodeLocation,
+							CallingSourceRef = GetCurrentSourceRef(instructionPtr - 1), // See right above in GetCurrentSourceRef(instructionPtr - 1)
+							ClosureScope = fn.Function.ClosureContext,
+							ErrorHandler = handler,
+							Continuation = continuation,
+							ErrorHandlerBeforeUnwind = unwindHandler,
+							Flags = flags,
+						});
+						return fn.Function.EntryPointByteCodeLocation;
 				}
-				case DataType.Function:
-					m_ValueStack.Push(DynValue.NewNumber(argsCount));
-					m_ExecutionStack.Push(new CallStackItem()
-					{
-						BasePointer = m_ValueStack.Count,
-						ReturnAddress = instructionPtr,
-						Debug_EntryPoint = fn.Function.EntryPointByteCodeLocation,
-						CallingSourceRef = GetCurrentSourceRef(instructionPtr - 1), // See right above in GetCurrentSourceRef(instructionPtr - 1)
-						ClosureScope = fn.Function.ClosureContext,
-						ErrorHandler = handler,
-						Continuation = continuation,
-						ErrorHandlerBeforeUnwind = unwindHandler,
-						Flags = flags,
-					});
-					return fn.Function.EntryPointByteCodeLocation;
-			}
 
-			// fallback to __call metamethod
-			var m = GetMetamethod(fn, "__call");
+				// fallback to __call metamethod
+				var m = GetMetamethod(fn, "__call");
 
-			if (m.IsNotNil())
-			{
+				if (!m.IsNotNil())
+				{
+					throw ScriptRuntimeException.AttemptToCallNonFunc(fn.Type, debugText);
+				}
+				
 				DynValue[] tmp = new DynValue[argsCount + 1];
-				for (int i = 0; i < argsCount + 1; i++)
-					tmp[i] = m_ValueStack.Pop();
+				for (int i = 0; i < argsCount + 1; i++) tmp[i] = m_ValueStack.Pop();
 
 				m_ValueStack.Push(m);
 
-				for (int i = argsCount; i >= 0; i--)
-					m_ValueStack.Push(tmp[i]);
+				for (int i = argsCount; i >= 0; i--) m_ValueStack.Push(tmp[i]);
 
-				return Internal_ExecCall(canAwait, argsCount + 1, instructionPtr, handler, continuation);
+				argsCount += 1;
+				thisCall = false;
+				debugText = null;
+				unwindHandler = default;
 			}
-
-			throw ScriptRuntimeException.AttemptToCallNonFunc(fn.Type, debugText);
 		}
 
 		private int PerformTCO(int instructionPtr, int argsCount)
@@ -766,7 +765,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			// perform a fake RET
 			CallStackItem csi = PopToBasePointer();
 			int retpoint = csi.ReturnAddress;
-			var argscnt = (int)(m_ValueStack.Pop().Number);
+			var argscnt = m_ValueStack.Pop().Int;
 			m_ValueStack.RemoveLast(argscnt + 1);
 
 			// Re-push all cur args and func ptr
@@ -787,7 +786,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				{
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
-					var argscnt = (int)(m_ValueStack.Pop().Number);
+					var argscnt = m_ValueStack.Pop().Int;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(DynValue.Void);
 					break;
@@ -797,7 +796,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					var retval = m_ValueStack.Pop();
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
-					var argscnt = (int)(m_ValueStack.Pop().Number);
+					var argscnt = m_ValueStack.Pop().Int;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(retval);
 					retpoint = Internal_CheckForTailRequests(false, retpoint);
@@ -850,14 +849,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private int JumpBool(Instruction i, bool expectedValueForJump, int instructionPtr)
 		{
 			DynValue op = m_ValueStack.Pop().ToScalar();
-
 			return op.CastToBool() == expectedValueForJump ? i.NumVal : instructionPtr;
 		}
 
 		private int ExecShortCircuitingOperator(Instruction i, int instructionPtr)
 		{
 			bool expectedValToShortCircuit = i.OpCode == OpCode.JtOrPop;
-
 			DynValue op = m_ValueStack.Peek().ToScalar();
 
 			if (op.CastToBool() == expectedValToShortCircuit)
@@ -871,8 +868,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		
 		private int ExecAdd(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
@@ -889,8 +885,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecSub(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln - rn));
@@ -907,8 +902,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		
 		private int ExecMul(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln * rn));
@@ -925,8 +919,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecMod(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				var mod = ln - Math.Floor(ln / rn) * rn;
 				m_ValueStack.Pop();
@@ -944,8 +937,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private int ExecDiv(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln / rn));
@@ -962,8 +954,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		
 		private int ExecPower(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(Math.Pow(ln,rn)));
@@ -1016,7 +1007,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			}
 
 			// then attempt metatables for tables
-			if ((l.Type == DataType.Table) && (GetMetatable(l) != null) && (GetMetatable(l) == GetMetatable(r)))
+			if (l.Type == DataType.Table && GetMetatable(l) != null && GetMetatable(l) == GetMetatable(r))
 			{
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__eq", instructionPtr);
 				if (ip >= 0) return ip;
@@ -1066,7 +1057,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					break;
 				case DataType.String when r.Type == DataType.String:
 					m_ValueStack.Push(DynValue.False);
-					m_ValueStack.Push(DynValue.NewBoolean(l.String.CompareTo(r.String) <= 0));
+					m_ValueStack.Push(DynValue.NewBoolean(String.Compare(l.String, r.String, StringComparison.Ordinal) <= 0));
 					break;
 				default:
 				{
