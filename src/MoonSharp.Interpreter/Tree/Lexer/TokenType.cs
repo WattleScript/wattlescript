@@ -55,6 +55,14 @@ namespace MoonSharp.Interpreter.Tree
 		Op_Mul,
 		Op_MinusOrSub,
 		Op_Add,
+		Op_AddEq,
+		Op_SubEq,
+		Op_DivEq,
+		Op_ModEq,
+		Op_MulEq,
+		Op_PwrEq,
+		Op_ConcatEq,
+		
 		Comment,
 
 		String,

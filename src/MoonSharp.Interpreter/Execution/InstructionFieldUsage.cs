@@ -64,6 +64,7 @@ namespace MoonSharp.Interpreter.Execution
 					return InstructionFieldUsage.NumValAsCodeAddress;
 				case OpCode.Swap:
 				case OpCode.Clean:
+				case OpCode.CopyValue:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:

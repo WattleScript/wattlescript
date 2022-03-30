@@ -331,6 +331,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Copy, NumVal = numval });
 		}
+		
+		public int Emit_CopyValue(int numval, int tupleidx)
+		{
+			return AppendInstruction(new Instruction() { OpCode = OpCode.Copy, NumVal = numval, NumVal2 = tupleidx });
+		}
 
 		public int Emit_Swap(int p1, int p2)
 		{

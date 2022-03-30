@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.DataStructs;
+﻿using System;
+using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Execution;
 
 namespace MoonSharp.Interpreter.Tree.Expressions
@@ -49,9 +50,19 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		}
 
 
-		public void CompileAssignment(Execution.VM.ByteCode bc, int stackofs, int tupleidx)
+		public void CompileAssignment(Execution.VM.ByteCode bc, Operator op, int stackofs, int tupleidx)
 		{
-			bc.Emit_Store(m_Ref, stackofs, tupleidx);
+			if (op != Operator.NotAnOperator)
+			{				
+				bc.Emit_Load(m_Ref); //left
+				bc.Emit_CopyValue(stackofs + 1, tupleidx); //right
+				bc.Emit_Operator(BinaryOperatorExpression.OperatorToOpCode(op));
+				bc.Emit_Store(m_Ref, 0, 0);
+				bc.Emit_Pop();
+			}
+			else {
+				bc.Emit_Store(m_Ref, stackofs, tupleidx);
+			}
 		}
 
 		public override DynValue Eval(ScriptExecutionContext context)

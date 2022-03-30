@@ -13,6 +13,9 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		List<Expression> m_RValues;
 		SourceRef m_Ref;
 
+		public Operator AssignmentOp = Operator.NotAnOperator;
+		
+
 
 		public AssignmentStatement(ScriptLoadingContext lcontext, Token startToken)
 			: base(lcontext)
@@ -69,7 +72,44 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_LValues.Add(CheckVar(lcontext, e));
 			}
 
-			CheckTokenType(lcontext, TokenType.Op_Assignment);
+			if (lcontext.CSyntax) {
+				switch (lcontext.Lexer.Current.Type) {
+					case TokenType.Op_AddEq:
+						AssignmentOp = Operator.Add;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_SubEq:
+						AssignmentOp = Operator.Sub;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_MulEq:
+						AssignmentOp = Operator.Mul;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_DivEq:
+						AssignmentOp = Operator.Div;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_ModEq:
+						AssignmentOp = Operator.Mod;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_PwrEq:
+						AssignmentOp = Operator.Power;
+						lcontext.Lexer.Next();
+						break;
+					case TokenType.Op_ConcatEq:
+						AssignmentOp = Operator.StrConcat;
+						lcontext.Lexer.Next();
+						break;
+					default:
+						CheckTokenType(lcontext, TokenType.Op_Assignment);
+						break;
+				}
+			}
+			else {
+				CheckTokenType(lcontext, TokenType.Op_Assignment);
+			}
 
 			m_RValues = Expression.ExprList(lcontext);
 
@@ -100,7 +140,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				}
 
 				for (int i = 0; i < m_LValues.Count; i++)
-					m_LValues[i].CompileAssignment(bc,
+					m_LValues[i].CompileAssignment(bc, AssignmentOp,
 							Math.Max(m_RValues.Count - 1 - i, 0), // index of r-value
 							i - Math.Min(i, m_RValues.Count - 1)); // index in last tuple
 

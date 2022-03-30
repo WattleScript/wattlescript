@@ -58,6 +58,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.Copy:
 							m_ValueStack.Push(m_ValueStack.Peek(i.NumVal));
 							break;
+						case OpCode.CopyValue:
+							m_ValueStack.Push(GetStoreValue(i));
+							break;
 						case OpCode.Swap:
 							ExecSwap(i);
 							break;
@@ -414,7 +417,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			int stackofs = i.NumVal;
 			int tupleidx = i.NumVal2;
 
-			DynValue v = m_ValueStack.Peek(stackofs);
+			ref DynValue v = ref m_ValueStack.Peek(stackofs);
 
 			if (v.Type == DataType.Tuple)
 			{

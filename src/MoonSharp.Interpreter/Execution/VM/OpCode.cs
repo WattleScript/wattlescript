@@ -10,6 +10,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		// Stack ops and assignment
 		Pop,		// Discards the topmost n elements from the v-stack. 
 		Copy,		// Copies the n-th value of the stack on the top
+		CopyValue,  // Copies the n-th value of the stack on the top, fetching tupleidx from NumVal2
 		Swap,		// Swaps two entries relative to the v-stack
 		PushNil,	// Pushes nil to the v-stack
 		PushTrue,	// Pushes true to the v-stack

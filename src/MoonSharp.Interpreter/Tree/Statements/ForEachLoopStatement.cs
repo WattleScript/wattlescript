@@ -90,7 +90,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			// perform assignment of iteration result- stack : iterator-tuple, iteration result
 			for (int i = 0; i < m_NameExps.Length; i++)
-				m_NameExps[i].CompileAssignment(bc, 0, i);
+				m_NameExps[i].CompileAssignment(bc, Operator.NotAnOperator, 0, i);
 
 			// pops  - stack : iterator-tuple
 			bc.Emit_Pop();

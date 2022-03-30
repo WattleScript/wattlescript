@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.DataStructs;
+﻿using System;
+using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Execution.VM;
 
@@ -45,8 +46,16 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
-		public void CompileAssignment(ByteCode bc, int stackofs, int tupleidx)
+		public void CompileAssignment(ByteCode bc, Operator op, int stackofs, int tupleidx)
 		{
+			if (op != Operator.NotAnOperator)
+			{
+				Compile(bc); //left
+				bc.Emit_CopyValue(stackofs + 1, tupleidx); //right
+				bc.Emit_Operator(BinaryOperatorExpression.OperatorToOpCode(op));
+				stackofs = 0;
+				tupleidx = 0;
+			}
 			m_BaseExp.Compile(bc);
 
 			if (m_Name != null)
@@ -62,6 +71,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				m_IndexExp.Compile(bc);
 				bc.Emit_IndexSet(stackofs, tupleidx, isExpList: (m_IndexExp is ExprListExpression));
 			}
+
+			if (op != Operator.NotAnOperator) bc.Emit_Pop();
 		}
 
 		public override DynValue Eval(ScriptExecutionContext context)
