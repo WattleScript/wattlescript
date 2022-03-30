@@ -103,5 +103,12 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool AutoAwait { get; set; }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether tables are indexed from zero or one (default)
+		/// When set to 1, tables will be indexed from one
+		/// When set to 0, tables will be indexed from zero
+		/// Other values are not supported
+		/// </summary>
+		public int IndexTablesFrom { get; set; } = 1;
 	}
 }

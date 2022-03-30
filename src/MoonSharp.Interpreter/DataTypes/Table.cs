@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using MoonSharp.Interpreter.DataStructs;
 
 namespace MoonSharp.Interpreter
@@ -13,11 +14,11 @@ namespace MoonSharp.Interpreter
 		readonly LinkedListIndex<DynValue, TablePair> m_ValueMap;
 		readonly LinkedListIndex<string, TablePair> m_StringMap;
 		readonly LinkedListArrayIndex<TablePair> m_ArrayMap;
-		readonly Script m_Owner;
 
 		int m_InitArray = 0;
 		int m_CachedLength = -1;
 		bool m_ContainsNilEntries = false;
+		int m_IndexFrom => OwnerScript?.Options.IndexTablesFrom ?? 1;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Table"/> class.
@@ -29,7 +30,7 @@ namespace MoonSharp.Interpreter
 			m_StringMap = new LinkedListIndex<string, TablePair>(m_Values);
 			m_ArrayMap = new LinkedListArrayIndex<TablePair>(m_Values);
 			m_ValueMap = new LinkedListIndex<DynValue, TablePair>(m_Values);
-			m_Owner = owner;
+			OwnerScript = owner;
 		}
 
 		/// <summary>
@@ -42,17 +43,14 @@ namespace MoonSharp.Interpreter
 		{
 			for (int i = 0; i < arrayValues.Length; i++)
 			{
-				this.Set(DynValue.NewNumber(i + 1), arrayValues[i]);
+				Set(DynValue.NewNumber(i + m_IndexFrom), arrayValues[i]);
 			}
 		}
 
 		/// <summary>
 		/// Gets the script owning this resource.
 		/// </summary>
-		public Script OwnerScript
-		{
-			get { return m_Owner; }
-		}
+		public Script OwnerScript { get; }
 
 		/// <summary>
 		/// Removes all items from the Table.
@@ -69,15 +67,8 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Gets the integral key from a double.
 		/// </summary>
-		private int GetIntegralKey(double d)
-		{
-			int v = ((int)d);
-
-			if (d >= 1.0 && d == v)
-				return v;
-
-			return -1;
-		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int GetIntegralKey(int n) => n >= m_IndexFrom ? n : -1;
 
 		/// <summary>
 		/// Gets or sets the 
@@ -130,7 +121,7 @@ namespace MoonSharp.Interpreter
 			Table t = this;
 			key = (keys.Length > 0) ? keys[0] : null;
 
-			for (int i = 1; i < keys.Length; ++i)
+			for (int i = m_IndexFrom; i < keys.Length; ++i)
 			{
 				DynValue vt = t.RawGet(key);
 
@@ -146,6 +137,18 @@ namespace MoonSharp.Interpreter
 
 			return t;
 		}
+		
+		/// <summary>
+		/// Append the values to the table using the next available integer indexes.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public void Append(IEnumerable<DynValue> values)
+		{
+			foreach (DynValue value in values)
+			{
+				Append(value);
+			}
+		}
 
 		/// <summary>
 		/// Append the value to the table using the next available integer index.
@@ -154,7 +157,28 @@ namespace MoonSharp.Interpreter
 		public void Append(DynValue value)
 		{
 			this.CheckScriptOwnership(value);
-			PerformTableSet(m_ArrayMap, Length + 1, DynValue.NewNumber(Length + 1), value, true, Length + 1);
+			PerformTableSet(m_ArrayMap, Length + m_IndexFrom, DynValue.NewNumber(Length + m_IndexFrom), value, true, Length + m_IndexFrom);
+		}
+		
+		/// <summary>
+		/// Append the value to the table using the next available integer index.
+		/// </summary>
+		/// <param name="value">The value.</param>
+		public void Append(object value)
+		{
+			Append(DynValue.FromObject(OwnerScript, value));
+		}
+
+		/// <summary>
+		/// Append the values to the table using the next available integer indexes.
+		/// </summary>
+		/// <param name="values">The value.</param>
+		public void Append(IEnumerable<object> values)
+		{
+			foreach (object value in values)
+			{
+				Append(DynValue.FromObject(OwnerScript, value));	
+			}
 		}
 
 		#region Set
@@ -226,6 +250,16 @@ namespace MoonSharp.Interpreter
 			this.CheckScriptOwnership(value);
 			PerformTableSet(m_ArrayMap, key, DynValue.NewNumber(key), value, true, -1);
 		}
+		
+		/// <summary>
+		/// Sets the value associated to the specified key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="value">The value.</param>
+		public void Set(int key, object value)
+		{
+			Set(key, DynValue.FromObject(OwnerScript, value));
+		}
 
 		/// <summary>
 		/// Sets the value associated to the specified key.
@@ -250,9 +284,9 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.Number);
+				int idx = GetIntegralKey(key.CastToInt() ?? -1);
 
-				if (idx > 0)
+				if (idx >= m_IndexFrom)
 				{
 					Set(idx, value);
 					return;
@@ -397,8 +431,8 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.Number);
-				if (idx > 0)
+				int idx = GetIntegralKey(key.CastToInt() ?? -1);
+				if (idx >= m_IndexFrom)
 					return RawGet(idx);
 			}
 
@@ -488,8 +522,8 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.Number);
-				if (idx > 0)
+				int idx = GetIntegralKey(key.CastToInt() ?? -1);
+				if (idx >= m_IndexFrom)
 					return Remove(idx);
 			}
 
@@ -576,9 +610,9 @@ namespace MoonSharp.Interpreter
 
 			if (v.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(v.Number);
+				int idx = GetIntegralKey(v.CastToInt() ?? -1);
 
-				if (idx > 0)
+				if (idx >= m_IndexFrom)
 				{
 					return GetNextOf(m_ArrayMap.Find(idx));
 				}
@@ -616,8 +650,8 @@ namespace MoonSharp.Interpreter
 				{
 					m_CachedLength = 0;
 
-					for (int i = 1; m_ArrayMap.ContainsKey(i) && !m_ArrayMap.Find(i).Value.Value.IsNil(); i++)
-						m_CachedLength = i;
+					for (int i = m_IndexFrom; m_ArrayMap.ContainsKey(i) && !m_ArrayMap.Find(i).Value.Value.IsNil(); i++)
+						m_CachedLength++;
 				}
 
 				return m_CachedLength;
@@ -633,7 +667,14 @@ namespace MoonSharp.Interpreter
 			}
 			else
 			{
-				Set(++m_InitArray, val.ToScalar());
+				if (m_IndexFrom > 0)
+				{
+					Set(++m_InitArray, val.ToScalar());	
+				}
+				else
+				{
+					Set(m_InitArray++, val.ToScalar());	
+				}
 			}
 		}
 
