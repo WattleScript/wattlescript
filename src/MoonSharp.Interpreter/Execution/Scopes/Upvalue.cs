@@ -11,11 +11,10 @@ namespace MoonSharp.Interpreter.Execution
         public FastStack<DynValue> ParentScope;
         public int Index;
         private DynValue storage;
-        
         private static int s = 1;
         private int _refID;
-        public int ReferenceID { get => _refID; }
-        
+        public int ReferenceID => _refID;
+
         public Upvalue(FastStack<DynValue> parentScope, int index)
         {
             ParentScope = parentScope;

@@ -53,7 +53,8 @@ namespace MoonSharp.Interpreter
 				{
 					throw new ScriptRuntimeException("Attempt to perform operations with resources owned by different scripts.");
 				}
-				else if (containingResource.OwnerScript == null && itemResource.OwnerScript != null)
+				
+				if (containingResource.OwnerScript == null && itemResource.OwnerScript != null)
 				{
 					throw new ScriptRuntimeException("Attempt to perform operations with a script private resource on a shared resource.");
 				}

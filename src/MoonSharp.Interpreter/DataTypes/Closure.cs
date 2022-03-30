@@ -51,7 +51,6 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		internal ClosureContext ClosureContext { get; private set; }
 
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Closure"/> class.
 		/// </summary>
@@ -62,13 +61,8 @@ namespace MoonSharp.Interpreter
 		internal Closure(Script script, int idx, SymbolRef[] symbols, IEnumerable<Upvalue> resolvedLocals)
 		{
 			OwnerScript = script;
-
 			EntryPointByteCodeLocation = idx;
-
-			if (symbols.Length > 0)
-				ClosureContext = new ClosureContext(symbols, resolvedLocals);
-			else
-				ClosureContext = emptyClosure;
+			ClosureContext = symbols.Length > 0 ? new ClosureContext(symbols, resolvedLocals) : emptyClosure;
 		}
 
 		/// <summary>
@@ -117,15 +111,14 @@ namespace MoonSharp.Interpreter
 		{
 			return OwnerScript.CallAsync(this, args);
 		}
-
-
+		
 		/// <summary>
 		/// Gets a delegate wrapping calls to this scripted function
 		/// </summary>
 		/// <returns></returns>
 		public ScriptFunctionDelegate GetDelegate()
 		{
-			return args => this.Call(args).ToObject();
+			return args => Call(args).ToObject();
 		}
 
 		/// <summary>
@@ -135,7 +128,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public ScriptFunctionDelegate<T> GetDelegate<T>()
 		{
-			return args => this.Call(args).ToObject<T>();
+			return args => Call(args).ToObject<T>();
 		}
 
 		/// <summary>
@@ -175,14 +168,12 @@ namespace MoonSharp.Interpreter
 		{
 			int count = GetUpvaluesCount();
 
-			if (count == 0)
-				return UpvaluesType.None;
-			else if (count == 1 && GetUpvalueName(0) == WellKnownSymbols.ENV)
-				return UpvaluesType.Environment;
-			else
-				return UpvaluesType.Closure;
+			return count switch
+			{
+				0 => UpvaluesType.None,
+				1 when GetUpvalueName(0) == WellKnownSymbols.ENV => UpvaluesType.Environment,
+				_ => UpvaluesType.Closure
+			};
 		}
-
-
 	}
 }

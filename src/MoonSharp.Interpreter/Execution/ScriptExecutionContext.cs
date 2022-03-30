@@ -48,14 +48,13 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public object AdditionalData 
 		{
-			get { return (m_Callback != null) ? m_Callback.AdditionalData : null; }
+			get => m_Callback?.AdditionalData;
 			set 
 			{
 				if (m_Callback == null) throw new InvalidOperationException("Cannot set additional data on a context which has no callback");
 				m_Callback.AdditionalData = value; 
 			} 
 		}
-
 
 		/// <summary>
 		/// Gets the metatable associated with the given value.
@@ -66,8 +65,7 @@ namespace MoonSharp.Interpreter
 		{
 			return m_Processor.GetMetatable(value);
 		}
-
-
+		
 		/// <summary>
 		/// Gets the specified metamethod associated with the given value.
 		/// </summary>
@@ -84,9 +82,8 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public DynValue GetMetamethodTailCall(DynValue value, string metamethod, params DynValue[] args)
 		{
-			DynValue meta = this.GetMetamethod(value, metamethod);
-			if (meta.IsNil()) return meta;
-			return DynValue.NewTailCallReq(meta, args);
+			DynValue meta = GetMetamethod(value, metamethod);
+			return meta.IsNil() ? meta : DynValue.NewTailCallReq(meta, args);
 		}
 
 		/// <summary>
@@ -141,62 +138,63 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="ScriptRuntimeException">If the function yields, returns a tail call request with continuations/handlers or, of course, if it encounters errors.</exception>
 		public DynValue Call(DynValue func, params DynValue[] args)
 		{
-			if (func.Type == DataType.Function)
+			switch (func.Type)
 			{
-				return this.GetScript().Call(func, args);
-			}
-			else if (func.Type == DataType.ClrFunction)
-			{
-				while (true)
+				case DataType.Function:
+					return GetScript().Call(func, args);
+				case DataType.ClrFunction:
 				{
-					DynValue ret = func.Callback.Invoke(this, args, false);
+					while (true)
+					{
+						DynValue ret = func.Callback.Invoke(this, args, false);
 
-					if (ret.Type == DataType.YieldRequest)
-					{
-						throw ScriptRuntimeException.CannotYield();
-					}
-					else if (ret.Type == DataType.TailCallRequest)
-					{
-						var tail = ret.TailCallData;
+						switch (ret.Type)
+						{
+							case DataType.YieldRequest:
+								throw ScriptRuntimeException.CannotYield();
+							case DataType.TailCallRequest:
+							{
+								var tail = ret.TailCallData;
 
-						if (tail.Continuation != null || tail.ErrorHandler != null)
-						{
-							throw new ScriptRuntimeException("the function passed cannot be called directly. wrap in a script function instead.");
+								if (tail.Continuation != null || tail.ErrorHandler != null)
+								{
+									throw new ScriptRuntimeException("the function passed cannot be called directly. wrap in a script function instead.");
+								}
+
+								args = tail.Args;
+								func = tail.Function;
+								break;
+							}
+							default:
+								return ret;
 						}
-						else
-						{
-							args = tail.Args;
-							func = tail.Function;
-						}
-					}
-					else
-					{
-						return ret;
 					}
 				}
-			}
-			else
-			{
-				int maxloops = 10;
-
-				while (maxloops > 0)
+				default:
 				{
-					DynValue v = this.GetMetamethod(func, "__call");
+					int maxloops = GetScript()?.Options?.CallDepthLimit ?? 100;
 
-					if (v.IsNil())
+					while (maxloops > 0)
 					{
-						throw ScriptRuntimeException.AttemptToCallNonFunc(func.Type);
+						DynValue v = GetMetamethod(func, "__call");
+
+						if (v.IsNil())
+						{
+							throw ScriptRuntimeException.AttemptToCallNonFunc(func.Type);
+						}
+
+						func = v;
+
+						if (func.Type == DataType.Function || func.Type == DataType.ClrFunction)
+						{
+							return Call(func, args);
+						}
+
+						maxloops--;
 					}
 
-					func = v;
-
-					if (func.Type == DataType.Function || func.Type == DataType.ClrFunction)
-					{
-						return Call(func, args);
-					}
+					throw ScriptRuntimeException.LoopInCall();
 				}
-
-				throw ScriptRuntimeException.LoopInCall();
 			}
 		}
 
@@ -205,10 +203,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public DynValue EvaluateSymbol(SymbolRef symref)
 		{
-			if (symref == null)
-				return DynValue.Nil;
-
-			return m_Processor.GetGenericSymbol(symref);
+			return symref == null ? DynValue.Nil : m_Processor.GetGenericSymbol(symref);
 		}
 
 		/// <summary>
@@ -216,7 +211,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public DynValue EvaluateSymbolByName(string symbol)
 		{
-			return this.EvaluateSymbol(this.FindSymbolByName(symbol));
+			return EvaluateSymbol(FindSymbolByName(symbol));
 		}
 
 		/// <summary>
@@ -238,7 +233,7 @@ namespace MoonSharp.Interpreter
 
 				if (env.IsNil() || env.Type != DataType.Table)
 					return null;
-				else return env.Table;
+				return env.Table;
 			}
 		}
 
@@ -249,23 +244,15 @@ namespace MoonSharp.Interpreter
 		/// <param name="exception">The exception.</param>
 		public void PerformMessageDecorationBeforeUnwind(DynValue messageHandler, ScriptRuntimeException exception)
 		{
-			if (messageHandler.IsNotNil())
-				exception.DecoratedMessage = m_Processor.PerformMessageDecorationBeforeUnwind(messageHandler, exception.Message, CallingLocation);
-			else
-				exception.DecoratedMessage = exception.Message;
+			exception.DecoratedMessage = messageHandler.IsNotNil() ? m_Processor.PerformMessageDecorationBeforeUnwind(messageHandler, exception.Message, CallingLocation) : exception.Message;
 		}
-
-
+		
 		/// <summary>
 		/// Gets the script owning this resource.
 		/// </summary>
 		/// <value>
 		/// The script owning this resource.
 		/// </value>
-		public Script OwnerScript
-		{
-			get { return this.GetScript(); }
-		}
-
+		public Script OwnerScript => GetScript();
 	}
 }

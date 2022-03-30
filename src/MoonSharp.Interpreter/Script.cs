@@ -49,8 +49,8 @@ namespace MoonSharp.Interpreter
 
 			DefaultOptions = new ScriptOptions()
 			{
-				DebugPrint = s => { Script.GlobalOptions.Platform.DefaultPrint(s); },
-				DebugInput = s => { return Script.GlobalOptions.Platform.DefaultInput(s); },
+				DebugPrint = s => { GlobalOptions.Platform.DefaultPrint(s); },
+				DebugInput = s => GlobalOptions.Platform.DefaultInput(s),
 				CheckThreadAccess = true,
 				ScriptLoader = PlatformAutoDetector.GetDefaultScriptLoader(),
 				TailCallOptimizationThreshold = 65536
@@ -106,10 +106,7 @@ namespace MoonSharp.Interpreter
 		/// Gets the default global table for this script. Unless a different table is intentionally passed (or setfenv has been used)
 		/// execution uses this table.
 		/// </summary>
-		public Table Globals
-		{
-			get { return m_GlobalTable; }
-		}
+		public Table Globals => m_GlobalTable;
 
 		/// <summary>
 		/// Loads a string containing a Lua/MoonSharp function.
@@ -124,7 +121,7 @@ namespace MoonSharp.Interpreter
 		{
 			this.CheckScriptOwnership(globalTable);
 
-			string chunkName = string.Format("libfunc_{0}", funcFriendlyName ?? m_Sources.Count.ToString());
+			string chunkName = $"libfunc_{funcFriendlyName ?? m_Sources.Count.ToString()}";
 
 			SourceCode source = new SourceCode(chunkName, code, m_Sources.Count, this);
 
@@ -172,11 +169,11 @@ namespace MoonSharp.Interpreter
 			{
 				code = code.Substring(StringModule.BASE64_DUMP_HEADER.Length);
 				byte[] data = Convert.FromBase64String(code);
-				using (MemoryStream ms = new MemoryStream(data))
-					return LoadStream(ms, globalTable, codeFriendlyName);
+				using MemoryStream ms = new MemoryStream(data);
+				return LoadStream(ms, globalTable, codeFriendlyName);
 			}
 
-			string chunkName = string.Format("{0}", codeFriendlyName ?? "chunk_" + m_Sources.Count.ToString());
+			string chunkName = $"{codeFriendlyName ?? "chunk_" + m_Sources.Count.ToString()}";
 
 			SourceCode source = new SourceCode(codeFriendlyName ?? chunkName, code, m_Sources.Count, this);
 
@@ -207,32 +204,26 @@ namespace MoonSharp.Interpreter
 			
 			if (!Processor.IsDumpStream(stream))
 			{
-				using (StreamReader sr = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
-				{
-					string scriptCode = sr.ReadToEnd();
-					return LoadString(scriptCode, globalTable, codeFriendlyName);
-				}
+				using StreamReader sr = new StreamReader(stream, Encoding.UTF8, true, 4096, true);
+				string scriptCode = sr.ReadToEnd();
+				return LoadString(scriptCode, globalTable, codeFriendlyName);
 			}
 			else
 			{
-				string chunkName = string.Format("{0}", codeFriendlyName ?? "dump_" + m_Sources.Count.ToString());
+				string chunkName = $"{codeFriendlyName ?? "dump_" + m_Sources.Count.ToString()}";
 
 				SourceCode source = new SourceCode(codeFriendlyName ?? chunkName,
-					string.Format("-- This script was decoded from a binary dump - dump_{0}", m_Sources.Count),
+					$"-- This script was decoded from a binary dump - dump_{m_Sources.Count}",
 					m_Sources.Count, this);
 
 				m_Sources.Add(source);
 
-				bool hasUpvalues;
-				int address = m_MainProcessor.Undump(stream, m_Sources.Count - 1, globalTable ?? m_GlobalTable, out hasUpvalues);
+				int address = m_MainProcessor.Undump(stream, m_Sources.Count - 1, globalTable ?? m_GlobalTable, out bool hasUpvalues);
 
 				SignalSourceCodeChange(source);
 				SignalByteCodeChange();
 
-				if (hasUpvalues)
-					return MakeClosure(address, globalTable ?? m_GlobalTable);
-				else
-					return MakeClosure(address);
+				return hasUpvalues ? MakeClosure(address, globalTable ?? m_GlobalTable) : MakeClosure(address);
 			}
 		}
 
@@ -265,7 +256,6 @@ namespace MoonSharp.Interpreter
 				throw new ArgumentException("function arg has upvalues other than _ENV");
 
 			m_MainProcessor.Dump(stream, function.Function.EntryPointByteCodeLocation, upvaluesType == Closure.UpvaluesType.Environment, writeSourceRefs);
-			
 		}
 
 		/// <summary>
@@ -301,35 +291,31 @@ namespace MoonSharp.Interpreter
 
 			object code = Options.ScriptLoader.LoadFile(filename, globalContext ?? m_GlobalTable);
 
-			if (code is string)
+			switch (code)
 			{
-				return LoadString((string)code, globalContext, friendlyFilename ?? filename);
-			}
-			else if (code is byte[])
-			{
-				using (MemoryStream ms = new MemoryStream((byte[])code))
+				case string s:
+					return LoadString(s, globalContext, friendlyFilename ?? filename);
+				case byte[] bytes:
+				{
+					using MemoryStream ms = new MemoryStream(bytes);
 					return LoadStream(ms, globalContext, friendlyFilename ?? filename);
-			}
-			else if (code is Stream)
-			{
-				try
-				{
-					return LoadStream((Stream)code, globalContext, friendlyFilename ?? filename);
 				}
-				finally
-				{
-					((Stream)code).Dispose();
-				}
-			}
-			else
-			{
-				if (code == null)
+				case Stream stream:
+					try
+					{
+						return LoadStream(stream, globalContext, friendlyFilename ?? filename);
+					}
+					finally
+					{
+						stream.Dispose();
+					}
+					
+				case null:
 					throw new InvalidCastException("Unexpected null from IScriptLoader.LoadFile");
-				else
-					throw new InvalidCastException(string.Format("Unsupported return type from IScriptLoader.LoadFile : {0}", code.GetType()));
+				default:
+					throw new InvalidCastException($"Unsupported return type from IScriptLoader.LoadFile : {code.GetType()}");
 			}
 		}
-
 
 		/// <summary>
 		/// Loads and executes a string containing a Lua/MoonSharp script.
@@ -352,7 +338,6 @@ namespace MoonSharp.Interpreter
 			return CallAsync(func);
 		}
 
-
 		/// <summary>
 		/// Loads and executes a stream containing a Lua/MoonSharp script.
 		/// </summary>
@@ -368,7 +353,6 @@ namespace MoonSharp.Interpreter
 			return Call(func);
 		}
 
-
 		/// <summary>
 		/// Loads and executes a file containing a Lua/MoonSharp script.
 		/// </summary>
@@ -383,8 +367,7 @@ namespace MoonSharp.Interpreter
 			DynValue func = LoadFile(filename, globalContext, codeFriendlyName);
 			return Call(func);
 		}
-
-
+		
 		/// <summary>
 		/// Runs the specified file with all possible defaults for quick experimenting.
 		/// </summary>
@@ -423,7 +406,7 @@ namespace MoonSharp.Interpreter
 				Instruction? meta = m_MainProcessor.FindMeta(ref address);
 
 				// if we find the meta for a new chunk, we use the value in the meta for the _ENV upvalue
-				if ((meta != null) && (meta.Value.NumVal2 == (int)OpCodeMetadataType.ChunkEntrypoint))
+				if (meta is {NumVal2: (int)OpCodeMetadataType.ChunkEntrypoint})
 				{
 					c = new Closure(this, address,
 						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
@@ -431,7 +414,7 @@ namespace MoonSharp.Interpreter
 				}
 				else
 				{
-					c = new Closure(this, address, new SymbolRef[0], new Upvalue[0]);
+					c = new Closure(this, address, Array.Empty<SymbolRef>(), Array.Empty<Upvalue>());
 				}
 			}
 			else
@@ -536,7 +519,7 @@ namespace MoonSharp.Interpreter
 			else if (function.Type == DataType.ClrFunction)
 			{
 				return Task.FromResult(function.Callback.ClrCallback(
-					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, false)));
+					CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, false)));
 			}
 
 			return m_MainProcessor.CallAsync(function, args);
@@ -630,12 +613,12 @@ namespace MoonSharp.Interpreter
 		{
 			this.CheckScriptOwnership(function);
 
-			if (function.Type == DataType.Function)
-				return m_MainProcessor.Coroutine_Create(function.Function);
-			else if (function.Type == DataType.ClrFunction)
-				return DynValue.NewCoroutine(new Coroutine(function.Callback));
-			else
-				throw new ArgumentException("function is not of DataType.Function or DataType.ClrFunction");
+			return function.Type switch
+			{
+				DataType.Function => m_MainProcessor.Coroutine_Create(function.Function),
+				DataType.ClrFunction => DynValue.NewCoroutine(new Coroutine(function.Callback)),
+				_ => throw new ArgumentException("function is not of DataType.Function or DataType.ClrFunction")
+			};
 		}
 
 		/// <summary>
@@ -660,8 +643,8 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool DebuggerEnabled
 		{
-			get { return m_MainProcessor.DebuggerEnabled; }
-			set { m_MainProcessor.DebuggerEnabled = value; }
+			get => m_MainProcessor.DebuggerEnabled;
+			set => m_MainProcessor.DebuggerEnabled = value;
 		}
 
 
@@ -690,21 +673,15 @@ namespace MoonSharp.Interpreter
 		{
 			return m_Sources[sourceCodeID];
 		}
-
-
+		
 		/// <summary>
 		/// Gets the source code count.
 		/// </summary>
 		/// <value>
 		/// The source code count.
 		/// </value>
-		public int SourceCodeCount
-		{
-			get { return m_Sources.Count; }
-		}
-
-
-
+		public int SourceCodeCount => m_Sources.Count;
+		
 		/// <summary>
 		/// Loads a module as per the "require" Lua function. http://www.lua.org/pil/8.1.html
 		/// </summary>
@@ -725,8 +702,6 @@ namespace MoonSharp.Interpreter
 			DynValue func = LoadFile(filename, globalContext, filename);
 			return func;
 		}
-
-
 
 		/// <summary>
 		/// Gets a type metatable.
@@ -760,8 +735,7 @@ namespace MoonSharp.Interpreter
 			else
 				throw new ArgumentException("Specified type not supported : " + type.ToString());
 		}
-
-
+		
 		/// <summary>
 		/// Warms up the parser/lexer structures so that MoonSharp operations start faster.
 		/// </summary>
@@ -770,8 +744,7 @@ namespace MoonSharp.Interpreter
 			Script s = new Script(CoreModules.Basic);
 			s.LoadString("return 1;");
 		}
-
-
+		
 		/// <summary>
 		/// Creates a new dynamic expression.
 		/// </summary>
@@ -828,15 +801,12 @@ namespace MoonSharp.Interpreter
 			subproduct = (subproduct != null) ? (subproduct + " ") : "";
 
 			StringBuilder sb = new StringBuilder();
-			sb.AppendLine(string.Format("MoonSharp {0}{1} [{2}]", subproduct, Script.VERSION, Script.GlobalOptions.Platform.GetPlatformName()));
+			sb.AppendLine($"MoonSharp {subproduct}{VERSION} [{GlobalOptions.Platform.GetPlatformName()}]");
 			sb.AppendLine("Copyright (C) 2014-2022 MoonSharp Contributors");
 			sb.AppendLine("http://www.moonsharp.org");
 			return sb.ToString();
 		}
 
-		Script IScriptPrivateResource.OwnerScript
-		{
-			get { return this; }
-		}
+		Script IScriptPrivateResource.OwnerScript => this;
 	}
 }

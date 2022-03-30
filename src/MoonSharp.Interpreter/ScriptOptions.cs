@@ -15,18 +15,15 @@ namespace MoonSharp.Interpreter
 
 		internal ScriptOptions(ScriptOptions defaults)
 		{
-			this.DebugInput = defaults.DebugInput;
-			this.DebugPrint = defaults.DebugPrint;
-
-			this.UseLuaErrorLocations = defaults.UseLuaErrorLocations;
-			this.Stdin = defaults.Stdin;
-			this.Stdout = defaults.Stdout;
-			this.Stderr = defaults.Stderr;
-			this.TailCallOptimizationThreshold = defaults.TailCallOptimizationThreshold;
-
-			this.ScriptLoader = defaults.ScriptLoader;
-
-			this.CheckThreadAccess = defaults.CheckThreadAccess;
+			DebugInput = defaults.DebugInput;
+			DebugPrint = defaults.DebugPrint;
+			UseLuaErrorLocations = defaults.UseLuaErrorLocations;
+			Stdin = defaults.Stdin;
+			Stdout = defaults.Stdout;
+			Stderr = defaults.Stderr;
+			TailCallOptimizationThreshold = defaults.TailCallOptimizationThreshold;
+			ScriptLoader = defaults.ScriptLoader;
+			CheckThreadAccess = defaults.CheckThreadAccess;
 		}
 
 		/// <summary>
@@ -111,5 +108,10 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public int IndexTablesFrom { get; set; } = 1;
 
+		/// <summary>
+		/// Gets or sets maximum depth of nested calls
+		/// This applies to DynValue Call(DynValue func, params DynValue[] args) only
+		/// </summary>
+		public int CallDepthLimit { get; set; } = 100;
 	}
 }

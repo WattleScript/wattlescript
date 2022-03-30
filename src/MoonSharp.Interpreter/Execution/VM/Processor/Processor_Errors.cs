@@ -12,8 +12,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			}
 			return null;
 		}
-
-
+		
 		private void FillDebugData(InterpreterException ex, int ip)
 		{
 			// adjust IP
@@ -30,7 +29,5 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			ex.CallStack = Debugger_GetCallStack(sref);
 		}
-
-
 	}
 }

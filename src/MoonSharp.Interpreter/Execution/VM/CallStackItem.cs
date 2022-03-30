@@ -26,5 +26,4 @@ namespace MoonSharp.Interpreter.Execution.VM
 		public ClosureContext ClosureScope;
 		public CallStackItemFlags Flags;
 	}
-
 }

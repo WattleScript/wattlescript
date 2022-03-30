@@ -22,7 +22,6 @@ namespace MoonSharp.Interpreter
 		/// Gets the type of the value.
 		/// </summary>
 		public DataType Type => m_Type;
-		
 		/// <summary>
 		/// Gets the function (valid only if the <see cref="Type"/> is <see cref="DataType.Function"/>)
 		/// </summary>
@@ -266,8 +265,6 @@ namespace MoonSharp.Interpreter
 			};
 		}
 
-
-
 		/// <summary>
 		/// Creates a new request for a yield of the current coroutine.
 		/// </summary>
@@ -296,7 +293,7 @@ namespace MoonSharp.Interpreter
 			};
 		}
 
-		internal static DynValue NewAwaitReq(System.Threading.Tasks.Task task)
+		internal static DynValue NewAwaitReq(Task task)
 		{
 			return new DynValue()
 			{
@@ -350,8 +347,7 @@ namespace MoonSharp.Interpreter
 				m_Type = DataType.Tuple,
 			};
 		}
-
-
+		
 		/// <summary>
 		/// Creates a new userdata value
 		/// </summary>
@@ -363,7 +359,6 @@ namespace MoonSharp.Interpreter
 				m_Type = DataType.UserData,
 			};
 		}
-
 
 		/// <summary>
 		/// A preinitialized, readonly instance, equaling Void
@@ -382,7 +377,6 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public static DynValue False { get; private set; }
 
-
 		static DynValue()
 		{
 			Nil = new DynValue() {m_Type = DataType.Nil};
@@ -391,21 +385,17 @@ namespace MoonSharp.Interpreter
 			False = NewBoolean(false);
 		}
 
-
 		/// <summary>
 		/// Returns a string which is what it's expected to be output by the print function applied to this value.
 		/// </summary>
 		public string ToPrintString()
 		{
-			if (this.m_Object != null && this.m_Object is RefIdObject)
+			if (m_Object != null && m_Object is RefIdObject refid)
 			{
-				RefIdObject refid = (RefIdObject)m_Object;
+				string typeString = Type.ToLuaTypeString();
 
-				string typeString = this.Type.ToLuaTypeString();
-
-				if (m_Object is UserData)
+				if (m_Object is UserData ud)
 				{
-					UserData ud = (UserData)m_Object;
 					string str = ud.Descriptor.AsString(ud.Object);
 					if (str != null)
 						return str;
@@ -434,15 +424,12 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public string ToDebugPrintString()
 		{
-			if (this.m_Object != null && this.m_Object is RefIdObject)
+			if (m_Object != null && m_Object is RefIdObject refid)
 			{
-				RefIdObject refid = (RefIdObject)m_Object;
+				string typeString = Type.ToLuaTypeString();
 
-				string typeString = this.Type.ToLuaTypeString();
-
-				if (m_Object is UserData)
+				if (m_Object is UserData ud)
 				{
-					UserData ud = (UserData)m_Object;
 					string str = ud.Descriptor.AsString(ud.Object);
 					if (str != null)
 						return str;
@@ -463,8 +450,7 @@ namespace MoonSharp.Interpreter
 					return ToString();
 			}
 		}
-
-
+		
 		/// <summary>
 		/// Returns a <see cref="System.String" /> that represents this instance.
 		/// </summary>
@@ -486,7 +472,7 @@ namespace MoonSharp.Interpreter
 				case DataType.String:
 					return "\"" + String + "\"";
 				case DataType.Function:
-					return string.Format("(Function {0:X8})", Function.EntryPointByteCodeLocation);
+					return $"(Function {Function.EntryPointByteCodeLocation:X8})";
 				case DataType.ClrFunction:
 					return string.Format("(Function CLR)", Function);
 				case DataType.Table:
@@ -498,7 +484,7 @@ namespace MoonSharp.Interpreter
 				case DataType.UserData:
 					return "(UserData)";
 				case DataType.Thread:
-					return string.Format("(Coroutine {0:X8})", this.Coroutine.ReferenceID);
+					return $"(Coroutine {this.Coroutine.ReferenceID:X8})";
 				default:
 					return "(???)";
 			}
@@ -525,7 +511,7 @@ namespace MoonSharp.Interpreter
 					return baseValue ^ Number.GetHashCode();
 				default:
 					if (m_Object == null) return 0;
-					else return baseValue ^ m_Object.GetHashCode();
+					return baseValue ^ m_Object.GetHashCode();
 			}
 		}
 
@@ -540,11 +526,11 @@ namespace MoonSharp.Interpreter
 		{
 			if (!(obj is DynValue other)) return false;
 			
-			if ((other.Type == DataType.Nil && this.Type == DataType.Void)
-				|| (other.Type == DataType.Void && this.Type == DataType.Nil))
+			if ((other.Type == DataType.Nil && Type == DataType.Void)
+				|| (other.Type == DataType.Void && Type == DataType.Nil))
 				return true;
 
-			if (other.Type != this.Type) return false;
+			if (other.Type != Type) return false;
 
 
 			switch (Type)
@@ -576,7 +562,7 @@ namespace MoonSharp.Interpreter
 					return Coroutine == other.Coroutine;
 				case DataType.UserData:
 					{
-						UserData ud1 = this.UserData;
+						UserData ud1 = UserData;
 						UserData ud2 = other.UserData;
 
 						if (ud1 == null || ud2 == null)
@@ -606,15 +592,12 @@ namespace MoonSharp.Interpreter
 		public string CastToString()
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
-			if (rv.Type == DataType.Number)
+			return rv.Type switch
 			{
-				return rv.Number.ToString();
-			}
-			else if (rv.Type == DataType.String)
-			{
-				return rv.String;
-			}
-			return null;
+				DataType.Number => rv.Number.ToString(CultureInfo.InvariantCulture),
+				DataType.String => rv.String,
+				_ => null
+			};
 		}
 
 		/// <summary>
@@ -624,18 +607,12 @@ namespace MoonSharp.Interpreter
 		public double? CastToNumber()
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
-			if (rv.Type == DataType.Number)
+			return rv.Type switch
 			{
-				return rv.Number;
-			}
-			else if (rv.Type == DataType.String)
-			{
-				if (ToNumber(rv.String, out var n))
-				{
-					return n;
-				}
-			}
-			return null;
+				DataType.Number => rv.Number,
+				DataType.String when ToNumber(rv.String, out var n) => n,
+				_ => null
+			};
 		}
 
 		internal double AssertNumber(int stage)
@@ -648,20 +625,17 @@ namespace MoonSharp.Interpreter
 		public bool TryCastToNumber(out double d)
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
-			if (rv.Type == DataType.Number)
+			switch (rv.Type)
 			{
-				d = rv.Number;
-				return true;
-			}
-			else if (rv.Type == DataType.String)
-			{
-				if (ToNumber(rv.String, out d))
-				{
+				case DataType.Number:
+					d = rv.Number;
 					return true;
-				}
+				case DataType.String when ToNumber(rv.String, out d):
+					return true;
+				default:
+					d = 0.0;
+					return false;
 			}
-			d = 0.0;
-			return false;
 		}
 
 		public static bool ToNumber(string str, out double num)
@@ -716,7 +690,7 @@ namespace MoonSharp.Interpreter
 				negate = true;
 				s = s.Substring(1);
 			}
-			if ((s.Length < 3) || s[0] != '0' || char.ToUpperInvariant(s[1]) != 'X')
+			if (s.Length < 3 || s[0] != '0' || char.ToUpperInvariant(s[1]) != 'X')
 				return false;
 
 			s = s.Substring(2);
@@ -761,7 +735,7 @@ namespace MoonSharp.Interpreter
 			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Boolean)
 				return rv.Boolean;
-			else return (rv.Type != DataType.Nil && rv.Type != DataType.Void);
+			return rv.Type != DataType.Nil && rv.Type != DataType.Void;
 		}
 
 		/// <summary>
@@ -773,8 +747,7 @@ namespace MoonSharp.Interpreter
 		{
 			return m_Object as IScriptPrivateResource;
 		}
-
-
+		
 		/// <summary>
 		/// Converts a tuple to a scalar value. If it's already a scalar value, this function returns "this".
 		/// </summary>
@@ -784,7 +757,7 @@ namespace MoonSharp.Interpreter
 				return this;
 
 			if (Tuple.Length == 0)
-				return DynValue.Void;
+				return Void;
 
 			return Tuple[0].ToScalar();
 		}
@@ -798,9 +771,7 @@ namespace MoonSharp.Interpreter
 			}
 			return ref ScalarReference(ref d.Tuple[0]);
 		}
-
-
-
+		
 		/// <summary>
 		/// Gets the length of a string or table value.
 		/// </summary>
@@ -808,12 +779,12 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="ScriptRuntimeException">Value is not a table or string.</exception>
 		public DynValue GetLength()
 		{
-			if (this.Type == DataType.Table)
-				return DynValue.NewNumber(this.Table.Length);
-			if (this.Type == DataType.String)
-				return DynValue.NewNumber(this.String.Length);
-
-			throw new ScriptRuntimeException("Can't get length of type {0}", this.Type);
+			return Type switch
+			{
+				DataType.Table => NewNumber(Table.Length),
+				DataType.String => NewNumber(String.Length),
+				_ => throw new ScriptRuntimeException("Can't get length of type {0}", Type)
+			};
 		}
 
 		/// <summary>
@@ -821,7 +792,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool IsNil()
 		{
-			return this.Type == DataType.Nil || this.Type == DataType.Void;
+			return Type == DataType.Nil || Type == DataType.Void;
 		}
 
 		/// <summary>
@@ -829,7 +800,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool IsNotNil()
 		{
-			return this.Type != DataType.Nil && this.Type != DataType.Void;
+			return Type != DataType.Nil && Type != DataType.Void;
 		}
 
 		/// <summary>
@@ -837,7 +808,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool IsVoid()
 		{
-			return this.Type == DataType.Void;
+			return Type == DataType.Void;
 		}
 
 		/// <summary>
@@ -845,7 +816,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool IsNotVoid()
 		{
-			return this.Type != DataType.Void;
+			return Type != DataType.Void;
 		}
 
 		/// <summary>
@@ -853,11 +824,9 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public bool IsNilOrNan()
 		{
-			return (this.Type == DataType.Nil) || (this.Type == DataType.Void) || (this.Type == DataType.Number && double.IsNaN(this.Number));
+			return Type == DataType.Nil || Type == DataType.Void || Type == DataType.Number && double.IsNaN(Number);
 		}
-
 		
-
 		/// <summary>
 		/// Creates a new DynValue from a CLR object
 		/// </summary>
@@ -866,7 +835,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public static DynValue FromObject(Script script, object obj)
 		{
-			return MoonSharp.Interpreter.Interop.Converters.ClrToScriptConversions.ObjectToDynValue(script, obj);
+			return Interop.Converters.ClrToScriptConversions.ObjectToDynValue(script, obj);
 		}
 
 		/// <summary>
@@ -874,7 +843,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public object ToObject()
 		{
-			return MoonSharp.Interpreter.Interop.Converters.ScriptToClrConversions.DynValueToObject(this);
+			return Interop.Converters.ScriptToClrConversions.DynValueToObject(this);
 		}
 
 		/// <summary>
@@ -883,7 +852,7 @@ namespace MoonSharp.Interpreter
 		public object ToObject(Type desiredType)
 		{
 			//Contract.Requires(desiredType != null);
-			return MoonSharp.Interpreter.Interop.Converters.ScriptToClrConversions.DynValueToObjectOfType(this, desiredType, null, false);
+			return Interop.Converters.ScriptToClrConversions.DynValueToObjectOfType(this, desiredType, null, false);
 		}
 
 		/// <summary>
@@ -892,11 +861,7 @@ namespace MoonSharp.Interpreter
 		public T ToObject<T>()
 		{
 			T myObject = (T)ToObject(typeof(T));
-			if (myObject == null) {
-				return default(T);
-			}
-			
-			return myObject;
+			return myObject ?? default(T);
 		}
 
 #if HASDYNAMIC
@@ -924,40 +889,43 @@ namespace MoonSharp.Interpreter
 		/// to the specified type.</exception>
 		public DynValue CheckType(string funcName, DataType desiredType, int argNum = -1, TypeValidationFlags flags = TypeValidationFlags.Default)
 		{
-			if (this.Type == desiredType)
+			if (Type == desiredType)
 				return this;
 
-			bool allowNil = ((int)(flags & TypeValidationFlags.AllowNil) != 0);
+			bool allowNil = (int)(flags & TypeValidationFlags.AllowNil) != 0;
 
-			if (allowNil && this.IsNil())
+			if (allowNil && IsNil())
 				return this;
 
-			bool autoConvert = ((int)(flags & TypeValidationFlags.AutoConvert) != 0);
+			bool autoConvert = (int)(flags & TypeValidationFlags.AutoConvert) != 0;
 
 			if (autoConvert)
 			{
-				if (desiredType == DataType.Boolean)
-					return DynValue.NewBoolean(this.CastToBool());
-
-				if (desiredType == DataType.Number)
+				switch (desiredType)
 				{
-					double? v = this.CastToNumber();
-					if (v.HasValue)
-						return DynValue.NewNumber(v.Value);
-				}
-
-				if (desiredType == DataType.String)
-				{
-					string v = this.CastToString();
-					if (v != null)
-						return DynValue.NewString(v);
+					case DataType.Boolean:
+						return NewBoolean(CastToBool());
+					case DataType.Number:
+					{
+						double? v = CastToNumber();
+						if (v.HasValue)
+							return NewNumber(v.Value);
+						break;
+					}
+					case DataType.String:
+					{
+						string v = CastToString();
+						if (v != null)
+							return NewString(v);
+						break;
+					}
 				}
 			}
 
-			if (this.IsVoid())
+			if (IsVoid())
 				throw ScriptRuntimeException.BadArgumentNoValue(argNum, funcName, desiredType);
 
-			throw ScriptRuntimeException.BadArgument(argNum, funcName, desiredType, this.Type, allowNil);
+			throw ScriptRuntimeException.BadArgument(argNum, funcName, desiredType, Type, allowNil);
 		}
 
 		/// <summary>
@@ -970,22 +938,17 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public T CheckUserDataType<T>(string funcName, int argNum = -1, TypeValidationFlags flags = TypeValidationFlags.Default)
 		{
-			DynValue v = this.CheckType(funcName, DataType.UserData, argNum, flags);
-			bool allowNil = ((int)(flags & TypeValidationFlags.AllowNil) != 0);
+			DynValue v = CheckType(funcName, DataType.UserData, argNum, flags);
+			bool allowNil = (int)(flags & TypeValidationFlags.AllowNil) != 0;
 
 			if (v.IsNil())
-				return default(T);
+				return default;
 
 			object o = v.UserData.Object;
-			if (o != null && o is T)
-				return (T)o;
+			if (o is T t)
+				return t;
 
 			throw ScriptRuntimeException.BadArgumentUserData(argNum, funcName, typeof(T), o, allowNil);
 		}
-
 	}
-
-
-
-
 }

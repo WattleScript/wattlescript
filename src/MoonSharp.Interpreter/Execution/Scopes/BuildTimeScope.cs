@@ -9,8 +9,7 @@ namespace MoonSharp.Interpreter.Execution
 	{
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
-
-
+		
 		public void PushFunction(IClosureBuilder closureBuilder, bool hasVarArgs)
 		{
 			m_ClosureBuilders.Add(closureBuilder);
@@ -38,7 +37,6 @@ namespace MoonSharp.Interpreter.Execution
 			return last.GetRuntimeFrameData();
 		}
 
-
 		public SymbolRef Find(string name)
 		{
 			SymbolRef local = m_Frames.Last().Find(name);
@@ -52,7 +50,7 @@ namespace MoonSharp.Interpreter.Execution
 
 				if (symb != null)
 				{
-					symb = CreateUpValue(this, symb, i, m_Frames.Count - 2);
+					symb = CreateUpValue(symb, i, m_Frames.Count - 2);
 						
 					if (symb != null)
 						return symb;
@@ -70,20 +68,19 @@ namespace MoonSharp.Interpreter.Execution
 			SymbolRef env = Find(WellKnownSymbols.ENV);
 			return SymbolRef.Global(name, env);
 		}
-
-
+		
 		public void ForceEnvUpValue()
 		{
 			Find(WellKnownSymbols.ENV);
 		}
 
-		private SymbolRef CreateUpValue(BuildTimeScope buildTimeScope, SymbolRef symb, int closuredFrame, int currentFrame)
+		private SymbolRef CreateUpValue(SymbolRef symb, int closuredFrame, int currentFrame)
 		{
 			// it's a 0-level upvalue. Just create it and we're done.
 			if (closuredFrame == currentFrame)
 				return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
 
-			SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
+			SymbolRef upvalue = CreateUpValue(symb, closuredFrame, currentFrame - 1);
 
 			return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
 		}
@@ -112,6 +109,5 @@ namespace MoonSharp.Interpreter.Execution
 		{
 			m_Frames.Last().RegisterGoto(gotostat);
 		}
-
 	}
 }

@@ -13,8 +13,7 @@ namespace MoonSharp.Interpreter
 		/// The metamethod name (like '__div', '__ipairs', etc.)
 		/// </summary>
 		public string Name { get; private set; }
-
-
+		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MoonSharpPropertyAttribute"/> class.
 		/// </summary>

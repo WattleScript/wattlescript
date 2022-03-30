@@ -38,8 +38,6 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public IUserDataDescriptor Descriptor { get; private set; }
 
-
-
 		static UserData()
 		{
 			RegistrationPolicy = InteropRegistrationPolicy.Default;
@@ -75,7 +73,6 @@ namespace MoonSharp.Interpreter
 			return TypeDescriptorRegistry.RegisterType_Impl(type, accessMode, friendlyName, null);
 		}
 
-
 		/// <summary>
 		/// Registers a proxy type.
 		/// </summary>
@@ -103,9 +100,7 @@ namespace MoonSharp.Interpreter
 		{
 			return RegisterProxyType(new DelegateProxyFactory<TProxy, TTarget>(wrapDelegate), accessMode, friendlyName);
 		}
-
-
-
+		
 		/// <summary>
 		/// Registers a type with a custom userdata descriptor
 		/// </summary>
@@ -134,8 +129,7 @@ namespace MoonSharp.Interpreter
 		{
 			return TypeDescriptorRegistry.RegisterType_Impl(customDescriptor.Type, InteropAccessMode.Default, null, customDescriptor);
 		}
-
-
+		
 		/// <summary>
 		/// Registers all types marked with a MoonSharpUserDataAttribute that ar contained in an assembly.
 		/// </summary>
@@ -224,10 +218,7 @@ namespace MoonSharp.Interpreter
 			var descr = GetDescriptorForObject(o);
 			if (descr == null)
 			{
-				if (o is Type)
-					return CreateStatic((Type)o);
-
-				return DynValue.Nil;
+				return o is Type type ? CreateStatic(type) : DynValue.Nil;
 			}
 
 			return Create(o, descr);
@@ -274,8 +265,8 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public static IRegistrationPolicy RegistrationPolicy
 		{
-			get { return TypeDescriptorRegistry.RegistrationPolicy; }
-			set { TypeDescriptorRegistry.RegistrationPolicy = value; }
+			get => TypeDescriptorRegistry.RegistrationPolicy;
+			set => TypeDescriptorRegistry.RegistrationPolicy = value;
 		}
 
 		/// <summary>
@@ -287,8 +278,8 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="System.ArgumentException">InteropAccessMode is InteropAccessMode.Default</exception>
 		public static InteropAccessMode DefaultAccessMode
 		{
-			get { return TypeDescriptorRegistry.DefaultAccessMode; }
-			set { TypeDescriptorRegistry.DefaultAccessMode = value; }
+			get => TypeDescriptorRegistry.DefaultAccessMode;
+			set => TypeDescriptorRegistry.DefaultAccessMode = value;
 		}
 
 		/// <summary>
@@ -343,8 +334,7 @@ namespace MoonSharp.Interpreter
 		{
 			return TypeDescriptorRegistry.GetDescriptorForType(type, searchInterfaces);
 		}
-
-
+		
 		/// <summary>
 		/// Gets the best possible type descriptor for a specified CLR object.
 		/// </summary>
@@ -354,8 +344,7 @@ namespace MoonSharp.Interpreter
 		{
 			return TypeDescriptorRegistry.GetDescriptorForType(o.GetType(), true);
 		}
-
-
+		
 		/// <summary>
 		/// Gets a table with the description of registered types.
 		/// </summary>
@@ -368,9 +357,7 @@ namespace MoonSharp.Interpreter
 
 			foreach (var descpair in registeredTypesPairs)
 			{
-				IWireableDescriptor sd = descpair.Value as IWireableDescriptor;
-
-				if (sd != null)
+				if (descpair.Value is IWireableDescriptor sd)
 				{
 					DynValue t = DynValue.NewPrimeTable();
 					output.Table.Set(descpair.Key.FullName, t);
@@ -391,8 +378,5 @@ namespace MoonSharp.Interpreter
 			var registeredTypesPairs = useHistoricalData ? TypeDescriptorRegistry.RegisteredTypesHistory : TypeDescriptorRegistry.RegisteredTypes;
 			return registeredTypesPairs.Select(p => p.Value.Type);
 		}
-
-		
-
 	}
 }

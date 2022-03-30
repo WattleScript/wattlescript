@@ -19,7 +19,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return DynValue.NewCoroutine(new Coroutine(P));
 		}
 
-		public CoroutineState State { get { return m_State; } }
+		public CoroutineState State => m_State;
 		public Coroutine AssociatedCoroutine { get; set; }
 
 		public DynValue Coroutine_Resume(DynValue[] args)
@@ -33,21 +33,20 @@ namespace MoonSharp.Interpreter.Execution.VM
 				if (m_State != CoroutineState.NotStarted && m_State != CoroutineState.Suspended && m_State != CoroutineState.ForceSuspended)
 					throw ScriptRuntimeException.CannotResumeNotSuspended(m_State);
 
-				if (m_State == CoroutineState.NotStarted)
+				switch (m_State)
 				{
-					entrypoint = PushClrToScriptStackFrame(CallStackItemFlags.ResumeEntryPoint, DynValue.Nil, args);
-				}
-				else if (m_State == CoroutineState.Suspended)
-				{
-					m_ValueStack.Push(DynValue.NewTuple(args));
-					entrypoint = m_SavedInstructionPtr;
-				}
-				else if (m_State == CoroutineState.ForceSuspended)
-				{
-					if (args != null && args.Length > 0)
+					case CoroutineState.NotStarted:
+						entrypoint = PushClrToScriptStackFrame(CallStackItemFlags.ResumeEntryPoint, DynValue.Nil, args);
+						break;
+					case CoroutineState.Suspended:
+						m_ValueStack.Push(DynValue.NewTuple(args));
+						entrypoint = m_SavedInstructionPtr;
+						break;
+					case CoroutineState.ForceSuspended when args != null && args.Length > 0:
 						throw new ArgumentException("When resuming a force-suspended coroutine, args must be empty.");
-
-					entrypoint = m_SavedInstructionPtr;
+					case CoroutineState.ForceSuspended:
+						entrypoint = m_SavedInstructionPtr;
+						break;
 				}
 
 				m_State = CoroutineState.Running;
@@ -83,9 +82,5 @@ namespace MoonSharp.Interpreter.Execution.VM
 				LeaveProcessor();
 			}
 		}
-
-
-
 	}
-
 }

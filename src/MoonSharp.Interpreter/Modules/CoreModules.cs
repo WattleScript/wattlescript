@@ -12,7 +12,6 @@ namespace MoonSharp.Interpreter
 		/// Value used to specify no modules to be loaded (equals 0).
 		/// </summary>
 		None = 0,
-
 		/// <summary>
 		/// The basic methods. Includes "assert", "collectgarbage", "error", "print", "select", "type", "tonumber" and "tostring".
 		/// </summary>
@@ -81,8 +80,6 @@ namespace MoonSharp.Interpreter
 		/// The "json" package (introduced by MoonSharp).
 		/// </summary>
 		Json = 0x10000,
-
-
 		/// <summary>
 		/// A sort of "hard" sandbox preset, including string, math, table, bit32 packages, constants and table iterators.
 		/// </summary>
@@ -101,7 +98,6 @@ namespace MoonSharp.Interpreter
 		/// Beware that using this preset allows scripts unlimited access to the system.
 		/// </summary>
 		Preset_Complete = Preset_Default | Debug,
-
 	}
 
 	internal static class CoreModules_ExtensionMethods
@@ -111,6 +107,4 @@ namespace MoonSharp.Interpreter
 			return (val & flag) == flag;
 		}
 	}
-
-
 }

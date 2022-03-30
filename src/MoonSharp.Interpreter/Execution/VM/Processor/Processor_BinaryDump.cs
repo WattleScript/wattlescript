@@ -17,12 +17,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			if (stream.Length >= 8)
 			{
-				using (BinaryReader br = new BinaryReader(stream, Encoding.UTF8, true))
-				{
-					ulong magic = br.ReadUInt64();
-					stream.Seek(-8, SeekOrigin.Current);
-					return magic == DUMP_CHUNK_MAGIC;
-				}
+				using BinaryReader br = new BinaryReader(stream, Encoding.UTF8, true);
+				ulong magic = br.ReadUInt64();
+				stream.Seek(-8, SeekOrigin.Current);
+				return magic == DUMP_CHUNK_MAGIC;
 			}
 			return false;
 		}
@@ -58,10 +56,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			for (int i = 0; i <= meta.Value.NumVal; i++)
 			{
-				SymbolRef[] symbolList;
-				SymbolRef symbol;
-
-				m_RootChunk.Code[baseAddress + i].GetSymbolReferences(out symbolList, out symbol);
+				m_RootChunk.Code[baseAddress + i].GetSymbolReferences(out SymbolRef[] symbolList, out SymbolRef symbol);
 
 				if (symbol != null)
 					AddSymbolToMap(symbolMap, symbol);
@@ -151,9 +146,18 @@ namespace MoonSharp.Interpreter.Execution.VM
 			for (int i = 0; i <= len; i++)
 			{
 				var c = br.ReadByte();
-				if(c == 0) m_RootChunk.SourceRefs.Add(sourceRef);
-				else if (c == 1) m_RootChunk.SourceRefs.Add(m_RootChunk.SourceRefs[m_RootChunk.SourceRefs.Count - 1]);
-				else m_RootChunk.SourceRefs.Add(SourceRef.ReadBinary(br, sourceID));
+				switch (c)
+				{
+					case 0:
+						m_RootChunk.SourceRefs.Add(sourceRef);
+						break;
+					case 1:
+						m_RootChunk.SourceRefs.Add(m_RootChunk.SourceRefs[m_RootChunk.SourceRefs.Count - 1]);
+						break;
+					default:
+						m_RootChunk.SourceRefs.Add(SourceRef.ReadBinary(br, sourceID));
+						break;
+				}
 			}
 
 			return baseAddress;

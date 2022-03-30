@@ -27,7 +27,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return meta;
 		}
 
-
 		internal void AttachDebugger(IDebugger debugger)
 		{
 			m_Debug.DebuggerAttached = debugger;
@@ -37,8 +36,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		internal bool DebuggerEnabled
 		{
-			get { return m_Debug.DebuggerEnabled; }
-			set { m_Debug.DebuggerEnabled = value; }
+			get => m_Debug.DebuggerEnabled;
+			set => m_Debug.DebuggerEnabled = value;
 		}
 
 
@@ -63,8 +62,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				isOnDifferentRef = instr_SourceCodeRef != null;
 			}
-
-
+			
 			if (m_Debug.DebuggerAttached.IsPauseRequested() ||
 				(instr_SourceCodeRef != null && instr_SourceCodeRef.Breakpoint && isOnDifferentRef))
 			{
@@ -92,8 +90,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					if (instr_SourceCodeRef == null || instr_SourceCodeRef == m_Debug.LastHlRef || m_ExecutionStack.Count > m_Debug.ExStackDepthAtStep) return;
 					break;
 			}
-
-
+			
 			RefreshDebugger(false, instructionPtr);
 
 			while (true)
@@ -189,9 +186,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				if (srf.IncludesLocation(action.SourceID, action.SourceLine, action.SourceCol))
 				{
 					found = true;
-
-					//System.Diagnostics.Debug.WriteLine(string.Format("BRK: found {0} for {1} on contains", srf, srf.Type));
-
+					
 					if (state == null)
 						srf.Breakpoint = !srf.Breakpoint;
 					else
@@ -229,8 +224,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 				if (nearest != null)
 				{
-					//System.Diagnostics.Debug.WriteLine(string.Format("BRK: found {0} for {1} on distance {2}", nearest, nearest.Type, minDistance));
-
 					if (state == null)
 						nearest.Breakpoint = !nearest.Breakpoint;
 					else
@@ -247,11 +240,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 					return true;
 				}
-				else
-					return false;
+				
+				return false;
 			}
-			else
-				return true;
+			
+			return true;
 		}
 
 		private void RefreshDebugger(bool hard, int instructionPtr)
@@ -278,12 +271,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private List<WatchItem> Debugger_RefreshThreads(ScriptExecutionContext context)
 		{
-			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
+			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : m_CoroutinesStack;
 
 			return coroutinesStack.Select(c => new WatchItem()
 			{
 				Address = c.AssociatedCoroutine.ReferenceID,
-				Name = "coroutine #" + c.AssociatedCoroutine.ReferenceID.ToString()
+				Name = $"coroutine # {c.AssociatedCoroutine.ReferenceID}"
 			}).ToList();
 		}
 
@@ -364,7 +357,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 			for (int i = 0; i < m_ExecutionStack.Count; i++)
 			{
 				var c = m_ExecutionStack.Peek(i);
-
 				var I = m_RootChunk.Code[c.Debug_EntryPoint];
 
 				string callname = I.OpCode == OpCode.Meta ? I.String : null;
@@ -402,8 +394,6 @@ namespace MoonSharp.Interpreter.Execution.VM
 						Location = SourceRef.GetClrLocation()
 					});
 				}
-
-
 			}
 
 			return wis;

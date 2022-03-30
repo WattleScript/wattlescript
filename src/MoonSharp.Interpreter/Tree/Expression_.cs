@@ -42,7 +42,7 @@ namespace MoonSharp.Interpreter.Tree
 
 			exps.Add(expr1);
 
-			while ((lcontext.Lexer.Current.Type == TokenType.Comma))
+			while (lcontext.Lexer.Current.Type == TokenType.Comma)
 			{
 				lcontext.Lexer.Next();
 				exps.Add(Expr(lcontext));
@@ -50,7 +50,6 @@ namespace MoonSharp.Interpreter.Tree
 
 			return exps;
 		}
-
 
 		internal static List<Expression> ExprList(ScriptLoadingContext lcontext)
 		{
@@ -76,8 +75,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary)
 		{
-			Expression e = null;
-
+			Expression e;
 			Token T = lcontext.Lexer.Current;
 
 			if (T.IsUnaryOperator())
@@ -94,7 +92,7 @@ namespace MoonSharp.Interpreter.Tree
 					List<Expression> powerChain = new List<Expression>();
 					powerChain.Add(e);
 
-					while (isPrimary && T.Type == TokenType.Op_Pwr)
+					while (T.Type == TokenType.Op_Pwr)
 					{
 						lcontext.Lexer.Next();
 						powerChain.Add(SubExpr(lcontext, false));

@@ -18,9 +18,8 @@ namespace MoonSharp.Interpreter
 		/// <value>
 		/// The reference identifier.
 		/// </value>
-		public int ReferenceID { get { return m_RefID; } }
-
-
+		public int ReferenceID => m_RefID;
+		
 		/// <summary>
 		/// Formats a string with a type name and a ref-id
 		/// </summary>
@@ -28,7 +27,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public string FormatTypeString(string typeString)
 		{
-			return string.Format("{0}: {1:X8}", typeString, m_RefID);
+			return $"{typeString}: {m_RefID:X8}";
 		}
 
 	}

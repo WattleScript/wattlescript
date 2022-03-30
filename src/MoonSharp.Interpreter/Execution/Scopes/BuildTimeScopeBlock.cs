@@ -19,7 +19,7 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 		{
 			SymbolRef sref = m_DefinedNames[name];
 			m_DefinedNames.Remove(name);
-			m_DefinedNames.Add(string.Format("@{0}_{1}", name, Guid.NewGuid().ToString("N")), sref);
+			m_DefinedNames.Add($"@{name}_{Guid.NewGuid():N}", sref);
 		}
 
 		internal BuildTimeScopeBlock(BuildTimeScopeBlock parent)
@@ -65,22 +65,22 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 				lastVal = pos;
 			}
 
-			this.ScopeBlock.From = firstVal;
-			this.ScopeBlock.ToInclusive = this.ScopeBlock.To = lastVal;
+			ScopeBlock.From = firstVal;
+			ScopeBlock.ToInclusive = ScopeBlock.To = lastVal;
 
 			if (firstVal < 0)
-				this.ScopeBlock.From = buildTimeScopeFrame.GetPosForNextVar();
+				ScopeBlock.From = buildTimeScopeFrame.GetPosForNextVar();
 
 			foreach (var child in ChildNodes)
 			{
-				this.ScopeBlock.ToInclusive = Math.Max(this.ScopeBlock.ToInclusive, child.ResolveLRefs(buildTimeScopeFrame));
+				ScopeBlock.ToInclusive = Math.Max(ScopeBlock.ToInclusive, child.ResolveLRefs(buildTimeScopeFrame));
 			}
 
 			if (m_LocalLabels != null)
 				foreach (var label in m_LocalLabels.Values)
-					label.SetScope(this.ScopeBlock);
+					label.SetScope(ScopeBlock);
 
-			return this.ScopeBlock.ToInclusive;
+			return ScopeBlock.ToInclusive;
 		}
 
 
@@ -90,25 +90,20 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 
 		internal void DefineLabel(LabelStatement label)
 		{
-			if (m_LocalLabels == null)
-				m_LocalLabels = new Dictionary<string, LabelStatement>();
+			m_LocalLabels ??= new Dictionary<string, LabelStatement>();
 
 			if (m_LocalLabels.ContainsKey(label.Label))
 			{
 				throw new SyntaxErrorException(label.NameToken, "label '{0}' already defined on line {1}", label.Label, m_LocalLabels[label.Label].SourceRef.FromLine);
 			}
-			else
-			{
-				m_LocalLabels.Add(label.Label, label);
-				label.SetDefinedVars(m_DefinedNames.Count, m_LastDefinedName);
-			}
+
+			m_LocalLabels.Add(label.Label, label);
+			label.SetDefinedVars(m_DefinedNames.Count, m_LastDefinedName);
 		}
 
 		internal void RegisterGoto(GotoStatement gotostat)
 		{
-			if (m_PendingGotos == null)
-				m_PendingGotos = new List<GotoStatement>();
-
+			m_PendingGotos ??= new List<GotoStatement>();
 			m_PendingGotos.Add(gotostat);
 			gotostat.SetDefinedVars(m_DefinedNames.Count, m_LastDefinedName);
 		}
@@ -120,9 +115,7 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 
 			foreach (GotoStatement gotostat in m_PendingGotos)
 			{
-				LabelStatement label;
-
-				if (m_LocalLabels != null && m_LocalLabels.TryGetValue(gotostat.Label, out label))
+				if (m_LocalLabels != null && m_LocalLabels.TryGetValue(gotostat.Label, out LabelStatement label))
 				{
 					if (label.DefinedVarsCount > gotostat.DefinedVarsCount)
 						throw new SyntaxErrorException(gotostat.GotoToken,

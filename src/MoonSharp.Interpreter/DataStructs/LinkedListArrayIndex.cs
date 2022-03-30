@@ -5,7 +5,6 @@ namespace MoonSharp.Interpreter.DataStructs
 {
     internal class LinkedListArrayIndex<TValue> : LinkedListIndex<int, TValue>
     {
-
         /// <summary>
         /// Initializes a new instance of the <see cref="LinkedListArrayIndex{TValue}"/> class.
         /// </summary>

@@ -15,17 +15,15 @@ namespace MoonSharp.Interpreter.DataStructs
 		int m_HeadIdx = 0;
 		private int maxCapacity;
 
+		public int Count => m_HeadIdx;
 		public int MaxCapacity => maxCapacity;
-
+		public ref T this[int index] => ref m_Storage[index];
+		
 		public FastStack(int initialCapacity, int maxCapacity)
 		{
 			m_Storage = new T[initialCapacity];
 			this.maxCapacity = maxCapacity;
 		}
-
-		public ref T this[int index] => ref m_Storage[index];
-		
-		
 
 		void Grow(int newSize)
 		{
@@ -64,7 +62,7 @@ namespace MoonSharp.Interpreter.DataStructs
 
 		private void Zero(int index)
 		{
-			m_Storage[index] = default(T);
+			m_Storage[index] = default;
 		}
 
 		public ref T Peek(int idxofs = 0)
@@ -88,7 +86,7 @@ namespace MoonSharp.Interpreter.DataStructs
 			if (cnt == 1)
 			{
 				--m_HeadIdx;
-				m_Storage[m_HeadIdx] = default(T);
+				m_Storage[m_HeadIdx] = default;
 			}
 			else
 			{
@@ -117,13 +115,6 @@ namespace MoonSharp.Interpreter.DataStructs
 			Array.Clear(m_Storage, index, length);
 		}
 		
-
-		public int Count
-		{
-			get { return m_HeadIdx; }
-		}
-
-
 		#region IList<T> Impl.
 
 		int IList<T>.IndexOf(T item)
@@ -143,14 +134,8 @@ namespace MoonSharp.Interpreter.DataStructs
 
 		T IList<T>.this[int index]
 		{
-			get
-			{
-				return this[index];
-			}
-			set
-			{
-				this[index] = value;
-			}
+			get => this[index];
+			set => this[index] = value;
 		}
 
 		void ICollection<T>.Add(T item)
@@ -173,15 +158,9 @@ namespace MoonSharp.Interpreter.DataStructs
 			throw new NotImplementedException();
 		}
 
-		int ICollection<T>.Count
-		{
-			get { return this.Count; }
-		}
+		int ICollection<T>.Count => this.Count;
 
-		bool ICollection<T>.IsReadOnly
-		{
-			get { return false; }
-		}
+		bool ICollection<T>.IsReadOnly => false;
 
 		bool ICollection<T>.Remove(T item)
 		{

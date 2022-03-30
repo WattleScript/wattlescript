@@ -10,7 +10,6 @@ namespace MoonSharp.Interpreter.Tree
 			: base(lcontext)
 		{ }
 
-
 		protected static Statement CreateStatement(ScriptLoadingContext lcontext, out bool forceLast)
 		{
 			Token tkn = lcontext.Lexer.Current;
@@ -54,12 +53,11 @@ namespace MoonSharp.Interpreter.Tree
 					{
 						Token l = lcontext.Lexer.Current;
 						Expression exp = Expression.PrimaryExp(lcontext);
-						FunctionCallExpression fnexp = exp as FunctionCallExpression;
 
-						if (fnexp != null)
+						if (exp is FunctionCallExpression fnexp)
 							return new FunctionCallStatement(lcontext, fnexp);
-						else
-							return new AssignmentStatement(lcontext, exp, l);
+						
+						return new AssignmentStatement(lcontext, exp, l);
 					}
 			}
 		}
@@ -75,15 +73,8 @@ namespace MoonSharp.Interpreter.Tree
 
 			if (lcontext.Lexer.Current.Type == TokenType.Op_Assignment)
 				return new ForLoopStatement(lcontext, name, forTkn);
-			else
-				return new ForEachLoopStatement(lcontext, name, forTkn);
+			
+			return new ForEachLoopStatement(lcontext, name, forTkn);
 		}
-
-
-
-
 	}
-
-
-
 }

@@ -25,7 +25,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// The special name used by CLR for indexer setters
 		/// </summary>
 		protected const string SPECIALNAME_INDEXER_SET = "set_Item";
-
 		/// <summary>
 		/// The special name used by CLR for explicit cast conversions
 		/// </summary>
@@ -34,8 +33,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// The special name used by CLR for implicit cast conversions
 		/// </summary>
 		protected const string SPECIALNAME_CAST_IMPLICIT = "op_Implicit";
-
-
 		/// <summary>
 		/// Gets the name of the descriptor (usually, the name of the type described).
 		/// </summary>
@@ -48,7 +45,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// Gets a human readable friendly name of the descriptor
 		/// </summary>
 		public string FriendlyName { get; private set; }
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="StandardUserDataDescriptor" /> class.
 		/// </summary>
@@ -60,7 +56,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			Name = type.FullName;
 			FriendlyName = friendlyName ?? type.Name;
 		}
-
 		/// <summary>
 		/// Adds a member to the meta-members list.
 		/// </summary>
@@ -74,8 +69,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			if (desc != null)
 				AddMemberTo(m_MetaMembers, name, desc);
 		}
-
-
 		/// <summary>
 		/// Adds a DynValue as a member
 		/// </summary>
@@ -86,7 +79,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			var desc = new DynValueMemberDescriptor(name, value); 
 			AddMemberTo(m_Members, name, desc);
 		}
-
 		/// <summary>
 		/// Adds a property to the member list
 		/// </summary>
@@ -100,23 +92,14 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			if (desc != null)
 				AddMemberTo(m_Members, name, desc);
 		}
-
 		/// <summary>
 		/// Gets the member names.
 		/// </summary>
-		public IEnumerable<string> MemberNames
-		{
-			get { return m_Members.Keys; }
-		}
-
+		public IEnumerable<string> MemberNames => m_Members.Keys;
 		/// <summary>
 		/// Gets the members.
 		/// </summary>
-		public IEnumerable<KeyValuePair<string, IMemberDescriptor>> Members
-		{
-			get { return m_Members; }
-		}
-
+		public IEnumerable<KeyValuePair<string, IMemberDescriptor>> Members => m_Members;
 		/// <summary>
 		/// Finds the member with a given name. If not found, null is returned.
 		/// </summary>
@@ -126,7 +109,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			return m_Members.GetOrDefault(memberName);
 		}
-
 		/// <summary>
 		/// Removes the member with a given name. In case of overloaded functions, all overloads are removed.
 		/// </summary>
@@ -135,22 +117,14 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			m_Members.Remove(memberName);
 		}
-
 		/// <summary>
 		/// Gets the meta member names.
 		/// </summary>
-		public IEnumerable<string> MetaMemberNames
-		{
-			get { return m_MetaMembers.Keys; }
-		}
-
+		public IEnumerable<string> MetaMemberNames => m_MetaMembers.Keys;
 		/// <summary>
 		/// Gets the meta members.
 		/// </summary>
-		public IEnumerable<KeyValuePair<string, IMemberDescriptor>> MetaMembers
-		{
-			get { return m_MetaMembers; }
-		}
+		public IEnumerable<KeyValuePair<string, IMemberDescriptor>> MetaMembers => m_MetaMembers;
 
 		/// <summary>
 		/// Finds the meta member with a given name. If not found, null is returned.
@@ -160,7 +134,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			return m_MetaMembers.GetOrDefault(memberName);
 		}
-
 		/// <summary>
 		/// Removes the meta member with a given name. In case of overloaded functions, all overloads are removed.
 		/// </summary>
@@ -169,24 +142,17 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			m_MetaMembers.Remove(memberName);
 		}
-
-
-
-
+		
 		private void AddMemberTo(Dictionary<string, IMemberDescriptor> members, string name, IMemberDescriptor desc)
 		{
-			IOverloadableMemberDescriptor odesc = desc as IOverloadableMemberDescriptor;
-
-			if (odesc != null)
+			if (desc is IOverloadableMemberDescriptor odesc)
 			{
 				if (members.ContainsKey(name))
 				{
-					OverloadedMethodMemberDescriptor overloads = members[name] as OverloadedMethodMemberDescriptor;
-
-					if (overloads != null)
+					if (members[name] is OverloadedMethodMemberDescriptor overloads)
 						overloads.AddOverload(odesc);
 					else
-						throw new ArgumentException(string.Format("Multiple members named {0} are being added to type {1} and one or more of these members do not support overloads.", name, this.Type.FullName));
+						throw new ArgumentException($"Multiple members named {name} are being added to type {this.Type.FullName} and one or more of these members do not support overloads.");
 				}
 				else
 				{
@@ -197,12 +163,10 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			{
 				if (members.ContainsKey(name))
 				{
-					throw new ArgumentException(string.Format("Multiple members named {0} are being added to type {1} and one or more of these members do not support overloads.", name, this.Type.FullName));
+					throw new ArgumentException($"Multiple members named {name} are being added to type {this.Type.FullName} and one or more of these members do not support overloads.");
 				}
-				else
-				{
-					members.Add(name, desc);
-				}
+
+				members.Add(name, desc);
 			}
 		}
 
@@ -248,8 +212,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 
 			return v;
 		}
-
-
+		
 		/// <summary>
 		/// Tries to perform an indexing operation by checking newly added extension methods for the given indexName.
 		/// </summary>
@@ -292,8 +255,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		{
 			return m_MetaMembers.ContainsKey(exactName);
 		}
-
-
+		
 		/// <summary>
 		/// Tries to perform an indexing operation by checking methods and properties for the given indexName
 		/// </summary>
@@ -303,9 +265,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// <returns></returns>
 		protected virtual DynValue TryIndex(Script script, object obj, string indexName)
 		{
-			IMemberDescriptor desc;
-
-			if (m_Members.TryGetValue(indexName, out desc))
+			if (m_Members.TryGetValue(indexName, out IMemberDescriptor desc))
 			{
 				return desc.GetValue(script, obj);
 			}
@@ -367,10 +327,8 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 				descr.SetValue(script, obj, value);
 				return true;
 			}
-			else
-			{
-				return false;
-			}
+
+			return false;
 		}
 
 		void IOptimizableDescriptor.Optimize()
@@ -411,10 +369,8 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		/// <returns></returns>
 		public virtual string AsString(object obj)
 		{
-			return (obj != null) ? obj.ToString() : null;
+			return obj?.ToString();
 		}
-
-
 
 		/// <summary>
 		/// Executes the specified indexer method.
@@ -444,14 +400,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			}
 			else
 			{
-				if (value.IsNil())
-				{
-					values = new DynValue[] { index };
-				}
-				else
-				{
-					values = new DynValue[] { index, value };
-				}
+				values = value.IsNil() ? new DynValue[] { index } : new DynValue[] { index, value };
 			}
 
 			CallbackArguments args = new CallbackArguments(values, false);
@@ -464,8 +413,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 
 			return v.Callback.ClrCallback(execCtx, args);
 		}
-
-
+		
 		/// <summary>
 		/// Gets a "meta" operation on this userdata. If a descriptor does not support this functionality,
 		/// it should return "null" (not a nil). 
@@ -532,17 +480,16 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		}
 
 		#region MetaMethodsDispatching
-
-
+		
 		private int PerformComparison(object obj, object p1, object p2)
 		{
 			IComparable comp = (IComparable)obj;
 
 			if (comp != null)
 			{
-				if (object.ReferenceEquals(obj, p1))
+				if (ReferenceEquals(obj, p1))
 					return comp.CompareTo(p2);
-				else if (object.ReferenceEquals(obj, p2))
+				if (ReferenceEquals(obj, p2))
 					return -comp.CompareTo(p1);
 			}
 
@@ -552,8 +499,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 
 		private DynValue MultiDispatchLessThanOrEqual(Script script, object obj)
 		{
-			IComparable comp = obj as IComparable;
-			if (comp != null)
+			if (obj is IComparable comp)
 			{
 				return DynValue.NewCallback(
 					(context, args) =>
@@ -565,8 +511,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 
 		private DynValue MultiDispatchLessThan(Script script, object obj)
 		{
-			IComparable comp = obj as IComparable;
-			if (comp != null)
+			if (obj is IComparable comp)
 			{
 				return DynValue.NewCallback(
 					(context, args) =>
@@ -589,42 +534,33 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			return DynValue.Nil;
 		}
 
-
 		private DynValue MultiDispatchEqual(Script script, object obj)
 		{
 			return DynValue.NewCallback(
 				(context, args) => DynValue.NewBoolean(CheckEquality(obj, args[0].ToObject(), args[1].ToObject())));
 		}
-
-
+		
 		private bool CheckEquality(object obj, object p1, object p2)
 		{
 			if (obj != null)
 			{
-				if (object.ReferenceEquals(obj, p1))
+				if (ReferenceEquals(obj, p1))
 					return obj.Equals(p2);
-				else if (object.ReferenceEquals(obj, p2))
+				if (ReferenceEquals(obj, p2))
 					return obj.Equals(p1);
 			}
 
 			if (p1 != null) return p1.Equals(p2);
-			else if (p2 != null) return p2.Equals(p1);
-			else return true;
+			if (p2 != null) return p2.Equals(p1);
+			return true;
 		}
 
 		private DynValue DispatchMetaOnMethod(Script script, object obj, string methodName)
 		{
 			IMemberDescriptor desc = m_Members.GetOrDefault(methodName);
-
-			if (desc != null)
-			{
-				return desc.GetValue(script, obj);
-			}
-			else
-				return DynValue.Nil;
+			return desc?.GetValue(script, obj) ?? DynValue.Nil;
 		}
-
-
+		
 		private DynValue TryDispatchToNumber(Script script, object obj)
 		{
 			foreach (Type t in NumericConversions.NumericTypesOrdered)
@@ -636,7 +572,6 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 			return DynValue.Nil;
 		}
 
-
 		private DynValue TryDispatchToBool(Script script, object obj)
 		{
 			var name = typeof(bool).GetConversionMethodName();
@@ -646,8 +581,7 @@ namespace MoonSharp.Interpreter.Interop.BasicDescriptors
 		}
 
 		#endregion
-
-
+		
 		/// <summary>
 		/// Determines whether the specified object is compatible with the specified type.
 		/// Unless a very specific behaviour is needed, the correct implementation is a 

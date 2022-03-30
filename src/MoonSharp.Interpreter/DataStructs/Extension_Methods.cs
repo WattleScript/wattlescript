@@ -18,14 +18,8 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 		{
-			TValue v;
-
-			if (dictionary.TryGetValue(key, out v))
-				return v;
-
-			return default(TValue);
+			return dictionary.TryGetValue(key, out TValue v) ? v : default;
 		}
-
 
 		/// <summary>
 		/// Gets a value from the dictionary or creates it
@@ -38,13 +32,13 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public static TValue GetOrCreate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TValue> creator)
 		{
-			TValue v;
-
-			if (!dictionary.TryGetValue(key, out v))
+			if (dictionary.TryGetValue(key, out TValue v))
 			{
-				v = creator();
-				dictionary.Add(key, v);
+				return v;
 			}
+			
+			v = creator();
+			dictionary.Add(key, v);
 
 			return v;
 		}

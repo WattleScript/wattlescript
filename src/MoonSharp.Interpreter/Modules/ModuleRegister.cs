@@ -57,7 +57,7 @@ namespace MoonSharp.Interpreter
 			Table m = moonsharp_table.Table;
 
 			table.Set("_G", DynValue.NewTable(table));
-			table.Set("_VERSION", DynValue.NewString(string.Format("MoonSharp {0}", Script.VERSION)));
+			table.Set("_VERSION", DynValue.NewString($"MoonSharp {Script.VERSION}"));
 			table.Set("_MOONSHARP", moonsharp_table);
 
 			m.Set("version", DynValue.NewString(Script.VERSION));
@@ -72,8 +72,6 @@ namespace MoonSharp.Interpreter
 
 			return table;
 		}
-
-
 
 		/// <summary>
 		/// Registers a module type to the specified table
@@ -93,7 +91,7 @@ namespace MoonSharp.Interpreter
 					MoonSharpModuleMethodAttribute attr = (MoonSharpModuleMethodAttribute)mi.GetCustomAttributes(typeof(MoonSharpModuleMethodAttribute), false).First();
 
 					if (!CallbackFunction.CheckCallbackSignature(mi, true))
-							throw new ArgumentException(string.Format("Method {0} does not have the right signature.", mi.Name));
+							throw new ArgumentException($"Method {mi.Name} does not have the right signature.");
 
 
 					Delegate deleg = Delegate.CreateDelegate(typeof(Func<ScriptExecutionContext, CallbackArguments, DynValue>), mi);
@@ -146,7 +144,7 @@ namespace MoonSharp.Interpreter
 			}
 			else
 			{
-				throw new ArgumentException(string.Format("Field {0} does not have the right type - it must be string or double.", name));
+				throw new ArgumentException($"Field {name} does not have the right type - it must be string or double.");
 			}
 		}
 
@@ -154,7 +152,7 @@ namespace MoonSharp.Interpreter
 		{
 			if (fi.FieldType != typeof(string))
 			{
-				throw new ArgumentException(string.Format("Field {0} does not have the right type - it must be string.", name));
+				throw new ArgumentException($"Field {name} does not have the right type - it must be string.");
 			}
 
 			string val = fi.GetValue(o) as string;
@@ -163,8 +161,7 @@ namespace MoonSharp.Interpreter
 
 			table.Set(name, fn);
 		}
-
-
+		
 		private static Table CreateModuleNamespace(Table gtable, Type t)
 		{
 			MoonSharpModuleAttribute attr = (MoonSharpModuleAttribute)(t.GetCustomAttributes(typeof(MoonSharpModuleAttribute), false).First());
@@ -173,42 +170,38 @@ namespace MoonSharp.Interpreter
 			{
 				return gtable;
 			}
+
+			Table table;
+
+			DynValue found = gtable.Get(attr.Namespace);
+
+			if (found.Type == DataType.Table)
+			{
+				table = found.Table;
+			}
 			else
 			{
-				Table table = null;
-
-				DynValue found = gtable.Get(attr.Namespace);
-
-				if (found.Type == DataType.Table)
-				{
-					table = found.Table;
-				}
-				else
-				{
-					table = new Table(gtable.OwnerScript);
-					gtable.Set(attr.Namespace, DynValue.NewTable(table));
-				}
-
-
-				DynValue package = gtable.RawGet("package");
-
-				if (package.Type != DataType.Table)
-				{
-					gtable.Set("package", package = DynValue.NewTable(gtable.OwnerScript));
-				}
-
-
-				DynValue loaded = package.Table.RawGet("loaded");
-
-				if (loaded.Type != DataType.Table)
-				{
-					package.Table.Set("loaded", loaded = DynValue.NewTable(gtable.OwnerScript));
-				}
-
-				loaded.Table.Set(attr.Namespace, DynValue.NewTable(table));
-
-				return table;
+				table = new Table(gtable.OwnerScript);
+				gtable.Set(attr.Namespace, DynValue.NewTable(table));
 			}
+			
+			DynValue package = gtable.RawGet("package");
+
+			if (package.Type != DataType.Table)
+			{
+				gtable.Set("package", package = DynValue.NewTable(gtable.OwnerScript));
+			}
+			
+			DynValue loaded = package.Table.RawGet("loaded");
+
+			if (loaded.Type != DataType.Table)
+			{
+				package.Table.Set("loaded", loaded = DynValue.NewTable(gtable.OwnerScript));
+			}
+
+			loaded.Table.Set(attr.Namespace, DynValue.NewTable(table));
+
+			return table;
 		}
 
 		/// <summary>
@@ -222,7 +215,5 @@ namespace MoonSharp.Interpreter
 		{
 			return RegisterModuleType(table, typeof(T));
 		}
-
-
 	}
 }

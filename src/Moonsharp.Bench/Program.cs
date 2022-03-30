@@ -5,16 +5,17 @@ using MoonSharp.Interpreter;
 
 namespace Moonsharp.Bench;
 
+[MemoryDiagnoser(false)]
 public class Program
 {
-    //[Benchmark]
+    [Benchmark]
     public void Scimark()
     {
         Script script = new Script();
         script.DoString(File.ReadAllText("Programs/scimark.lua"));
     }
     
-    [Benchmark]
+    //[Benchmark]
     public void Heapsort()
     {
         Script script = new Script();

@@ -9,7 +9,7 @@ namespace MoonSharp.Interpreter.DataStructs
 	{
 		bool IEqualityComparer<object>.Equals(object x, object y)
 		{
-			return object.ReferenceEquals(x, y);
+			return ReferenceEquals(x, y);
 		}
 
 		int IEqualityComparer<object>.GetHashCode(object obj)

@@ -10,7 +10,7 @@ namespace MoonSharp.Interpreter.Execution
 
 		public override string ToString()
 		{
-			return String.Format("ScopeBlock : {0} -> {1} --> {2}", From, To, ToInclusive);
+			return $"ScopeBlock : {From} -> {To} --> {ToInclusive}";
 		}
 	}
 }

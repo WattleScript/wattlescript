@@ -12,7 +12,7 @@ namespace MoonSharp.Interpreter.DataStructs
 	internal class LinkedListIndex<TKey, TValue>
 	{
 		protected LinkedList<TValue> m_LinkedList;
-		Dictionary<TKey, LinkedListNode<TValue>> m_Map = null;
+		Dictionary<TKey, LinkedListNode<TValue>> m_Map;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="LinkedListIndex{TKey, TValue}"/> class.
@@ -29,15 +29,10 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <param name="key">The key.</param>
 		public virtual LinkedListNode<TValue> Find(TKey key)
 		{
-			LinkedListNode<TValue> node;
-
 			if (m_Map == null)
 				return null;
 
-			if (m_Map.TryGetValue(key, out node))
-				return node;
-
-			return null;
+			return m_Map.TryGetValue(key, out LinkedListNode<TValue> node) ? node : null;
 		}
 
 		/// <summary>
@@ -53,14 +48,12 @@ namespace MoonSharp.Interpreter.DataStructs
 			if (node == null)
 			{
 				Add(key, value);
-				return default(TValue);
+				return default;
 			}
-			else
-			{
-				TValue val = node.Value;
-				node.Value = value;
-				return val;
-			}
+
+			TValue val = node.Value;
+			node.Value = value;
+			return val;
 		}
 
 		/// <summary>
@@ -71,10 +64,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		public virtual void Add(TKey key, TValue value)
 		{
 			var node = m_LinkedList.AddLast(value);
-
-			if (m_Map == null)
-				m_Map = new Dictionary<TKey, LinkedListNode<TValue>>();
-
+			m_Map ??= new Dictionary<TKey, LinkedListNode<TValue>>();
 			m_Map.Add(key, node);
 		}
 
@@ -102,10 +92,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <param name="key">The key.</param>
 		public virtual bool ContainsKey(TKey key)
 		{
-			if (m_Map == null)
-				return false;
-
-			return m_Map.ContainsKey(key);
+			return m_Map != null && m_Map.ContainsKey(key);
 		}
 
 		/// <summary>
@@ -113,8 +100,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// </summary>
 		public virtual void Clear()
 		{
-            if(m_Map != null)
-			    m_Map.Clear();
+			m_Map?.Clear();
 		}
 	}
 }

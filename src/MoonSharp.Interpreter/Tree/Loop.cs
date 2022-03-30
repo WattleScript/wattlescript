@@ -33,5 +33,4 @@ namespace MoonSharp.Interpreter.Tree
 			return true;
 		}
 	}
-
 }

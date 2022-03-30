@@ -9,14 +9,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 			{
 				return value.Table.MetaTable;
 			}
-			else if (value.Type.CanHaveTypeMetatables())
+			
+			if (value.Type.CanHaveTypeMetatables())
 			{
 				return m_Script.GetTypeMetatable(value.Type);
 			}
-			else
-			{
-				return null;
-			}
+
+			return null;
 		}
 
 		internal DynValue GetBinaryMetamethod(DynValue op1, DynValue op2, string eventName)
@@ -39,7 +38,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if (op1.Type == DataType.UserData)
 			{
-				DynValue meta = op1.UserData.Descriptor.MetaIndex(this.m_Script,
+				DynValue meta = op1.UserData.Descriptor.MetaIndex(m_Script,
 					op1.UserData.Object, eventName);
 
 				if (meta.IsNotNil())
@@ -48,7 +47,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if (op2.Type == DataType.UserData)
 			{
-				DynValue meta = op2.UserData.Descriptor.MetaIndex(this.m_Script,
+				DynValue meta = op2.UserData.Descriptor.MetaIndex(m_Script,
 					op2.UserData.Object, eventName);
 
 				if (meta.IsNotNil())

@@ -45,15 +45,19 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public DynValue Invoke(ScriptExecutionContext executionContext, IList<DynValue> args, bool isMethodCall = false)
 		{
-			if (isMethodCall)
+			if (!isMethodCall)
 			{
-				var colon = executionContext.GetScript().Options.ColonOperatorClrCallbackBehaviour;
-
-				if (colon == ColonOperatorBehaviour.TreatAsColon)
-					isMethodCall = false;
-				else if (colon == ColonOperatorBehaviour.TreatAsDotOnUserData)
-					isMethodCall = (args.Count > 0 && args[0].Type == DataType.UserData);
+				return ClrCallback(executionContext, new CallbackArguments(args, false));
 			}
+			
+			var colon = executionContext.GetScript().Options.ColonOperatorClrCallbackBehaviour;
+
+			isMethodCall = colon switch
+			{
+				ColonOperatorBehaviour.TreatAsColon => false,
+				ColonOperatorBehaviour.TreatAsDotOnUserData => args.Count > 0 && args[0].Type == DataType.UserData,
+				_ => true
+			};
 
 			return ClrCallback(executionContext, new CallbackArguments(args, isMethodCall));
 		}

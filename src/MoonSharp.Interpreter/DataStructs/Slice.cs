@@ -37,32 +37,20 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <returns></returns>
 		public T this[int index]
 		{
-			get 
-			{
-				return m_SourceList[CalcRealIndex(index)];
-			}
-			set
-			{
-				m_SourceList[CalcRealIndex(index)] = value;
-			}
+			get => m_SourceList[CalcRealIndex(index)];
+			set => m_SourceList[CalcRealIndex(index)] = value;
 		}
 
 		/// <summary>
 		/// Gets the index from which the slice starts
 		/// </summary>
-		public int From
-		{
-			get { return m_From; }
-		}
+		public int From => m_From;
 
 		/// <summary>
 		/// Gets the number of elements contained in the <see cref="T:System.Collections.Generic.ICollection`1" />.
 		/// </summary>
 		/// <returns>The number of elements contained in the <see cref="T:System.Collections.Generic.ICollection`1" />.</returns>
-		public int Count
-		{
-			get { return m_Length; }
-		}
+		public int Count => m_Length;
 
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="Slice{T}"/> operates in a reversed direction.
@@ -70,10 +58,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <value>
 		///   <c>true</c> if this <see cref="Slice{T}"/> operates in a reversed direction; otherwise, <c>false</c>.
 		/// </value>
-		public bool Reversed
-		{
-			get { return m_Reversed; }
-		}
+		public bool Reversed => m_Reversed;
 
 		/// <summary>
 		/// Calculates the real index in the underlying collection
@@ -81,16 +66,14 @@ namespace MoonSharp.Interpreter.DataStructs
 		private int CalcRealIndex(int index)
 		{
 			if (index < 0 || index >= m_Length)
-				throw new ArgumentOutOfRangeException("index");
+				throw new ArgumentOutOfRangeException(nameof(index));
 
 			if (m_Reversed)
 			{
 				return m_From + m_Length - index - 1;
 			}
-			else
-			{
-				return m_From + index;
-			}
+
+			return m_From + index;
 		}
 
 		/// <summary>
@@ -142,7 +125,6 @@ namespace MoonSharp.Interpreter.DataStructs
 
 			return list;
 		}
-
 
 		/// <summary>
 		/// Determines the index of a specific item in the <see cref="T:System.Collections.Generic.IList`1" />.
@@ -228,10 +210,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// Gets a value indicating whether the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only.
 		/// </summary>
 		/// <returns>true if the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only; otherwise, false.</returns>
-		public bool IsReadOnly
-		{
-			get { return true; }
-		}
+		public bool IsReadOnly => true;
 
 		/// <summary>
 		/// Removes the first occurrence of a specific object from the <see cref="T:System.Collections.Generic.ICollection`1" />.

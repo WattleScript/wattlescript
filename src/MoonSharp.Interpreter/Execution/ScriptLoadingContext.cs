@@ -16,6 +16,5 @@ namespace MoonSharp.Interpreter.Execution
 		{
 			Script = s;
 		}
-
 	}
 }

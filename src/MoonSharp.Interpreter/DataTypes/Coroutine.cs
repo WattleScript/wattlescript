@@ -34,11 +34,9 @@ namespace MoonSharp.Interpreter
 		/// Gets the type of coroutine
 		/// </summary>
 		public  CoroutineType Type { get; private set; }
-
 		private CallbackFunction m_ClrCallback;
 		private Processor m_Processor;
-
-
+		
 		internal Coroutine(CallbackFunction function)
 		{
 			Type = CoroutineType.ClrCallback;
@@ -61,8 +59,7 @@ namespace MoonSharp.Interpreter
 
 			Type = CoroutineType.ClrCallbackDead;
 		}
-
-
+		
 		/// <summary>
 		/// Gets this coroutine as a typed enumerable which can be looped over for resuming.
 		/// Returns its result as DynValue(s)
@@ -74,10 +71,9 @@ namespace MoonSharp.Interpreter
 			if (Type != CoroutineType.Coroutine)
 				throw new InvalidOperationException("Only non-CLR coroutines can be resumed with this overload of the Resume method. Use the overload accepting a ScriptExecutionContext instead");
 
-			while (this.State == CoroutineState.NotStarted || this.State == CoroutineState.Suspended || this.State == CoroutineState.ForceSuspended)
+			while (State == CoroutineState.NotStarted || State == CoroutineState.Suspended || State == CoroutineState.ForceSuspended)
 				yield return Resume();
 		}
-
 
 		/// <summary>
 		/// Gets this coroutine as a typed enumerable which can be looped over for resuming.
@@ -119,12 +115,7 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="System.InvalidOperationException">Only non-CLR coroutines can be resumed with this overload of the Resume method. Use the overload accepting a ScriptExecutionContext instead</exception>
 		public System.Collections.IEnumerator AsUnityCoroutine()
 		{
-#pragma warning disable 0219
-			foreach (DynValue v in AsTypedEnumerable())
-			{
-				yield return null;
-			}
-#pragma warning restore 0219
+			return AsTypedEnumerable().Select(v => (object)null).GetEnumerator();
 		}
 
 		/// <summary>
@@ -140,8 +131,8 @@ namespace MoonSharp.Interpreter
 
 			if (Type == CoroutineType.Coroutine)
 				return m_Processor.Coroutine_Resume(args);
-			else 
-				throw new InvalidOperationException("Only non-CLR coroutines can be resumed with this overload of the Resume method. Use the overload accepting a ScriptExecutionContext instead");
+			
+			throw new InvalidOperationException("Only non-CLR coroutines can be resumed with this overload of the Resume method. Use the overload accepting a ScriptExecutionContext instead");
 		}
 
 
@@ -156,16 +147,19 @@ namespace MoonSharp.Interpreter
 			this.CheckScriptOwnership(context);
 			this.CheckScriptOwnership(args);
 
-			if (Type == CoroutineType.Coroutine)
-				return m_Processor.Coroutine_Resume(args);
-			else if (Type == CoroutineType.ClrCallback)
+			switch (Type)
 			{
-				DynValue ret = m_ClrCallback.Invoke(context, args);
-				MarkClrCallbackAsDead();
-				return ret;
+				case CoroutineType.Coroutine:
+					return m_Processor.Coroutine_Resume(args);
+				case CoroutineType.ClrCallback:
+				{
+					DynValue ret = m_ClrCallback.Invoke(context, args);
+					MarkClrCallbackAsDead();
+					return ret;
+				}
+				default:
+					throw ScriptRuntimeException.CannotResumeNotSuspended(CoroutineState.Dead);
 			}
-			else
-				throw ScriptRuntimeException.CannotResumeNotSuspended(CoroutineState.Dead);
 		}
 
 		/// <summary>
@@ -176,10 +170,9 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="System.InvalidOperationException">Only non-CLR coroutines can be resumed with this overload of the Resume method. Use the overload accepting a ScriptExecutionContext instead</exception>
 		public DynValue Resume()
 		{
-			return Resume(new DynValue[0]);
+			return Resume(Array.Empty<DynValue>());
 		}
-
-
+		
 		/// <summary>
 		/// Resumes the coroutine.
 		/// </summary>
@@ -187,7 +180,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public DynValue Resume(ScriptExecutionContext context)
 		{
-			return Resume(context, new DynValue[0]);
+			return Resume(context, Array.Empty<DynValue>());
 		}
 
 		/// <summary>
@@ -205,11 +198,10 @@ namespace MoonSharp.Interpreter
 			DynValue[] dargs = new DynValue[args.Length];
 
 			for (int i = 0; i < dargs.Length; i++)
-				dargs[i] = DynValue.FromObject(this.OwnerScript, args[i]);
+				dargs[i] = DynValue.FromObject(OwnerScript, args[i]);
 
 			return Resume(dargs);
 		}
-
 
 		/// <summary>
 		/// Resumes the coroutine
@@ -226,10 +218,7 @@ namespace MoonSharp.Interpreter
 
 			return Resume(context, dargs);
 		}
-
-
-
-
+		
 		/// <summary>
 		/// Gets the coroutine state.
 		/// </summary>
@@ -237,12 +226,12 @@ namespace MoonSharp.Interpreter
 		{
 			get
 			{
-				if (Type == CoroutineType.ClrCallback)
-					return CoroutineState.NotStarted;
-				else if (Type == CoroutineType.ClrCallbackDead)
-					return CoroutineState.Dead;
-				else 
-					return m_Processor.State;
+				return Type switch
+				{
+					CoroutineType.ClrCallback => CoroutineState.NotStarted,
+					CoroutineType.ClrCallbackDead => CoroutineState.Dead,
+					_ => m_Processor.State
+				};
 			}
 		}
 
@@ -254,7 +243,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public WatchItem[] GetStackTrace(int skip, SourceRef entrySourceRef = null)
 		{
-			if (this.State != CoroutineState.Running)
+			if (State != CoroutineState.Running)
 			{
 				entrySourceRef = m_Processor.GetCoroutineSuspendedLocation();
 			}
@@ -284,8 +273,8 @@ namespace MoonSharp.Interpreter
 		/// </value>
 		public long AutoYieldCounter
 		{
-			get { return m_Processor.AutoYieldCounter; }
-			set { m_Processor.AutoYieldCounter = value; }
+			get => m_Processor.AutoYieldCounter;
+			set => m_Processor.AutoYieldCounter = value;
 		}
 	}
 }

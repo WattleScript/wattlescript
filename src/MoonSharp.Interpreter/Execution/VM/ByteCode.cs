@@ -23,14 +23,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			Script = script;
 		}
-
-
+		
 		public IDisposable EnterSource(SourceRef sref)
 		{
 			return new SourceCodeStackGuard(sref, this);
 		}
-
-
+		
 		private class SourceCodeStackGuard : IDisposable
 		{
 			ByteCode m_Bc;
@@ -46,8 +44,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 				m_Bc.PopSourceRef();
 			}
 		}
-
-
+		
 		public void PushSourceRef(SourceRef sref)
 		{
 			m_SourceRefStack.Add(sref);
@@ -128,12 +125,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 			switch (value.Type)
 			{
 				case DataType.Nil:
-					return AppendInstruction(new Instruction() {OpCode = OpCode.PushNil});
+					return AppendInstruction(Instruction.OpCodeNil);
 				case DataType.Boolean:
-					if (value.Boolean)
-						return AppendInstruction(new Instruction() {OpCode = OpCode.PushTrue});
-					else
-						return AppendInstruction(new Instruction() {OpCode = OpCode.PushFalse});
+					return AppendInstruction(value.Boolean ? new Instruction() {OpCode = OpCode.PushTrue} : new Instruction() {OpCode = OpCode.PushFalse});
 				case DataType.Number:
 					return AppendInstruction(new Instruction() {OpCode = OpCode.PushNumber, Number = value.Number});
 				case DataType.String:
@@ -156,11 +150,16 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			var i = AppendInstruction(new Instruction() { OpCode = opcode });
 
-			if (opcode == OpCode.LessEq)
-				AppendInstruction(new Instruction() { OpCode = OpCode.CNot });
-
-			if (opcode == OpCode.Eq || opcode == OpCode.Less)
-				AppendInstruction(new Instruction() { OpCode = OpCode.ToBool });
+			switch (opcode)
+			{
+				case OpCode.LessEq:
+					AppendInstruction(Instruction.OpCodeCNot);
+					break;
+				case OpCode.Eq:
+				case OpCode.Less:
+					AppendInstruction(Instruction.OpCodeToBool);
+					break;
+			}
 
 			return i;
 		}
@@ -219,7 +218,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		public int Emit_IterPrep()
 		{
-			return AppendInstruction(new Instruction() { OpCode = OpCode.IterPrep });
+			return AppendInstruction(Instruction.OpCodeIterPrep);
 		}
 
 		public int Emit_ExpTuple(int stackOffset)
@@ -229,7 +228,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		public int Emit_IterUpd()
 		{
-			return AppendInstruction(new Instruction() { OpCode = OpCode.IterUpd });
+			return AppendInstruction(Instruction.OpCodeIterUpd);
 		}
 
 		public int Emit_Meta(string funcName, OpCodeMetadataType metaType)

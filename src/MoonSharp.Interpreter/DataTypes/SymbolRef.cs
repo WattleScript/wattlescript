@@ -9,8 +9,6 @@ namespace MoonSharp.Interpreter
 	/// </summary>
 	public class SymbolRef
 	{
-		private static SymbolRef s_DefaultEnv = new SymbolRef() { i_Type = SymbolRefType.DefaultEnv };
-
 		// Fields are internal - direct access by the executor was a 10% improvement at profiling here!
 		internal SymbolRefType i_Type;
 		internal SymbolRef i_Env;
@@ -20,25 +18,27 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Gets the type of this symbol reference
 		/// </summary>
-		public SymbolRefType Type { get { return i_Type; } }
+		public SymbolRefType Type => i_Type;
+
 		/// <summary>
 		/// Gets the index of this symbol in its scope context
 		/// </summary>
-		public int Index { get { return i_Index; } }
+		public int Index => i_Index;
+
 		/// <summary>
 		/// Gets the name of this symbol
 		/// </summary>
-		public string Name { get { return i_Name; } }
+		public string Name => i_Name;
+
 		/// <summary>
 		/// Gets the environment this symbol refers to (for global symbols only)
 		/// </summary>
-		public SymbolRef Environment { get { return i_Env; } }
-
-
+		public SymbolRef Environment => i_Env;
+		
 		/// <summary>
 		/// Gets the default _ENV.
 		/// </summary>
-		public static SymbolRef DefaultEnv { get { return s_DefaultEnv; } }
+		public static SymbolRef DefaultEnv { get; } = new SymbolRef() { i_Type = SymbolRefType.DefaultEnv };
 
 		/// <summary>
 		/// Creates a new symbol reference pointing to a global var
@@ -83,13 +83,12 @@ namespace MoonSharp.Interpreter
 		/// </returns>
 		public override string ToString()
 		{
-			if (i_Type == SymbolRefType.DefaultEnv)
-				return "(default _ENV)";
-			else
-			if (i_Type == SymbolRefType.Global)
-				return string.Format("{2} : {0} / {1}", i_Type, i_Env, i_Name);
-			else
-				return string.Format("{2} : {0}[{1}]", i_Type, i_Index, i_Name);
+			return i_Type switch
+			{
+				SymbolRefType.DefaultEnv => "(default _ENV)",
+				SymbolRefType.Global => string.Format("{2} : {0} / {1}", i_Type, i_Env, i_Name),
+				_ => string.Format("{2} : {0}[{1}]", i_Type, i_Index, i_Name)
+			};
 		}
 
 		/// <summary>
@@ -116,7 +115,7 @@ namespace MoonSharp.Interpreter
 
 		internal void WriteBinaryEnv(BinDumpWriter bw, Dictionary<SymbolRef, int> symbolMap)
 		{
-			if (this.i_Env != null)
+			if (i_Env != null)
 				bw.WriteVarUInt32((uint)(symbolMap[i_Env] + 1));
 			else
 				bw.WriteVarUInt32(0);

@@ -25,7 +25,6 @@ namespace MoonSharp.Interpreter
 		/// Note: if both AutoConvert and AllowNil are specified, nils will NOT be converted to false booleans.
 		/// </summary>
 		AutoConvert = 0x2,
-
 		/// <summary>
 		/// The default : Autoconverting values, no nils.
 		/// </summary>

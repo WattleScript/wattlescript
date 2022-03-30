@@ -5,7 +5,7 @@ namespace MoonSharp.Interpreter.Execution
 	internal class RuntimeScopeFrame 
 	{
 		public List<SymbolRef> DebugSymbols { get; private set; }
-		public int Count { get { return DebugSymbols.Count; } }
+		public int Count => DebugSymbols.Count;
 		public int ToFirstBlock { get; internal set; }
 
 		public RuntimeScopeFrame()
@@ -15,7 +15,7 @@ namespace MoonSharp.Interpreter.Execution
 
 		public override string ToString()
 		{
-			return string.Format("ScopeFrame : #{0}", Count);
+			return $"ScopeFrame : #{Count}";
 		}
 	}
 }

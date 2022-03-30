@@ -14,8 +14,8 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public DynValue Key 
 		{
-			get { return key; }
-			private set { Key = key; }
+			get => key;
+			private set => Key = key;
 		}
 
 		/// <summary>
@@ -23,7 +23,7 @@ namespace MoonSharp.Interpreter
 		/// </summary>
 		public DynValue Value
 		{
-			get { return value; }
+			get => value;
 			set { if (key.IsNotNil()) Value = value; }
 		}
 
@@ -36,12 +36,12 @@ namespace MoonSharp.Interpreter
 		public TablePair(DynValue key, DynValue val) 
 		{
 			this.key = key;
-			this.value = val;
+			value = val;
 		}
 
 		/// <summary>
 		/// Gets the nil pair
 		/// </summary>
-		public static TablePair Nil { get { return s_NilNode; } }
+		public static TablePair Nil => s_NilNode;
 	}
 }

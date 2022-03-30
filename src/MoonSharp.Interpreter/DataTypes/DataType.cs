@@ -97,34 +97,23 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="ScriptRuntimeException">The DataType is not a Lua type</exception>
 		public static string ToErrorTypeString(this DataType type)
 		{
-			switch (type)
+			return type switch
 			{
-				case DataType.Void:
-					return "no value";
-				case DataType.Nil:
-					return "nil";
-				case DataType.Boolean:
-					return "boolean";
-				case DataType.Number:
-					return "number";
-				case DataType.String:
-					return "string";
-				case DataType.Function:
-					return "function";
-				case DataType.ClrFunction:
-					return "function";
-				case DataType.Table:
-					return "table";
-				case DataType.UserData:
-					return "userdata";
-				case DataType.Thread:
-					return "coroutine";
-				case DataType.Tuple:
-				case DataType.TailCallRequest:
-				case DataType.YieldRequest:
-				default:
-					return string.Format("internal<{0}>", type.ToLuaDebuggerString());
-			}
+				DataType.Void => "no value",
+				DataType.Nil => "nil",
+				DataType.Boolean => "boolean",
+				DataType.Number => "number",
+				DataType.String => "string",
+				DataType.Function => "function",
+				DataType.ClrFunction => "function",
+				DataType.Table => "table",
+				DataType.UserData => "userdata",
+				DataType.Thread => "coroutine",
+				DataType.Tuple => $"internal<{type.ToLuaDebuggerString()}>",
+				DataType.TailCallRequest => $"internal<{type.ToLuaDebuggerString()}>",
+				DataType.YieldRequest => $"internal<{type.ToLuaDebuggerString()}>",
+				_ => $"internal<{type.ToLuaDebuggerString()}>"
+			};
 		}
 
 		/// <summary>
@@ -139,7 +128,6 @@ namespace MoonSharp.Interpreter
 			return type.ToString().ToLowerInvariant();
 		}
 
-
 		/// <summary>
 		/// Converts the DataType to the string returned by the "type(...)" Lua function
 		/// </summary>
@@ -148,33 +136,23 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="ScriptRuntimeException">The DataType is not a Lua type</exception>
 		public static string ToLuaTypeString(this DataType type)
 		{
-			switch (type)
+			return type switch
 			{
-				case DataType.Void:
-				case DataType.Nil:
-					return "nil";
-				case DataType.Boolean:
-					return "boolean";
-				case DataType.Number:
-					return "number";
-				case DataType.String:
-					return "string";
-				case DataType.Function:
-					return "function";
-				case DataType.ClrFunction:
-					return "function";
-				case DataType.Table:
-					return "table";
-				case DataType.UserData:
-					return "userdata";
-				case DataType.Thread:
-					return "thread";
-				case DataType.Tuple:
-				case DataType.TailCallRequest:
-				case DataType.YieldRequest:
-				default:
-					throw new ScriptRuntimeException("Unexpected LuaType {0}", type);
-			}
+				DataType.Void => "nil",
+				DataType.Nil => "nil",
+				DataType.Boolean => "boolean",
+				DataType.Number => "number",
+				DataType.String => "string",
+				DataType.Function => "function",
+				DataType.ClrFunction => "function",
+				DataType.Table => "table",
+				DataType.UserData => "userdata",
+				DataType.Thread => "thread",
+				DataType.Tuple => throw new ScriptRuntimeException("Unexpected LuaType {0}", type),
+				DataType.TailCallRequest => throw new ScriptRuntimeException("Unexpected LuaType {0}", type),
+				DataType.YieldRequest => throw new ScriptRuntimeException("Unexpected LuaType {0}", type),
+				_ => throw new ScriptRuntimeException("Unexpected LuaType {0}", type)
+			};
 		}
 	}
 }

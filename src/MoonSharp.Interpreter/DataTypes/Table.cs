@@ -108,7 +108,7 @@ namespace MoonSharp.Interpreter
 			//Contract.Requires(keys != null);
 
 			Table t = this;
-			key = (keys.Length > 0) ? keys[0] : null;
+			key = keys.Length > 0 ? keys[0] : null;
 
 			for (int i = IndexFrom; i < keys.Length; ++i)
 			{
@@ -422,14 +422,17 @@ namespace MoonSharp.Interpreter
 		/// <param name="key">The key.</param>
 		public DynValue RawGet(DynValue key)
 		{
-			if (key.Type == DataType.String)
-				return RawGet(key.String);
-
-			if (key.Type == DataType.Number)
+			switch (key.Type)
 			{
-				int idx = GetIntegralKey(key.Int);
-				if (idx >= IndexFrom)
-					return RawGet(idx);
+				case DataType.String:
+					return RawGet(key.String);
+				case DataType.Number:
+				{
+					int idx = GetIntegralKey(key.Int);
+					if (idx >= IndexFrom)
+						return RawGet(idx);
+					break;
+				}
 			}
 
 			return RawGetValue(m_ValueMap.Find(key));
@@ -442,17 +445,13 @@ namespace MoonSharp.Interpreter
 		/// <param name="key">The key.</param>
 		public DynValue RawGet(object key)
 		{
-			switch (key)
+			return key switch
 			{
-				case null:
-					return DynValue.Nil;
-				case string s:
-					return RawGet(s);
-				case int i:
-					return RawGet(i);
-				default:
-					return RawGet(DynValue.FromObject(OwnerScript, key));
-			}
+				null => DynValue.Nil,
+				string s => RawGet(s),
+				int i => RawGet(i),
+				_ => RawGet(DynValue.FromObject(OwnerScript, key))
+			};
 		}
 
 		/// <summary>
@@ -536,15 +535,12 @@ namespace MoonSharp.Interpreter
 		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
 		public bool Remove(object key)
 		{
-			switch (key)
+			return key switch
 			{
-				case string s:
-					return Remove(s);
-				case int i:
-					return Remove(i);
-				default:
-					return Remove(DynValue.FromObject(OwnerScript, key));
-			}
+				string s => Remove(s),
+				int i => Remove(i),
+				_ => Remove(DynValue.FromObject(OwnerScript, key))
+			};
 		}
 
 		/// <summary>

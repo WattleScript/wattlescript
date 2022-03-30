@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace MoonSharp.Interpreter.DataStructs
 {
@@ -10,7 +11,7 @@ namespace MoonSharp.Interpreter.DataStructs
 	internal class MultiDictionary<K, V>
 	{
 		Dictionary<K, List<V>> m_Map;
-		V[] m_DefaultRet = new V[0];
+		V[] m_DefaultRet = Array.Empty<V>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MultiDictionary{K, V}"/> class.
@@ -28,8 +29,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		{
 			m_Map = new Dictionary<K, List<V>>(eqComparer);
 		}
-
-
+		
 		/// <summary>
 		/// Adds the specified key. Returns true if this is the first value for a given key
 		/// </summary>
@@ -38,19 +38,15 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <returns></returns>
 		public bool Add(K key, V value)
 		{
-			List<V> list;
-			if (m_Map.TryGetValue(key, out list))
+			if (m_Map.TryGetValue(key, out List<V> list))
 			{
 				list.Add(value);
 				return false;
 			}
-			else
-			{
-				list = new List<V>();
-				list.Add(value);
-				m_Map.Add(key, list);
-				return true;
-			}
+
+			list = new List<V> {value};
+			m_Map.Add(key, list);
+			return true;
 		}
 
 		/// <summary>
@@ -60,11 +56,10 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <param name="key">The key.</param>
 		public IEnumerable<V> Find(K key)
 		{
-			List<V> list;
-			if (m_Map.TryGetValue(key, out list))
+			if (m_Map.TryGetValue(key, out List<V> list))
 				return list;
-			else
-				return m_DefaultRet;
+			
+			return m_DefaultRet;
 		}
 
 		/// <summary>
@@ -79,10 +74,7 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <summary>
 		/// Gets the keys.
 		/// </summary>
-		public IEnumerable<K> Keys
-		{
-			get { return m_Map.Keys; }
-		}
+		public IEnumerable<K> Keys => m_Map.Keys;
 
 		/// <summary>
 		/// Clears this instance.
@@ -109,21 +101,20 @@ namespace MoonSharp.Interpreter.DataStructs
 		/// <returns></returns>
 		public bool RemoveValue(K key, V value)
 		{
-			List<V> list;
-
-			if (m_Map.TryGetValue(key, out list))
+			if (!m_Map.TryGetValue(key, out List<V> list))
 			{
-				list.Remove(value);
-
-				if (list.Count == 0)
-				{
-					Remove(key);
-					return true;
-				}
+				return false;
 			}
+			
+			list.Remove(value);
 
-			return false;
+			if (list.Count != 0)
+			{
+				return false;
+			}
+			
+			Remove(key);
+			return true;
 		}
-
 	}
 }
