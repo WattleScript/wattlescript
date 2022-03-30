@@ -17,71 +17,61 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         public void Synchronous_WaitDouble()
         {
             //Test Task.Wait() call
-            string script = @"
+            TestScript.Run(@"
             local dbl = getdouble()
-            if not dbl.isblocking() then
-                error('task wait should be blocking')
-            end
-            return dbl.await()";
-            var sc = new Script();
-            sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
-            var x= sc.DoString(script);
-            Assert.AreEqual(8, x.Number);
+            assert.istrue(dbl.isblocking(), 'task wait should be blocking')
+            assert.areequal(8, dbl.await())", sc =>
+            { 
+                sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
+            });
         }
 
         [Test]
         public async Task Async_AwaitDouble()
         {
             //Test awaiting tasks
-            string script = @"
+            await TestScript.RunAsync(@"
             local dbl = getdouble()
-            if dbl.isblocking() then
-                error('task wait should not be blocking')
-            end
-            return dbl.await()";
-            var sc = new Script();
-            sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
-            var x= await sc.DoStringAsync(script);
-            Assert.AreEqual(8, x.Number);
+            assert.isfalse(dbl.isblocking(), 'task wait should not be blocking')
+            assert.areequal(8, dbl.await())", sc =>
+            { 
+                sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
+            });
         }
         
         [Test]
         public void Synchronous_AutoAwait()
         {
             //Test automatic Task.Wait() call
-            string script = "return getdouble()";
-            var sc = new Script();
-            sc.Options.AutoAwait = true;
-            sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
-            var x= sc.DoString(script);
-            Assert.AreEqual(8, x.Number);
+            TestScript.Run(@"assert.areequal(8, getdouble())", sc =>
+            {
+                sc.Options.AutoAwait = true;
+                sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
+            });
         }
 
         [Test]
         public async Task Async_AutoAwait()
         {
             //Test automatic await
-            string script = "return getdouble()";
-            var sc = new Script();
-            sc.Options.AutoAwait = true;
-            sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
-            var x= await sc.DoStringAsync(script);
-            Assert.AreEqual(8, x.Number);
+            await TestScript.RunAsync(@"assert.areequal(8, getdouble())", sc =>
+            {
+                sc.Options.AutoAwait = true;
+                sc.Globals["getdouble"] = (Func<Task<double>>) GetDoubleDelay;
+            });
         }
 
         [Test]
         public async Task Async_Delay()
         {
-            string script = @"
+            await TestScript.RunAsync(@"
             local t1 = os.time()
             delay(1.1).await()
             local t2 = os.time()
-            return t2 - t1
-            ";
-            var sc = new Script();
-            sc.Globals["delay"] = (Func<double, Task>) ((time) => Task.Delay((int)(time * 1000.0)));
-            var x = await sc.DoStringAsync(script);
-            Assert.GreaterOrEqual(x.Number, 1);
+            assert.istrue((t2 - t1) >= 1, 'time comparison')
+            ", s => 
+                s.Globals["delay"] = (Func<double, Task>) (time => Task.Delay((int)(time * 1000.0)))
+            );
         }
 
         static async Task<double> GetDoubleExcept()
