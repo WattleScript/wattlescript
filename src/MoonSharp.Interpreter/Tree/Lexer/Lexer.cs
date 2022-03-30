@@ -232,11 +232,12 @@ namespace MoonSharp.Interpreter.Tree
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_LessThan, TokenType.Op_LessThanEqual, fromLine, fromCol);
 				case '>':
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_GreaterThan, TokenType.Op_GreaterThanEqual, fromLine, fromCol);
+				case '!' when m_Extended:
+					return PotentiallyDoubleCharOperator('=', TokenType.Not, TokenType.Op_NotEqual, fromLine, fromCol);
+				case '!' when !m_Extended:
 				case '~':
-				case '!':
 					if (CursorCharNext() != '=')
 						throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", c);
-
 					CursorCharNext();
 					return CreateToken(TokenType.Op_NotEqual, fromLine, fromCol, "~=");
 				case '.':

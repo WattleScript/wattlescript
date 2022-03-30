@@ -27,6 +27,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			switch (m_OpText)
 			{
+				case "!":
 				case "not":
 					bc.Emit_Operator(OpCode.Not);
 					break;
@@ -49,6 +50,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			switch (m_OpText)
 			{
+				case "!":
 				case "not":
 					return DynValue.NewBoolean(!v.CastToBool());
 				case "#":
@@ -76,6 +78,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 			switch (m_OpText)
 			{
+				case "!":
 				case "not":
 					dv = DynValue.NewBoolean(!v.CastToBool());
 					return true;

@@ -100,6 +100,13 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void Not()
+        {
+            TestScript.Run(@"assert.istrue(!false); assert.isfalse(!true);",
+                s => s.Options.EnableCSyntax = true);
+        }
+
+        [Test]
         public void Power()
         {
             Assert.AreEqual(4.0, RunScript("return 2**2;").Number);
