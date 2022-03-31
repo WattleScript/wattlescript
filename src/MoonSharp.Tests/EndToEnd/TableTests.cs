@@ -564,5 +564,64 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
 
 		}
 
+		[Test]
+		public void Table_ZeroIndexed_Length_Calculations()
+		{
+			Script s = new Script();
+			s.Options.IndexTablesFrom = 0;
+			Table t = new Table(s);
+
+			Assert.AreEqual(0, t.Length, "A");
+
+			t.Append(1);
+
+			Assert.AreEqual(1, t.Get(0).CastToInt(), "B1");
+			Assert.AreEqual(1, t.Length, "B2");
+
+			t.Append(5);
+
+			Assert.AreEqual(1, t.Get(0).CastToInt(), "C1");
+			Assert.AreEqual(5, t.Get(1).CastToInt(), "C2");
+			Assert.AreEqual(2, t.Length, "C3");
+
+			t.Set(0, 20);
+			t.Set(1, 21);
+
+			Assert.AreEqual(2, t.Length, "D1");
+			Assert.AreEqual(20, t.Get(0).CastToInt(), "D2");
+			Assert.AreEqual(21, t.Get(1).CastToInt(), "D3");
+		}
+
+		[Test]
+		public void Table_ZeroIndexed_Append()
+		{
+			Script s = new Script();
+			s.Options.IndexTablesFrom = 0;
+			Table t = new Table(s);
+
+			t.Append("STR1");
+			t.Append("STR2");
+			t.Append("STR3");
+
+			List<string> vals = t.Pairs.Select(x => x.Value.String).ToList();
+
+			Assert.AreEqual(vals.Count, 3, "A");
+			Assert.AreEqual("STR1", vals[0], "B");
+			Assert.AreEqual("STR2", vals[1], "C");
+			Assert.AreEqual("STR3", vals[2], "D");
+		}
+
+		[Test]
+		public void Table_ZeroIndexed_Remove()
+		{
+			Script s = new Script();
+			s.Options.IndexTablesFrom = 0;
+			Table t = new Table(s);
+
+			t.Append("STR1");
+			t.Remove(0);
+
+			Assert.AreEqual(0, t.Length, "A");
+		}
 	}
 }
