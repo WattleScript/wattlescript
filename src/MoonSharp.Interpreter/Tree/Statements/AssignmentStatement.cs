@@ -87,7 +87,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				if (lcontext.Syntax != ScriptSyntax.Lua) {
 					switch (lcontext.Lexer.Current.Type) {
 						case TokenType.Op_AddEq:
-							AssignmentOp = Operator.Add;
+							if (lcontext.Syntax == ScriptSyntax.CLike)
+								AssignmentOp = Operator.AddConcat;
+							else
+								AssignmentOp = Operator.Add;
 							lcontext.Lexer.Next();
 							break;
 						case TokenType.Op_SubEq:

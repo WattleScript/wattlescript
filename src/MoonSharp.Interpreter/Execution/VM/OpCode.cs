@@ -55,6 +55,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		Less,		// Compare < of the two topmost operands on the v-stack
 		Eq,			// Compare == of the two topmost operands on the v-stack
 		Add,		// Addition of the two topmost operands on the v-stack
+		AddStr,		// Addition of the two topmost operands on the v-stack, will concat strings
 		Sub,		// Subtraction of the two topmost operands on the v-stack
 		Mul,		// Multiplication of the two topmost operands on the v-stack
 		Div,		// Division of the two topmost operands on the v-stack

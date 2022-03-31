@@ -83,6 +83,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = ExecAdd(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.AddStr:
+							instructionPtr = ExecAddStr(i, instructionPtr);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
 						case OpCode.Concat:
 							instructionPtr = ExecConcat(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
@@ -938,6 +942,78 @@ namespace MoonSharp.Interpreter.Execution.VM
 				return instructionPtr;
 			}
 			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__add", instructionPtr);
+				if (ip >= 0) return ip;
+				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+
+		bool ToConcatString(ref DynValue v, out string s, ref int metamethodCounter)
+		{
+			var sc = v.ToScalar();
+			if (v.IsNil()) {
+				s = null;
+				return false;
+			}
+			if (v.Type == DataType.String) 
+			{
+				s = v.String;
+				return true;
+			}
+			else if (v.Type == DataType.Boolean)
+			{
+				s = v.Boolean ? "true" : "false";
+				return true;
+			}
+			else if (v.Type == DataType.Number) {
+				s = v.Number.ToString();
+				return true;
+			}
+
+			var m = GetMetamethod(v, "__tostring");
+			if (!m.IsNil())
+			{
+				if (metamethodCounter++ > 10) {
+					s = null;
+					return false;
+				}
+				var retval = Call(m, new[] {v});
+				return ToConcatString(ref retval, out s, ref metamethodCounter);
+			}
+			else {
+				s = null;
+				return false;
+			}
+		}
+		
+		private int ExecAddStr(Instruction i, int instructionPtr)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
+				return instructionPtr;
+			}
+			else if (m_ValueStack.Peek(1).Type == DataType.String ||
+			         m_ValueStack.Peek().Type == DataType.String)
+			{
+				int c1 = 0, c2 = 0;
+				if (!ToConcatString(ref m_ValueStack.Peek(), out var rhs, ref c1) ||
+				    !ToConcatString(ref m_ValueStack.Peek(1), out var lhs, ref c2))
+				{
+					var l = m_ValueStack.Pop().ToScalar();
+					var r = m_ValueStack.Pop().ToScalar();
+					throw ScriptRuntimeException.ConcatOnNonString(l, r);
+				}
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewString(lhs + rhs));
+				return instructionPtr;
+			} 
+			else 
 			{
 				var r = m_ValueStack.Pop().ToScalar();
 				var l = m_ValueStack.Pop().ToScalar();

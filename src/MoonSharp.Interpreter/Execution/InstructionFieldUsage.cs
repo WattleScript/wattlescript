@@ -32,6 +32,7 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Less:
 				case OpCode.Eq:
 				case OpCode.Add:
+				case OpCode.AddStr:
 				case OpCode.Sub:
 				case OpCode.Mul:
 				case OpCode.Div:

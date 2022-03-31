@@ -169,6 +169,22 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(3, tbl[3]());
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
+
+        [Test]
+        public void AddConcat()
+        {
+            TestScript.Run(@"
+            function getstring() {
+                return 'hello';
+            }
+            t = {}
+            mt = { __tostring= () => 'TABLE'; }
+            setmetatable(t, mt)
+            assert.areequal('hello world', getstring() + ' world');
+            assert.areequal('pancakes123', 'pancakes' + 123);
+            assert.areequal('t is TABLE', 't is ' +  t);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
         
         
 

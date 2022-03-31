@@ -26,6 +26,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Div = 0x2000,
 		Mod = 0x4000,
 		Power = 0x8000,
+		AddConcat = 0x10000
 	}
 	
 	/// <summary>
@@ -50,7 +51,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		const Operator POWER = Operator.Power;
 		const Operator MUL_DIV_MOD = Operator.Mul | Operator.Div | Operator.Mod;
-		const Operator ADD_SUB = Operator.Add | Operator.Sub;
+		const Operator ADD_SUB = Operator.Add | Operator.Sub | Operator.AddConcat;
 		const Operator STRCAT = Operator.StrConcat;
 		const Operator COMPARES = Operator.Less | Operator.Greater | Operator.GreaterOrEqual | Operator.LessOrEqual | Operator.Equal | Operator.NotEqual;
 		const Operator LOGIC_AND = Operator.And;
@@ -255,6 +256,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_Exp1 = exp1;
 			m_Exp2 = exp2;
 			m_Operator = op;
+			if (op == Operator.Add && lcontext.Syntax == ScriptSyntax.CLike)
+				m_Operator = Operator.AddConcat;
 		}
 
 		private static bool ShouldInvertBoolean(Operator op)
@@ -291,6 +294,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return OpCode.Mod;
 				case Operator.Power:
 					return OpCode.Power;
+				case Operator.AddConcat:
+					return OpCode.AddStr;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
@@ -441,6 +446,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			switch (m_Operator)
 			{
 				case Operator.Add:
+				case Operator.AddConcat:
 					return d1 + d2;
 				case Operator.Sub:
 					return d1 - d2;
