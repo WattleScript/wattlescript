@@ -21,13 +21,23 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			m_Start = whileTk.GetSourceRefUpTo(lcontext.Lexer.Current);
 
-			//m_Start = BuildSourceRef(context.Start, exp.Stop);
-			//m_End = BuildSourceRef(context.Stop, context.END());
-
 			lcontext.Scope.PushBlock();
-			CheckTokenType(lcontext, TokenType.Do);
-			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
-			m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			
+			if (lcontext.Syntax != ScriptSyntax.Lua &&
+			    lcontext.Lexer.Current.Type != TokenType.Do &&
+			    lcontext.Lexer.Current.Type != TokenType.Brk_Open_Curly)
+			{
+				m_Block = CreateStatement(lcontext, out _);
+				m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+			}
+			else
+			{
+				var tk = CheckTokenTypeEx(lcontext, TokenType.Do, TokenType.Brk_Open_Curly);
+				m_Block = new CompositeStatement(lcontext,
+					tk.Type == TokenType.Brk_Open_Curly ? BlockEndType.CloseCurly : BlockEndType.Normal);
+				m_End = CheckTokenTypeEx(lcontext, TokenType.End, TokenType.Brk_Close_Curly).GetSourceRef();
+			}
+
 			m_StackFrame = lcontext.Scope.PopBlock();
 
 			lcontext.Source.Refs.Add(m_Start);

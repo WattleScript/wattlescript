@@ -129,6 +129,17 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void WhileLoop()
+        {
+            TestScript.Run(@"
+            var a = 1;
+            while (a < 5) a++;
+            assert.areequal(5, a);
+            while (a > 0) { a--; }
+            assert.areequal(a, 5);");
+        }
+
+        [Test]
         public void PostfixIncDec()
         {
             TestScript.Run(@"
