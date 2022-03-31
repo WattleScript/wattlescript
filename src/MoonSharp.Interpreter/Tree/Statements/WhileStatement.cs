@@ -76,6 +76,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			bc.Emit_Debug("..end");
 			bc.PushSourceRef(m_End);
 	
+			int continuePoint = bc.GetJumpPointForNextInstruction();
 			bc.Emit_Leave(m_StackFrame);
 			bc.Emit_Jump(OpCode.Jump, start);
 			
@@ -85,7 +86,9 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			foreach (int i in L.BreakJumps)
 				bc.SetNumVal(i, exitpoint);
-
+			foreach (int i in L.ContinueJumps)
+				bc.SetNumVal(i, continuePoint);
+			
 			bc.SetNumVal(jumpend, exitpoint);
 
 			bc.PopSourceRef();

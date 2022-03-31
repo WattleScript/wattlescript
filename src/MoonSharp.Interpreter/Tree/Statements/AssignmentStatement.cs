@@ -130,16 +130,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(m_Ref);
 		}
 
-		private IVariable CheckVar(ScriptLoadingContext lcontext, Expression firstExpression)
-		{
-			IVariable v = firstExpression as IVariable;
-
-			if (v == null)
-				throw new SyntaxErrorException(lcontext.Lexer.Current, "unexpected symbol near '{0}' - not a l-value", lcontext.Lexer.Current);
-
-			return v;
-		}
-
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{

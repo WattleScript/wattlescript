@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.Execution;
+﻿using System;
+using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Tree.Expressions;
 using MoonSharp.Interpreter.Tree.Statements;
 
@@ -9,6 +10,16 @@ namespace MoonSharp.Interpreter.Tree
 		public Statement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{ }
+		
+		protected IVariable CheckVar(ScriptLoadingContext lcontext, Expression firstExpression)
+		{
+			IVariable v = firstExpression as IVariable;
+
+			if (v == null)
+				throw new SyntaxErrorException(lcontext.Lexer.Current, "unexpected symbol near '{0}' - not a l-value", lcontext.Lexer.Current);
+
+			return v;
+		}
 
 
 		protected static Statement CreateStatement(ScriptLoadingContext lcontext, out bool forceLast)
@@ -50,6 +61,8 @@ namespace MoonSharp.Interpreter.Tree
 					return new ReturnStatement(lcontext);
 				case TokenType.Break:
 					return new BreakStatement(lcontext);
+				case TokenType.Continue:
+					return new ContinueStatement(lcontext);
 				default:
 				{
 						//Check for labels in CLike mode
@@ -81,18 +94,48 @@ namespace MoonSharp.Interpreter.Tree
 			//	for namelist in explist do block end | 		
 
 			Token forTkn = CheckTokenType(lcontext, TokenType.For);
-
+			//skip opening paren
+			bool paren = false;
+			if (lcontext.Syntax != ScriptSyntax.Lua && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round) {
+				paren = true;
+				lcontext.Lexer.Next();
+			}
+			//Dispatch
+			lcontext.Lexer.SavePos();
+			
+			if (paren && lcontext.Lexer.Current.Type == TokenType.SemiColon)
+			{
+				return new CStyleForStatement(lcontext, forTkn);
+			}  
+			if (paren && lcontext.Lexer.Current.Type == TokenType.Local)
+			{
+				return new CStyleForStatement(lcontext, forTkn);
+			}
+			
 			Token name = CheckTokenType(lcontext, TokenType.Name);
-
-			if (lcontext.Lexer.Current.Type == TokenType.Op_Assignment)
-				return new ForLoopStatement(lcontext, name, forTkn);
-			else
-				return new ForEachLoopStatement(lcontext, name, forTkn);
+			switch (lcontext.Lexer.Current.Type)
+			{
+				case TokenType.Dot when paren:
+				case TokenType.Brk_Open_Round when paren:
+					lcontext.Lexer.RestorePos();
+					return new CStyleForStatement(lcontext, forTkn);
+				case TokenType.Op_Assignment when paren:
+					lcontext.Lexer.Next();
+					Expression.Expr(lcontext);
+					if (lcontext.Lexer.Current.Type == TokenType.SemiColon)
+					{
+						lcontext.Lexer.RestorePos();
+						return new CStyleForStatement(lcontext, forTkn);
+					}
+					lcontext.Lexer.RestorePos();
+					lcontext.Lexer.Next();
+					return new ForLoopStatement(lcontext, name, forTkn, true);
+				case TokenType.Op_Assignment when !paren:
+					return new ForLoopStatement(lcontext, name, forTkn, false);
+				default:
+					return new ForEachLoopStatement(lcontext, name, forTkn, paren);
+			}
 		}
-
-
-
-
 	}
 
 

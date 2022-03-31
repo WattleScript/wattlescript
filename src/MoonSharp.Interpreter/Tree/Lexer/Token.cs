@@ -44,6 +44,10 @@ namespace MoonSharp.Interpreter.Tree
 					case "let":
 					case "var":
 						return TokenType.Local;
+					case "of":
+						return TokenType.In;
+					case "continue":
+						return TokenType.Continue;
 				}
 			}
 			switch (reservedWord)

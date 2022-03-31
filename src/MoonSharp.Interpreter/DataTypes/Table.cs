@@ -684,5 +684,17 @@ namespace MoonSharp.Interpreter
 				return m_Values.Select(n => n.Value);
 			}
 		}
+		
+		/// <summary>
+		/// Enumerates value, key
+		/// </summary>
+
+		public IEnumerable<DynValue> ReversePair
+		{
+			get
+			{
+				return m_Values.Select(n => DynValue.NewTuple(n.Value, n.Key));
+			}
+		}
 	}
 }

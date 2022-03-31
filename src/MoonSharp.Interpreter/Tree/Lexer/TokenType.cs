@@ -8,6 +8,7 @@ namespace MoonSharp.Interpreter.Tree
 		Name,
 		And,
 		Break,
+		Continue,
 		Do,
 		Else,
 		ElseIf,

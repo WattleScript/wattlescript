@@ -41,6 +41,85 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void ForEach()
+        {
+            TestScript.Run(@"
+            local values = { 'a', 'b', 'c' };
+            //of is an alias for in
+            for (v of values) {
+                assert.areequal('a', v);
+                break;
+            }
+            for (v, k in values) {
+                assert.areequal(1, k);
+                assert.areequal('a', v);
+                break;
+            }
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void CFor()
+        {
+            TestScript.Run(@"
+            //out of scope local
+            local a = 0;
+            local b = 0;
+            for(a = 1; a <= 5; a++) {
+                b++;
+            }
+            assert.areequal(6, a, 'outer local');
+            assert.areequal(5, b, 'outer local');
+            b = 0;
+            for(var z = 1; z <= 5; z++) {
+                assert.istrue(z ~= nil, 'z should not be nil');
+                b++;
+            }
+            assert.areequal(nil, z, 'inner local'); //scope doesn't leak
+            assert.areequal(5, b, 'inner local');
+            //no init
+            for(; a < 20; a++) {
+                b++;
+            }
+            assert.areequal(20, a, 'no init');
+            //no condition
+            for(;; a++) {
+                if (a > 25) break;
+            }
+            assert.areequal(26, a, 'no condition or init')
+            for(a = 0;;a++) {
+                if (a == 3) break;
+            }
+            assert.areequal(3, a, 'no condition');
+            for(a = 0; a < 5;) {
+                a++;
+            }
+            assert.areequal(5, a, 'no modify');
+            for(;;) {
+                a++;
+                if(a == 10) break;
+            }
+            assert.areequal(10, a, 'empty for');
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void Continue()
+        {
+            TestScript.Run(@"
+            local a = 0;
+            while(a < 3) {
+                a++;
+                continue;
+                a = 5; //should be dead
+            }
+            assert.areequal(3, a, 'while');
+", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        
+
+        [Test]
         public void AndSyntax()
         {
             TestScript.Run(@" 

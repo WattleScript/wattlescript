@@ -26,11 +26,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			: base(lcontext)
 		{
 			bool cStyle;
-			m_Ifs.Add(CreateIfBlock(lcontext, out cStyle));
-			while (lcontext.Lexer.Current.Type == TokenType.ElseIf) {
-				m_Ifs.Add(CreateIfBlock(lcontext, out cStyle));
+			bool endBlock;
+			m_Ifs.Add(CreateIfBlock(lcontext, out cStyle, out endBlock));
+			while (!endBlock && lcontext.Lexer.Current.Type == TokenType.ElseIf) {
+				m_Ifs.Add(CreateIfBlock(lcontext, out cStyle, out endBlock));
 			}
-			if (lcontext.Lexer.Current.Type == TokenType.Else)
+			if (!endBlock && lcontext.Lexer.Current.Type == TokenType.Else)
 			{
 				m_Else = CreateElseBlock(lcontext, cStyle);
 			}
@@ -38,18 +39,23 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		}
 
 		
-		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool cstyle)
+		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool cstyle, out bool endBlock)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.If, TokenType.ElseIf);
 			lcontext.Scope.PushBlock();
 			var ifblock = new IfBlock();
 			ifblock.Exp = Expression.Expr(lcontext);
 			cstyle = false;
+			endBlock = false;
 			if (lcontext.Syntax == ScriptSyntax.Lua)
 			{
 				ifblock.Source = type.GetSourceRef(CheckTokenType(lcontext, TokenType.Then));
 				ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
-				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+				if (lcontext.Lexer.Current.Type == TokenType.End) {
+					m_End = lcontext.Lexer.Current.GetSourceRef();
+					lcontext.Lexer.Next();
+					endBlock = true;
+				}
 			}
 			else
 			{
@@ -64,7 +70,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				else if (open.Type == TokenType.Then) {
 					lcontext.Lexer.Next();
 					ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
-					m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+					if (lcontext.Lexer.Current.Type == TokenType.End) {
+						m_End = lcontext.Lexer.Current.GetSourceRef();
+						lcontext.Lexer.Next();
+						endBlock = true;
+					}
 				}
 				else
 				{

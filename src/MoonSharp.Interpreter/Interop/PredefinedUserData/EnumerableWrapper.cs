@@ -57,7 +57,7 @@ namespace MoonSharp.Interpreter.Interop
 
 		internal static DynValue ConvertTable(Table table)
 		{
-			return ConvertIterator(table.OwnerScript, table.Values.GetEnumerator());
+			return ConvertIterator(table.OwnerScript, table.ReversePair.GetEnumerator());
 		}
 
 
