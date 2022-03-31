@@ -177,13 +177,13 @@ namespace MoonSharp.Interpreter.Tree
 					//Scan to see if this is an arrow lambda
 					lcontext.Lexer.SavePos();
 					lcontext.Lexer.Next(); // skip bracket
-					while (lcontext.Lexer.PeekNext().Type != TokenType.Eof &&
-					       lcontext.Lexer.PeekNext().Type != TokenType.Brk_Close_Round &&
-					       lcontext.Lexer.PeekNext().Type != TokenType.Brk_Open_Round) {
+					while (lcontext.Lexer.Current.Type != TokenType.Eof &&
+					       lcontext.Lexer.Current.Type != TokenType.Brk_Close_Round &&
+					       lcontext.Lexer.Current.Type != TokenType.Brk_Open_Round) {
 						lcontext.Lexer.Next();
 					}
 					lcontext.Lexer.Next();
-					bool arrowLambda = lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
+					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow;
 					lcontext.Lexer.RestorePos();
 					if (arrowLambda) 					
 						return new FunctionDefinitionExpression(lcontext, false, true);

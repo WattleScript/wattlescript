@@ -19,6 +19,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
         SourceRef refEnd;
         RuntimeScopeBlock stackFrame;
 
+        private RuntimeScopeBlock iteratorFrame;
         public SourceRef End => refEnd;
         
         public CStyleForStatement(ScriptLoadingContext lcontext, Token forTok) : base(lcontext)
@@ -74,6 +75,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
             CheckTokenType(lcontext, TokenType.Brk_Close_Round);
             refBegin = forTok.GetSourceRef(lcontext.Lexer.Current);
+            lcontext.Scope.PushBlock();
             if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
             {
                 lcontext.Lexer.Next();
@@ -85,6 +87,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
                 refEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
             }
             stackFrame = lcontext.Scope.PopBlock();
+            iteratorFrame = lcontext.Scope.PopBlock();
         }
 
         public override void Compile(ByteCode bc)
@@ -100,6 +103,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
             bc.PushSourceRef(refBegin);
 
             bc.LoopTracker.Loops.Push(L);
+            bc.Emit_Enter(iteratorFrame);
             if (initExpression != null) {
                 initExpression.Compile(bc);
                 initAssignee.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
@@ -112,28 +116,19 @@ namespace MoonSharp.Interpreter.Tree.Statements
                 bc.Emit_Swap(0, 1);
             }
             var jumpend = bc.Emit_Jump(OpCode.Jf, -1);
+            
             bc.Emit_Enter(stackFrame);
-            if (isDefLocal) {
-                initAssignee.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-                bc.Emit_Pop();
-            }
             block.Compile(bc);
             int continuePoint = bc.GetJumpPointForNextInstruction();
+            if(isDefLocal) bc.Emit_CloseUp((initAssignee as SymbolRefExpression).Symbol);
             modify.Compile(bc);
-            if(isDefLocal) ((Expression) initAssignee).Compile(bc);
             bc.Emit_Leave(stackFrame);
-            if (isDefLocal) {
-                initAssignee.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-                bc.Emit_Pop();
-            }
             bc.Emit_Jump(OpCode.Jump, start);
             bc.LoopTracker.Loops.Pop();
             bc.PopSourceRef();
             bc.PushSourceRef(refEnd);
 
             int exitpoint = bc.GetJumpPointForNextInstruction();
-            if (isDefLocal) bc.Emit_Pop();
-
             foreach (int i in L.BreakJumps)
                 bc.SetNumVal(i, exitpoint);
             
@@ -141,7 +136,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
                 bc.SetNumVal(i, continuePoint);
 
             bc.SetNumVal(jumpend, exitpoint);
-            
+
+            bc.Emit_Leave(iteratorFrame);
             bc.PopSourceRef();
             
         }

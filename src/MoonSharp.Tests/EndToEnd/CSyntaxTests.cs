@@ -155,6 +155,20 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(3, a, 'numeric for');
 ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
+
+        [Test]
+        public void CFor_Closure()
+        {
+            TestScript.Run(@"
+            var tbl = {}
+            for(local i = 1; i < 4; i++) {
+                tbl[i] = () => i;
+            }
+            assert.areequal(1, tbl[1]());
+            assert.areequal(2, tbl[2]());
+            assert.areequal(3, tbl[3]());
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
         
         
 

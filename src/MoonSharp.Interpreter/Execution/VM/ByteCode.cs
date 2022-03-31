@@ -192,6 +192,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Clean, NumVal = runtimeScopeBlock.To + 1, NumVal2 = runtimeScopeBlock.ToInclusive });
 		}
 
+		public int Emit_CloseUp(SymbolRef sym)
+		{
+			if (sym.Type != SymbolRefType.Local)
+				throw new InternalErrorException("Can only emit CloseUp for locals");
+			return AppendInstruction(new Instruction() { OpCode = OpCode.CloseUp, NumVal = sym.i_Index });
+		}
+
 		public int Emit_Closure(SymbolRef[] symbols, int jmpnum)
 		{
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Closure, SymbolList = symbols, NumVal = jmpnum });

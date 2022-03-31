@@ -136,6 +136,19 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.Scalar:
 							m_ValueStack.Push(m_ValueStack.Pop().ToScalar());
 							break;
+						case OpCode.CloseUp:
+						{
+							ref var csi = ref m_ExecutionStack.Peek();
+							if (csi.OpenClosures == null) break;
+							for (int j = csi.OpenClosures.Count - 1; j >= 0; j--) {
+								if (csi.OpenClosures[j].Index == csi.BasePointer + i.NumVal)
+								{
+									csi.OpenClosures[j].Close();
+									csi.OpenClosures.RemoveAt(j);
+								}
+							}
+							break;
+						}
 						case OpCode.Not:
 							ExecNot(i);
 							break;

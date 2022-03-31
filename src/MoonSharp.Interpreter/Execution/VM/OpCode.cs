@@ -31,6 +31,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		// Stack-frame ops and calls
 		Clean,		// Cleansup locals setting them as null
+		CloseUp,	// Close a specific upvalue
 
 		Meta,	// Injects function metadata used for reflection things (dumping, debugging)
 		BeginFn,	// Adjusts for start of function, taking in parameters and allocating locals

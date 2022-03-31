@@ -14,6 +14,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		private bool dec = false;
 
 		public bool IsAssignment => inc || dec;
+		public SymbolRef Symbol => m_Ref;
 
 		public SymbolRefExpression(Token T, ScriptLoadingContext lcontext)
 			: base(lcontext)
