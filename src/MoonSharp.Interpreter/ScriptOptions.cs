@@ -104,9 +104,9 @@ namespace MoonSharp.Interpreter
 		public bool AutoAwait { get; set; }
 		
 		/// <summary>
-		/// Gets or sets a value indicating whether or not C Syntax extensions are enabled.
+		/// Gets or sets a value indicating the syntax used by the compiler.
 		/// </summary>
-		public bool EnableCSyntax { get; set; }
+		public ScriptSyntax Syntax { get; set; }
 
 	}
 }

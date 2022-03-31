@@ -15,8 +15,9 @@ namespace MoonSharp.Interpreter.Tree
 		int m_SourceId;
 		bool m_AutoSkipComments = false;
 		bool m_Extended = false;
+		private bool m_IncDec;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, bool extended)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, bool extended, bool incdec)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -26,7 +27,8 @@ namespace MoonSharp.Interpreter.Tree
 				m_Code = m_Code.Substring(1);
 
 			m_AutoSkipComments = autoSkipComments;
-			this.m_Extended = extended;
+			m_Extended = extended;
+			m_IncDec = incdec;
 		}
 
 		public Token Current
@@ -274,8 +276,21 @@ namespace MoonSharp.Interpreter.Tree
 				{
 					if (m_Extended)
 					{
-						return PotentiallyDoubleCharOperator('=', TokenType.Op_Add, TokenType.Op_AddEq, fromLine,
-							fromCol);
+						char next = CursorCharNext();
+						if (m_IncDec && next == '+')
+						{
+							CursorCharNext();
+							return CreateToken(TokenType.Op_Inc, fromLine, fromCol, "++");
+						}
+						else if (next == '=')
+						{
+							CursorCharNext();
+							return CreateToken(TokenType.Op_AddEq, fromLine, fromCol, "+=");
+						}
+						else
+						{
+							return CreateToken(TokenType.Op_Add, fromLine, fromCol, "+");
+						}
 					}
 					else
 					{
@@ -287,7 +302,14 @@ namespace MoonSharp.Interpreter.Tree
 						char next = CursorCharNext();
 						if (next == '-')
 						{
-							return ReadComment(fromLine, fromCol);
+							if (m_IncDec)
+							{
+								CursorCharNext();
+								return CreateToken(TokenType.Op_Dec, fromLine, fromCol, "--");
+							}
+							else
+								return ReadComment(fromLine, fromCol);
+
 						}
 						else if (m_Extended && next == '=')
 						{

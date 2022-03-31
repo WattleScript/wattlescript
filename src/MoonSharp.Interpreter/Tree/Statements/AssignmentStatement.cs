@@ -72,7 +72,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_LValues.Add(CheckVar(lcontext, e));
 			}
 
-			if (lcontext.CSyntax) {
+			if (lcontext.Syntax != ScriptSyntax.Lua) {
 				switch (lcontext.Lexer.Current.Type) {
 					case TokenType.Op_AddEq:
 						AssignmentOp = Operator.Add;

@@ -127,7 +127,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		public bool IsUnaryOperator()
 		{
-			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len;
+			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len ||
+			       Type == TokenType.Op_Inc || Type == TokenType.Op_Dec;
 		}
 
 		public bool IsBinaryOperator()

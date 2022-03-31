@@ -27,7 +27,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		protected static Token CheckTokenTypeEx(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
 		{
-			if (lcontext.CSyntax)
+			if (lcontext.Syntax != ScriptSyntax.Lua)
 			{
 				Token t = lcontext.Lexer.Current;
 				if (t.Type != tokenType1 &&

@@ -9,11 +9,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 	{
 		Expression m_Exp;
 		string m_OpText;
+		private Token tok;
 
 		public UnaryOperatorExpression(ScriptLoadingContext lcontext, Expression subExpression, Token unaryOpToken)
 			: base(lcontext)
 		{
 			m_OpText = unaryOpToken.Text;
+			tok = unaryOpToken;
 			m_Exp = subExpression;
 		}
 
@@ -23,18 +25,49 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public override void Compile(ByteCode bc)
 		{
-			m_Exp.Compile(bc);
-
 			switch (m_OpText)
 			{
+				//prefix inc/dec operators - return number AFTER calculation
+				case "++":
+				{
+					if (m_Exp is IVariable var)
+					{
+						m_Exp.Compile(bc);
+						bc.Emit_Literal(DynValue.NewNumber(1.0));
+						bc.Emit_Operator(OpCode.Add);
+						//assignment doesn't pop
+						var.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+					}
+					else
+						throw new SyntaxErrorException(tok, "'++' can only be used with indexers or variables",
+							"++");
+					break;
+				}
+				case "--":
+				{
+					if (m_Exp is IVariable var)
+					{
+						m_Exp.Compile(bc);
+						bc.Emit_Literal(DynValue.NewNumber(1.0));
+						bc.Emit_Operator(OpCode.Sub);
+						var.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+					}
+					else
+						throw new SyntaxErrorException(tok, "'--' can only be used with indexers or variables",
+							"--");
+					break;
+				}
 				case "!":
 				case "not":
+					m_Exp.Compile(bc);
 					bc.Emit_Operator(OpCode.Not);
 					break;
 				case "#":
+					m_Exp.Compile(bc);
 					bc.Emit_Operator(OpCode.Len);
 					break;
 				case "-":
+					m_Exp.Compile(bc);
 					bc.Emit_Operator(OpCode.Neg);
 					break;
 				default:
@@ -83,6 +116,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					dv = DynValue.NewBoolean(!v.CastToBool());
 					return true;
 				case "#":
+				case "++": 
+				case "--":
 					return false;
 				case "-":
 					double? d = v.CastToNumber();

@@ -12,7 +12,7 @@ namespace MoonSharp.Interpreter.Execution
 		public bool IsDynamicExpression { get; set; }
 		public Lexer Lexer { get; set; }
 		
-		public bool CSyntax { get; set; }
+		public ScriptSyntax Syntax { get; set; }
 
 		public ScriptLoadingContext(Script s)
 		{

@@ -10,7 +10,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         DynValue RunScript(string source)
         {
             var script = new Script();
-            script.Options.EnableCSyntax = true;
+            script.Options.Syntax = ScriptSyntax.CLike;
             return script.DoString(source);
         }
         
@@ -35,7 +35,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             }
             assert.isfalse(andfunc(true, false), 'true && false')
             assert.istrue(andfunc(true, true), 'true && true')",
-                s => s.Options.EnableCSyntax = true);
+                s => s.Options.Syntax = ScriptSyntax.CLike);
         }
         
         [Test]
@@ -47,7 +47,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             }
             assert.istrue(orfunc(true, false), 'true || false')
             assert.isfalse(orfunc(false, false), 'false && false')",
-                s => s.Options.EnableCSyntax = true);
+                s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(4, f, '^=');
             assert.areequal(1, g, '%=');
             assert.areequal('abc', h, '..=');
-            ", s=> s.Options.EnableCSyntax = true);
+            ", s=> s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]
@@ -96,14 +96,46 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(6, tbl[3], '*= (table)');
             assert.areequal(1, tbl[4], '%= (table)');
             assert.areequal('abc', tbl[5], '..= (table)');
-            ", s => s.Options.EnableCSyntax = true);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
+
+        [Test]
+        public void PrefixIncDec()
+        {
+            TestScript.Run(@"
+            var a = 1;
+            assert.areequal(2, ++a, '++');
+            assert.areequal(1, --a, '--');
+            var t = { 1 }
+            assert.areequal(2, ++t[1], '++ (table)');
+            assert.areequal(1, --t[1], '-- (table)');
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void PostfixIncDec()
+        {
+            TestScript.Run(@"
+            var a = 1;
+            assert.areequal(1, a++, '++');
+            assert.areequal(2, a, 'after ++');
+            var b = 1;
+            assert.areequal(1, b--, '--');
+            assert.areequal(0, b, 'after --');
+            var t = { 1 };
+            assert.areequal(1, t[1]++, '++ (table)');
+            assert.areequal(2, t[1], 'after ++ (table)');
+            assert.areequal(2, t[1]--, '-- (table)');
+            assert.areequal(1, t[1], 'after -- (table)');
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
 
         [Test]
         public void Not()
         {
             TestScript.Run(@"assert.istrue(!false); assert.isfalse(!true);",
-                s => s.Options.EnableCSyntax = true);
+                s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]

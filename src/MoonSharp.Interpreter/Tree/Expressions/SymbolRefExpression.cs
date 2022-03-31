@@ -1,6 +1,7 @@
 ﻿using System;
 using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Execution;
+using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Expressions
 {
@@ -8,6 +9,9 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 	{
 		SymbolRef m_Ref;
 		string m_VarName;
+
+		private bool inc = false;
+		private bool dec = false;
 
 		public SymbolRefExpression(Token T, ScriptLoadingContext lcontext)
 			: base(lcontext)
@@ -31,6 +35,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 
 			lcontext.Lexer.Next();
+			//inc/dec expr
+			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
+			{
+				inc = true;
+				lcontext.Lexer.Next();
+			} 
+			else if (lcontext.Lexer.Current.Type == TokenType.Op_Dec)
+			{
+				dec = true;
+				lcontext.Lexer.Next();
+			}
 		}
 
 		public SymbolRefExpression(ScriptLoadingContext lcontext, SymbolRef refr)
@@ -47,6 +62,22 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			bc.Emit_Load(m_Ref);
+			if (inc)
+			{
+				bc.Emit_Copy(0); //do copy before returning number
+				bc.Emit_Literal(DynValue.NewNumber(1.0));
+				bc.Emit_Operator(OpCode.Add);
+				bc.Emit_Store(m_Ref, 0, 0);
+				bc.Emit_Pop();
+			} 
+			else if (dec)
+			{
+				bc.Emit_Copy(0); //do copy before returning number
+				bc.Emit_Literal(DynValue.NewNumber(1.0));
+				bc.Emit_Operator(OpCode.Sub);
+				bc.Emit_Store(m_Ref, 0, 0);
+				bc.Emit_Pop();
+			}
 		}
 
 

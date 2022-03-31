@@ -60,7 +60,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				openRound = CheckTokenType(lcontext, TokenType.Brk_Open_Round);
 				paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
-				if (lcontext.CSyntax && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly) {
+				if (lcontext.Syntax != ScriptSyntax.Lua && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly) {
 					openCurly = true;
 					lcontext.Lexer.Next();
 				}
@@ -107,7 +107,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		private Statement CreateLambdaBody(ScriptLoadingContext lcontext, bool arrowFunc)
 		{
 			Token start = lcontext.Lexer.Current;
-			if (lcontext.CSyntax && start.Type == TokenType.Brk_Open_Curly)
+			if (lcontext.Syntax != ScriptSyntax.Lua && start.Type == TokenType.Brk_Open_Curly)
 			{
 				lcontext.Lexer.Next();
 				return CreateBody(lcontext, true);

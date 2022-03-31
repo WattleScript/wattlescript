@@ -166,7 +166,7 @@ namespace MoonSharp.Interpreter.Tree
 					return new FunctionDefinitionExpression(lcontext, false, true);
 				case TokenType.Brk_Open_Round:
 				{
-					if (!lcontext.CSyntax) return PrimaryExp(lcontext);
+					if (lcontext.Syntax == ScriptSyntax.Lua) return PrimaryExp(lcontext);
 					//Scan to see if this is an arrow lambda
 					lcontext.Lexer.SavePos();
 					lcontext.Lexer.Next(); // skip bracket

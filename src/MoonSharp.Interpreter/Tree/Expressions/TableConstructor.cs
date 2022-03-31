@@ -23,15 +23,22 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				switch (lcontext.Lexer.Current.Type)
 				{
 					case TokenType.String:
-						if (lcontext.CSyntax) goto case TokenType.Name;
-						else goto default;
+						if (lcontext.Syntax != ScriptSyntax.Lua)
+						{
+							Token assign = lcontext.Lexer.PeekNext();
+							if(assign.Type == TokenType.Colon)
+								StructField(lcontext);
+							else
+								ArrayField(lcontext);
+						}
+						else ArrayField(lcontext);
+						break;
 					case TokenType.Name:
 						{
 							Token assign = lcontext.Lexer.PeekNext();
 
-							if (assign.Type == TokenType.Op_Assignment || 
-							    lcontext.CSyntax && assign.Type == TokenType.Colon)
-								StructField(lcontext);
+							if (assign.Type == TokenType.Op_Assignment)
+							    StructField(lcontext);
 							else
 								ArrayField(lcontext);
 						}

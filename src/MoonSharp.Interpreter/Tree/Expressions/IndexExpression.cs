@@ -10,13 +10,25 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Expression m_BaseExp;
 		Expression m_IndexExp;
 		string m_Name;
-
+		private bool inc;
+		private bool dec;
 
 		public IndexExpression(Expression baseExp, Expression indexExp, ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
 			m_BaseExp = baseExp;
 			m_IndexExp = indexExp;
+			//inc/dec expr
+			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
+			{
+				inc = true;
+				lcontext.Lexer.Next();
+			} 
+			else if (lcontext.Lexer.Current.Type == TokenType.Op_Dec)
+			{
+				dec = true;
+				lcontext.Lexer.Next();
+			}
 		}
 
 		public IndexExpression(Expression baseExp, string name, ScriptLoadingContext lcontext)
@@ -24,6 +36,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		{
 			m_BaseExp = baseExp;
 			m_Name = name;
+			//inc/dec expr
+			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
+			{
+				inc = true;
+				lcontext.Lexer.Next();
+			} 
+			else if (lcontext.Lexer.Current.Type == TokenType.Op_Dec)
+			{
+				dec = true;
+				lcontext.Lexer.Next();
+			}
 		}
 
 
@@ -43,6 +66,23 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				m_IndexExp.Compile(bc);
 				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression));
+			}
+
+			if (inc)
+			{
+				bc.Emit_Copy(0);
+				bc.Emit_Literal(DynValue.NewNumber(1.0));
+				bc.Emit_Operator(OpCode.Add);
+				CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+				bc.Emit_Pop();
+			} 
+			else if (dec)
+			{
+				bc.Emit_Copy(0);
+				bc.Emit_Literal(DynValue.NewNumber(1.0));
+				bc.Emit_Operator(OpCode.Sub);
+				CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+				bc.Emit_Pop();
 			}
 		}
 
