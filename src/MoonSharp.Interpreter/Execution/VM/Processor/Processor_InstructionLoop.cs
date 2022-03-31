@@ -160,6 +160,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = JumpBool(i, false, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.Jt:
+							instructionPtr = JumpBool(i, true, instructionPtr);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
 						case OpCode.Jump:
 							instructionPtr = i.NumVal;
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;

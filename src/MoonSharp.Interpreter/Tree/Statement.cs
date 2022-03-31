@@ -31,7 +31,7 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.While:
 					return new WhileStatement(lcontext);
 				case TokenType.Do:
-					return new ScopeBlockStatement(lcontext);
+					return new DoBlockStatement(lcontext);
 				case TokenType.For:
 					return DispatchForLoopStatement(lcontext);
 				case TokenType.Repeat:

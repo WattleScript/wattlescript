@@ -57,6 +57,7 @@ namespace MoonSharp.Interpreter.Execution
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:
+				case OpCode.Jt:
 				case OpCode.JNil:
 				case OpCode.JFor:
 				case OpCode.JtOrPop:

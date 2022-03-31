@@ -13,7 +13,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             script.Options.Syntax = ScriptSyntax.CLike;
             return script.DoString(source);
         }
-        
+
         [Test]
         public void IfBlock()
         {
@@ -37,7 +37,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.istrue(andfunc(true, true), 'true && true')",
                 s => s.Options.Syntax = ScriptSyntax.CLike);
         }
-        
+
         [Test]
         public void OrSyntax()
         {
@@ -78,7 +78,23 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(4, f, '^=');
             assert.areequal(1, g, '%=');
             assert.areequal('abc', h, '..=');
-            ", s=> s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void DoLoop()
+        {
+            TestScript.Run(@"
+                var a = 1;
+                do {
+                    a++;
+                } while (a < 5);
+                assert.areequal(5, a);
+                do {
+                    a--;
+                } while (a > 0);
+                assert.areequal(0, a);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]

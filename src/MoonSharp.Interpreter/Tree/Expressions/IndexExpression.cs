@@ -13,6 +13,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		private bool inc;
 		private bool dec;
 
+		public bool IsAssignment => inc || dec;
+
 		public IndexExpression(Expression baseExp, Expression indexExp, ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
