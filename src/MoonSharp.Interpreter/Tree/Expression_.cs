@@ -118,6 +118,11 @@ namespace MoonSharp.Interpreter.Tree
 
 			T = lcontext.Lexer.Current;
 
+			if (T.Type == TokenType.Ternary)
+			{
+				return new TernaryExpression(lcontext, e);
+			}
+
 			if (isPrimary && T.IsBinaryOperator())
 			{
 				object chain = BinaryOperatorExpression.BeginOperatorChain();
@@ -234,7 +239,8 @@ namespace MoonSharp.Interpreter.Tree
 							e = new IndexExpression(e, index, lcontext);
 						}
 						break;
-					case TokenType.Colon:
+					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.CLike:
+					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.CLike:
 						lcontext.Lexer.Next();
 						thisCallName = CheckTokenType(lcontext, TokenType.Name);
 						goto case TokenType.Brk_Open_Round;

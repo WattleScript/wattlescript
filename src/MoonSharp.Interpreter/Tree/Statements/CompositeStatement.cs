@@ -8,12 +8,13 @@ namespace MoonSharp.Interpreter.Tree.Statements
 	enum BlockEndType
 	{
 		Normal,
-		CloseCurly,
-		SemiColon
+		CloseCurly
 	}
 	class CompositeStatement : Statement 
 	{
 		List<Statement> m_Statements = new List<Statement>();
+
+		public Token EndToken;
 
 		public CompositeStatement(ScriptLoadingContext lcontext, BlockEndType endType)
 			: base(lcontext)
@@ -21,20 +22,14 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			while (true)
 			{
 				Token t = lcontext.Lexer.Current;
+				EndToken = lcontext.Lexer.Current;
 				if (t.IsEndOfBlock()) break;
-				if (endType == BlockEndType.CloseCurly && t.Type == TokenType.Brk_Close_Curly) {
-					lcontext.Lexer.Next();
-					break;
-				}
-				if (endType == BlockEndType.SemiColon && t.Type == TokenType.SemiColon) {
-					lcontext.Lexer.Next();
-					break;
-				}
+				if (endType == BlockEndType.CloseCurly && t.Type == TokenType.Brk_Close_Curly) break;
 				bool forceLast;
 				
 				Statement s = Statement.CreateStatement(lcontext, out forceLast);
 				m_Statements.Add(s);
-
+				EndToken = lcontext.Lexer.Current;
 				if (forceLast) break;
 			}
 

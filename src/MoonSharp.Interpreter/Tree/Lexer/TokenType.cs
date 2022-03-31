@@ -64,6 +64,7 @@ namespace MoonSharp.Interpreter.Tree
 		Op_ConcatEq,
 		Op_Inc,
 		Op_Dec,
+		Ternary,
 		Comment,
 
 		String,

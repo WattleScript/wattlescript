@@ -401,6 +401,8 @@ namespace MoonSharp.Interpreter.Tree
 					return CreateSingleCharToken(TokenType.Brk_Close_Curly, fromLine, fromCol);
 				case ',':
 					return CreateSingleCharToken(TokenType.Comma, fromLine, fromCol);
+				case '?' when m_IncDec:
+					return CreateSingleCharToken(TokenType.Ternary, fromLine, fromCol);
 				case ':':
 					return PotentiallyDoubleCharOperator(':', TokenType.Colon, TokenType.DoubleColon, fromLine, fromCol);
 				case '"':

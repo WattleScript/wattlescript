@@ -136,7 +136,8 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             while (a < 5) a++;
             assert.areequal(5, a);
             while (a > 0) { a--; }
-            assert.areequal(a, 5);");
+            assert.areequal(0, a);",
+                s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]
@@ -158,6 +159,24 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void Ternary()
+        {
+            TestScript.Run(@"
+            // optimized
+            assert.areequal(2, true ? 2 : 1, '? true lit');
+            assert.areequal(1, false ? 2 : 1, '? false lit');
+            // func call - bytecode
+            assert.areequal(2, gettrue() ? 2 : 1, '? true func');
+            assert.areequal(1, getfalse() ? 2 : 1, '? false func');",
+                s =>
+            {
+                s.Options.Syntax = ScriptSyntax.CLike;
+                s.Globals["gettrue"] = (Func<bool>)(() => true);
+                s.Globals["getfalse"] = (Func<bool>) (() => false);
+            });
+        }
+
+        [Test]
         public void CMultilineComment()
         {
             TestScript.Run(@"
@@ -170,6 +189,18 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             */
             assert.areequal(4, a);
             assert.areequal(3, b);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void CLabel()
+        {
+            TestScript.Run(@"
+            var a = 7;
+            goto fin
+            a = 2;
+            fin:
+            assert.areequal(7, a);
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 

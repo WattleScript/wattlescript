@@ -24,17 +24,17 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			: base(lcontext)
 		{
 			bool openedCurly = false;
-			while (lcontext.Lexer.Current.Type != TokenType.Else 
-			       && lcontext.Lexer.Current.Type != TokenType.End 
-			       && lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly)
-			{
-				m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
-			}
 			
+			m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
 			if (openedCurly) {
 				m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
 			}
-			
+			while (lcontext.Lexer.Current.Type == TokenType.ElseIf) {
+				m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
+				if (openedCurly) {
+					m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+				}
+			}
 			if (lcontext.Lexer.Current.Type == TokenType.Else) {
 				m_Else = CreateElseBlock(lcontext, out openedCurly);
 				m_End = CheckTokenType(lcontext, openedCurly ? TokenType.Brk_Close_Curly : TokenType.End).GetSourceRef();

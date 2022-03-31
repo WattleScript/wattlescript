@@ -19,7 +19,7 @@ namespace MoonSharp.Interpreter.Tree
 
 			switch (tkn.Type)
 			{
-				case TokenType.DoubleColon:
+				case TokenType.DoubleColon when lcontext.Syntax != ScriptSyntax.CLike:
 					return new LabelStatement(lcontext);
 				case TokenType.Goto:
 					return new GotoStatement(lcontext);
@@ -51,16 +51,27 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Break:
 					return new BreakStatement(lcontext);
 				default:
-					{
+				{
+						//Check for labels in CLike mode
+						lcontext.Lexer.SavePos();
 						Token l = lcontext.Lexer.Current;
+						if (lcontext.Syntax == ScriptSyntax.CLike && l.Type == TokenType.Name)
+						{
+							lcontext.Lexer.Next();
+							if (lcontext.Lexer.Current.Type == TokenType.Colon) {
+								lcontext.Lexer.RestorePos();
+								return new LabelStatement(lcontext);
+							}
+						}
+						lcontext.Lexer.RestorePos();
+						//Regular expression
 						Expression exp = Expression.PrimaryExp(lcontext);
 						FunctionCallExpression fnexp = exp as FunctionCallExpression;
-
 						if (fnexp != null)
 							return new FunctionCallStatement(lcontext, fnexp);
 						else
 							return new AssignmentStatement(lcontext, exp, l);
-					}
+				}
 			}
 		}
 

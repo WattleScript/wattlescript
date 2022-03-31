@@ -24,6 +24,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			{
 				lcontext.Lexer.Next();
 				m_Block = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+				CheckTokenType(lcontext, TokenType.Brk_Close_Curly);
 				Token cond = CheckTokenType(lcontext, TokenType.While);
 				m_Condition = Expression.Expr(lcontext);
 				m_End = cond.GetSourceRefUpTo(lcontext.Lexer.Current);
