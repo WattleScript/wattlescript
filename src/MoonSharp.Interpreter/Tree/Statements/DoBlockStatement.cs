@@ -4,12 +4,14 @@ using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Statements
 {
-	class DoBlockStatement : Statement
+	class DoBlockStatement : Statement, IBlockStatement
 	{
 		Statement m_Block;
 		RuntimeScopeBlock m_StackFrame;
 		SourceRef m_Do, m_End;
 		Expression m_Condition;
+
+		public SourceRef End => m_End;
 
 		public DoBlockStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)

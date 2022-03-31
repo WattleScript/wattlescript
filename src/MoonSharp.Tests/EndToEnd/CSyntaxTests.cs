@@ -17,13 +17,27 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         [Test]
         public void IfBlock()
         {
-            Assert.AreEqual(1.0, RunScript(@"
-            if (1 > 2) {
-                return 0;
-            } else {
-                return 1;
+            TestScript.Run(@"
+            function if_1(a, b) {
+                if a < b return a;
+                return b;
             }
-            ").Number);
+            function if_2(a, b) {
+                if a > 3 { return a; }
+                else return b + 3;
+            }
+            assert.areequal(1, if_1(1,2));
+            assert.areequal(4, if_2(1,1));
+            //Can use elseif or chain else to if
+            if (3 < 2) 
+                assert.fail(); 
+            elseif (4 < 2) 
+                assert.fail();
+            else if (1 < 2) 
+                assert.pass(); 
+            else 
+                assert.fail();",
+                s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         [Test]
@@ -136,7 +150,9 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             while (a < 5) a++;
             assert.areequal(5, a);
             while (a > 0) { a--; }
-            assert.areequal(0, a);",
+            assert.areequal(0, a);
+            while (true) if (a > 5) break; else a++;
+            assert.areequal(6, a);",
                 s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 

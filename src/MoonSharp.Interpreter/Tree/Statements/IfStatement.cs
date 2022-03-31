@@ -6,7 +6,7 @@ using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Statements
 {
-	class IfStatement : Statement
+	class IfStatement : Statement, IBlockStatement
 	{
 		private class IfBlock
 		{
@@ -16,6 +16,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			public SourceRef Source;
 		}
 
+		public SourceRef End => m_End;
+
 		List<IfBlock> m_Ifs = new List<IfBlock>();
 		IfBlock m_Else = null;
 		SourceRef m_End;
@@ -23,60 +25,95 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public IfStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			bool openedCurly = false;
-			
-			m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
-			if (openedCurly) {
-				m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
-			}
+			bool cStyle;
+			m_Ifs.Add(CreateIfBlock(lcontext, out cStyle));
 			while (lcontext.Lexer.Current.Type == TokenType.ElseIf) {
-				m_Ifs.Add(CreateIfBlock(lcontext, out openedCurly));
-				if (openedCurly) {
-					m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
-				}
+				m_Ifs.Add(CreateIfBlock(lcontext, out cStyle));
 			}
-			if (lcontext.Lexer.Current.Type == TokenType.Else) {
-				m_Else = CreateElseBlock(lcontext, out openedCurly);
-				m_End = CheckTokenType(lcontext, openedCurly ? TokenType.Brk_Close_Curly : TokenType.End).GetSourceRef();
-			} else if (!openedCurly) {
-				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			if (lcontext.Lexer.Current.Type == TokenType.Else)
+			{
+				m_Else = CreateElseBlock(lcontext, cStyle);
 			}
-
 			lcontext.Source.Refs.Add(m_End);
 		}
 
-		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool curlyOpen)
+		
+		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool cstyle)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.If, TokenType.ElseIf);
-
 			lcontext.Scope.PushBlock();
-
 			var ifblock = new IfBlock();
-
 			ifblock.Exp = Expression.Expr(lcontext);
-			var open = CheckTokenType(lcontext, TokenType.Then, TokenType.Brk_Open_Curly);
-			curlyOpen = open.Type == TokenType.Brk_Open_Curly;
-			ifblock.Source = type.GetSourceRef(open);
-			ifblock.Block = new CompositeStatement(lcontext, open.Type == TokenType.Brk_Open_Curly ? BlockEndType.CloseCurly : BlockEndType.Normal);
+			cstyle = false;
+			if (lcontext.Syntax == ScriptSyntax.Lua)
+			{
+				ifblock.Source = type.GetSourceRef(CheckTokenType(lcontext, TokenType.Then));
+				ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			}
+			else
+			{
+				Token open = lcontext.Lexer.Current;
+				ifblock.Source = type.GetSourceRef(open);
+				if (open.Type == TokenType.Brk_Open_Curly) {
+					lcontext.Lexer.Next();
+					ifblock.Block = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+					m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+					cstyle = true;
+				} 
+				else if (open.Type == TokenType.Then) {
+					lcontext.Lexer.Next();
+					ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+					m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+				}
+				else
+				{
+					ifblock.Source = type.GetSourceRef(lcontext.Lexer.Current);
+					ifblock.Block = Statement.CreateStatement(lcontext, out _);
+					if (ifblock.Block is IBlockStatement block)
+						m_End = block.End;
+					else
+						m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+					cstyle = true;
+				}
+			}
 			ifblock.StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(ifblock.Source);
-
-
 			return ifblock;
 		}
+		
 
-		IfBlock CreateElseBlock(ScriptLoadingContext lcontext, out bool openedCurly)
+		IfBlock CreateElseBlock(ScriptLoadingContext lcontext, bool cstyle)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.Else);
 
 			lcontext.Scope.PushBlock();
 
 			var ifblock = new IfBlock();
-			openedCurly = lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly;
-			if(openedCurly) lcontext.Lexer.Next();
-			ifblock.Block = new CompositeStatement(lcontext, openedCurly ? BlockEndType.CloseCurly : BlockEndType.Normal);
+			if (cstyle)
+			{
+				Token open = lcontext.Lexer.Current;
+				ifblock.Source = type.GetSourceRef(open);
+				if (open.Type == TokenType.Brk_Open_Curly) {
+					lcontext.Lexer.Next();
+					ifblock.Block = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+					m_End = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+				}
+				else {
+					ifblock.Block = CreateStatement(lcontext, out _);
+					if (ifblock.Block is IBlockStatement block)
+						m_End = block.End;
+					else
+						m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+				}
+			}
+			else
+			{
+				ifblock.Source = type.GetSourceRef();
+				ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			}
 			ifblock.StackFrame = lcontext.Scope.PopBlock();
-			ifblock.Source = type.GetSourceRef();
 			lcontext.Source.Refs.Add(ifblock.Source);
 			return ifblock;
 		}

@@ -5,13 +5,16 @@ using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Statements
 {
-	class WhileStatement : Statement
+	class WhileStatement : Statement, IBlockStatement
 	{
 		Expression m_Condition;
 		Statement m_Block;
 		RuntimeScopeBlock m_StackFrame;
 		SourceRef m_Start, m_End;
+		
+		public SourceRef End => m_End;
 
+		
 		public WhileStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
@@ -28,7 +31,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			    lcontext.Lexer.Current.Type != TokenType.Brk_Open_Curly)
 			{
 				m_Block = CreateStatement(lcontext, out _);
-				m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+				if (m_Block is IBlockStatement block)
+					m_End = block.End;
+				else
+					m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
 			}
 			else
 			{
