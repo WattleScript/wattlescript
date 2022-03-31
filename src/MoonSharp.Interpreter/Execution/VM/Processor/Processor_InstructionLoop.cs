@@ -445,11 +445,13 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			if (s.Type == SymbolRefType.Local)
 			{
-				var ex = m_ExecutionStack.Peek();
-				for (int i = 0; i < ex.OpenClosures.Count; i++) {
+				ref var ex = ref m_ExecutionStack.Peek();
+				for (int i = 0; i < ex.OpenClosures?.Count; i++) {
 					if (ex.OpenClosures[i].Index == ex.LocalBase + s.i_Index) return ex.OpenClosures[i];
 				}
 				var upval = new Upvalue(m_ValueStack, ex.LocalBase + s.i_Index);
+				
+				ex.OpenClosures ??= new List<Upvalue>();
 				ex.OpenClosures.Add(upval);
 				return upval;
 			}
@@ -591,7 +593,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private void ExecBeginFn(Instruction i)
 		{
-			CallStackItem cur = m_ExecutionStack.Peek();
+			ref CallStackItem cur = ref m_ExecutionStack.Peek();
 
 			cur.Debug_Symbols = i.SymbolList;
 			cur.LocalCount = i.NumVal;
@@ -603,7 +605,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 		private CallStackItem PopToBasePointer()
 		{
 			var csi = m_ExecutionStack.Pop();
-			foreach(var closure in csi.OpenClosures) closure.Close();
+			if (csi.OpenClosures != null)
+				foreach(var closure in csi.OpenClosures) closure.Close();
 			if (csi.BasePointer >= 0)
 				m_ValueStack.CropAtCount(csi.BasePointer);
 			return csi;
@@ -696,7 +699,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					// and we are followed *exactly* by a RET 1
 					if (I.OpCode == OpCode.Ret && I.NumVal == 1)
 					{
-						CallStackItem csi = m_ExecutionStack.Peek();
+						ref CallStackItem csi = ref m_ExecutionStack.Peek();
 
 						// if the current stack item has no "odd" things pending and neither has the new coming one..
 						if (csi.ClrFunction == null && csi.Continuation == null && csi.ErrorHandler == null
