@@ -68,8 +68,16 @@ namespace MoonSharp.Interpreter
 		/// Gets the integral key from a double.
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int GetIntegralKey(int n) => n >= m_IndexFrom ? n : -1;
+		private int GetIntegralKey(double d)
+		{
+			int v = (int)d;
 
+			if (d >= m_IndexFrom && d == v)
+				return v;
+
+			return -1;
+		}
+		
 		/// <summary>
 		/// Gets or sets the 
 		/// <see cref="System.Object" /> with the specified key(s).
@@ -284,7 +292,7 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.CastToInt() ?? -1);
+				int idx = GetIntegralKey(key.Number);
 
 				if (idx >= m_IndexFrom)
 				{
@@ -431,7 +439,7 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.CastToInt() ?? -1);
+				int idx = GetIntegralKey(key.Number);
 				if (idx >= m_IndexFrom)
 					return RawGet(idx);
 			}
@@ -522,7 +530,7 @@ namespace MoonSharp.Interpreter
 
 			if (key.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(key.CastToInt() ?? -1);
+				int idx = GetIntegralKey(key.Number);
 				if (idx >= m_IndexFrom)
 					return Remove(idx);
 			}
@@ -610,7 +618,7 @@ namespace MoonSharp.Interpreter
 
 			if (v.Type == DataType.Number)
 			{
-				int idx = GetIntegralKey(v.CastToInt() ?? -1);
+				int idx = GetIntegralKey(v.Number);
 
 				if (idx >= m_IndexFrom)
 				{
