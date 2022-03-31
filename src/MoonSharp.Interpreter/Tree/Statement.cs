@@ -88,6 +88,29 @@ namespace MoonSharp.Interpreter.Tree
 			}
 		}
 
+		static bool CheckRangeFor(ScriptLoadingContext lcontext)
+		{
+			if (lcontext.Syntax == ScriptSyntax.Lua) return false;
+			try
+			{
+				lcontext.Lexer.SavePos();
+				if (lcontext.Lexer.Current.Type == TokenType.In)
+					lcontext.Lexer.Next();
+				else return false;
+				if (lcontext.Lexer.Current.Type == TokenType.Number)
+					lcontext.Lexer.Next();
+				else return false;
+				if (lcontext.Lexer.Current.Type == TokenType.Op_Concat)
+					lcontext.Lexer.Next();
+				else return false;
+				return lcontext.Lexer.Current.Type == TokenType.Number;
+			}
+			finally
+			{
+				lcontext.Lexer.RestorePos();
+			}
+		}
+		
 		private static Statement DispatchForLoopStatement(ScriptLoadingContext lcontext)
 		{
 			//	for Name ‘=’ exp ‘,’ exp [‘,’ exp] do block end | 
@@ -133,7 +156,11 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Op_Assignment when !paren:
 					return new ForLoopStatement(lcontext, name, forTkn, false);
 				default:
+				{
+					if (CheckRangeFor(lcontext))
+						return new ForRangeStatement(lcontext, name, forTkn, paren);
 					return new ForEachLoopStatement(lcontext, name, forTkn, paren);
+				}
 			}
 		}
 	}

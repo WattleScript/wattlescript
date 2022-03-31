@@ -88,6 +88,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
             }
             stackFrame = lcontext.Scope.PopBlock();
             iteratorFrame = lcontext.Scope.PopBlock();
+            lcontext.Source.Refs.Add(refBegin);
+            lcontext.Source.Refs.Add(refEnd);
         }
 
         public override void Compile(ByteCode bc)

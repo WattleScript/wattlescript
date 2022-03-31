@@ -59,6 +59,19 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void ForRange()
+        {
+            TestScript.Run(@"
+            local values = { };
+            for(x in 1..10)
+            {
+                values[x] = x;
+            }
+            assert.areequal(10, #values);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
         public void CFor()
         {
             TestScript.Run(@"

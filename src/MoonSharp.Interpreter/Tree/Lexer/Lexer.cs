@@ -545,6 +545,7 @@ namespace MoonSharp.Interpreter.Tree
 				}
 				else if (c == '.' && !dotAdded)
 				{
+					if (CursorMatches("..")) break;
 					dotAdded = true;
 					text.Append(c);
 				}
