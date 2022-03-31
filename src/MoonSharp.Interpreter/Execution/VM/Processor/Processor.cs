@@ -18,7 +18,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		Table m_GlobalTable;
 		Script m_Script;
-		Processor m_Parent = null;
+		Processor m_Parent;
 		CoroutineState m_State;
 		bool m_CanYield = true;
 		int m_SavedInstructionPtr = -1;
@@ -87,7 +87,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
 
 			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
-				return coroutinesStack[coroutinesStack.Count - 1].Call(function, args);
+				return await coroutinesStack[coroutinesStack.Count - 1].CallAsync(function, args);
 
 			EnterProcessor();
 
