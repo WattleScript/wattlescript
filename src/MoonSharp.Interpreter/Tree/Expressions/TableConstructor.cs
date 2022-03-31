@@ -15,10 +15,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		{
 			m_Shared = shared;
 
-			// here lexer is at the '{', go on
-			CheckTokenType(lcontext, TokenType.Brk_Open_Curly, TokenType.Brk_Open_Curly_Shared);
+			// here lexer is at the '{' (or '[' for c-like), go on
+			TokenType closeType = TokenType.Brk_Close_Curly;
+			if (lcontext.Syntax != ScriptSyntax.Lua && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Square) {
+				closeType = TokenType.Brk_Close_Square;
+				lcontext.Lexer.Next();
+			}
+			else {
+				CheckTokenType(lcontext, TokenType.Brk_Open_Curly, TokenType.Brk_Open_Curly_Shared);
+			}
 
-			while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly)
+			while (lcontext.Lexer.Current.Type != closeType)
 			{
 				switch (lcontext.Lexer.Current.Type)
 				{
@@ -37,7 +44,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 						{
 							Token assign = lcontext.Lexer.PeekNext();
 
-							if (assign.Type == TokenType.Op_Assignment)
+							if (assign.Type == TokenType.Op_Assignment ||
+							    assign.Type == TokenType.Colon && lcontext.Syntax != ScriptSyntax.Lua)
 							    StructField(lcontext);
 							else
 								ArrayField(lcontext);
@@ -63,18 +71,32 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				}
 			}
 
-			CheckTokenType(lcontext, TokenType.Brk_Close_Curly);
+			CheckTokenType(lcontext, closeType);
 		}
 
 		private void MapField(ScriptLoadingContext lcontext)
 		{
+			lcontext.Lexer.SavePos();
 			lcontext.Lexer.Next(); // skip '['
 
 			Expression key = Expr(lcontext);
-
+			if (lcontext.Syntax != ScriptSyntax.Lua &&
+			    lcontext.Lexer.Current.Type == TokenType.Comma) {
+				lcontext.Lexer.RestorePos();
+				ArrayField(lcontext);
+				return;
+			}
 			CheckTokenType(lcontext, TokenType.Brk_Close_Square);
+			if (lcontext.Syntax != ScriptSyntax.Lua &&
+			    lcontext.Lexer.Current.Type != TokenType.Op_Assignment &&
+			    lcontext.Lexer.Current.Type != TokenType.Colon)
+			{
+				lcontext.Lexer.RestorePos();
+				ArrayField(lcontext);
+				return;
+			}
 
-			CheckTokenType(lcontext, TokenType.Op_Assignment);
+			CheckTokenTypeEx(lcontext, TokenType.Op_Assignment, TokenType.Colon);
 
 			Expression value = Expr(lcontext);
 

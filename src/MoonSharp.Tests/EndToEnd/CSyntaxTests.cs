@@ -104,6 +104,18 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void SquareBracketTable()
+        {
+            TestScript.Run(@"
+                local table = [1, 2, [3, 4], [5], ['g']: 5];
+                assert.areequal(1, table[1], 'list');
+                assert.areequal(3, table[3][1], 'nested list');
+                assert.areequal(5, table[4][1], 'nested list 2');
+                assert.areequal(5, table['g'], 'map field');
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
         public void Continue()
         {
             TestScript.Run(@"
