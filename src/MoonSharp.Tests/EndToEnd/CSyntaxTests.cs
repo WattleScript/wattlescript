@@ -114,6 +114,33 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
                 a = 5; //should be dead
             }
             assert.areequal(3, a, 'while');
+            a = 0;
+            repeat {
+                a++;
+                continue;
+                a = 5;
+            } until(a == 3)
+            assert.areequal(3, a, 'repeat');
+            for(a = 0; a < 3; a++) {
+                continue;
+                a = 5;
+            }
+            assert.areequal(3, a, 'c for');
+            a = 0;
+            local t = { 1, 2, 3 };
+            for(v in t) {
+                a++;
+                continue;
+                a = 5;
+            }
+            assert.areequal(3, a, 'iterate for');
+            a = 0;
+            for(v = 3,1,-1) { 
+                a++;
+                continue;
+                a = 5;
+            }
+            assert.areequal(3, a, 'numeric for');
 ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
         
