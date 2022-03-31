@@ -130,6 +130,22 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
+        [Test]
+        public void CMultilineComment()
+        {
+            TestScript.Run(@"
+            var a = /*
+            a = 5*/  4;
+            var b = 3; /* b = 4 */
+            /*
+                b = 5;
+                b = 6;
+            */
+            assert.areequal(4, a);
+            assert.areequal(3, b);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
 
         [Test]
         public void Not()

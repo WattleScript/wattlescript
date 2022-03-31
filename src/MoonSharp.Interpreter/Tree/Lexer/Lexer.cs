@@ -347,8 +347,10 @@ namespace MoonSharp.Interpreter.Tree
 					{
 						char next = CursorCharNext();
 						if (next == '/') return ReadComment(fromLine, fromCol);
-						else if (next == '*') {
-							throw new NotImplementedException("Multiline C comments");
+						else if (next == '*')
+						{
+							CursorCharNext();
+							return ReadCMultilineComment(fromLine, fromCol);
 						}
 						else if (next == '=')
 						{
@@ -597,6 +599,34 @@ namespace MoonSharp.Interpreter.Tree
 			}
 
 			return CreateToken(TokenType.HashBang, fromLine, fromCol, text.ToString());
+		}
+
+		private Token ReadCMultilineComment(int fromLine, int fromCol)
+		{
+			StringBuilder text = new StringBuilder(32);
+
+			bool extraneousFound = false;
+
+			for (char c = CursorChar(); ; c = CursorCharNext())
+			{
+				if (c == '\r') continue;
+				if (c == '\0' || !CursorNotEof())
+				{
+					throw new SyntaxErrorException(
+						CreateToken(TokenType.Invalid, fromLine, fromCol),
+						"unfinished multiline comment near '{0}'", text.ToString()) { IsPrematureStreamTermination = true };
+				}
+				else if (c == '*' && CursorMatches("*/"))
+				{
+					CursorCharNext();
+					CursorCharNext();
+					return CreateToken(TokenType.Comment, fromLine, fromCol, text.ToString());
+				}
+				else
+				{
+					text.Append(c);
+				}
+			}
 		}
 
 
