@@ -7,7 +7,7 @@ namespace MoonSharp.Interpreter.Tests;
 
 public class CLikeTestRunner
 {
-    private const string ROOT_FOLDER = "EndToEnd\\CLike";
+    private const string ROOT_FOLDER = "EndToEnd/CLike";
 
     static string[] GetTestCases()
     {
