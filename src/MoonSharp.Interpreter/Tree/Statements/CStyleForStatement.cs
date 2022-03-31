@@ -111,12 +111,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
             }
             int start = bc.GetJumpPointForNextInstruction();
             condition.Compile(bc);
-            if (isDefLocal) {
-                ((Expression) initAssignee).Compile(bc);
-                bc.Emit_Swap(0, 1);
-            }
             var jumpend = bc.Emit_Jump(OpCode.Jf, -1);
-            
             bc.Emit_Enter(stackFrame);
             block.Compile(bc);
             int continuePoint = bc.GetJumpPointForNextInstruction();
