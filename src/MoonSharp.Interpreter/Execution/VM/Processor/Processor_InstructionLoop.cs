@@ -58,6 +58,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.Copy:
 							m_ValueStack.Push(m_ValueStack.Peek(i.NumVal));
 							break;
+						case OpCode.CopyValue:
+							m_ValueStack.Push(GetStoreValue(i));
+							break;
 						case OpCode.Swap:
 							ExecSwap(i);
 							break;
@@ -155,6 +158,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							break;
 						case OpCode.Jf:
 							instructionPtr = JumpBool(i, false, instructionPtr);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
+						case OpCode.Jt:
+							instructionPtr = JumpBool(i, true, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Jump:
@@ -414,7 +421,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			int stackofs = i.NumVal;
 			int tupleidx = i.NumVal2;
 
-			DynValue v = m_ValueStack.Peek(stackofs);
+			ref DynValue v = ref m_ValueStack.Peek(stackofs);
 
 			if (v.Type == DataType.Tuple)
 			{

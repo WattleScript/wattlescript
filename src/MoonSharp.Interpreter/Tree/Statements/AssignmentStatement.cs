@@ -13,6 +13,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		List<Expression> m_RValues;
 		SourceRef m_Ref;
 
+		public Operator AssignmentOp = Operator.NotAnOperator;
+
+		private bool isIncDec;
+
 
 		public AssignmentStatement(ScriptLoadingContext lcontext, Token startToken)
 			: base(lcontext)
@@ -69,24 +73,61 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_LValues.Add(CheckVar(lcontext, e));
 			}
 
-			CheckTokenType(lcontext, TokenType.Op_Assignment);
+			isIncDec = true;
+			foreach (var v in m_LValues) {
+				if (!v.IsAssignment)
+				{
+					isIncDec = false;
+					break;
+				}
+			}
 
-			m_RValues = Expression.ExprList(lcontext);
-
+			if (!isIncDec)
+			{
+				if (lcontext.Syntax != ScriptSyntax.Lua) {
+					switch (lcontext.Lexer.Current.Type) {
+						case TokenType.Op_AddEq:
+							AssignmentOp = Operator.Add;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_SubEq:
+							AssignmentOp = Operator.Sub;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_MulEq:
+							AssignmentOp = Operator.Mul;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_DivEq:
+							AssignmentOp = Operator.Div;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_ModEq:
+							AssignmentOp = Operator.Mod;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_PwrEq:
+							AssignmentOp = Operator.Power;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_ConcatEq:
+							AssignmentOp = Operator.StrConcat;
+							lcontext.Lexer.Next();
+							break;
+						default:
+							CheckTokenType(lcontext, TokenType.Op_Assignment);
+							break;
+					}
+				}
+				else {
+					CheckTokenType(lcontext, TokenType.Op_Assignment);
+				}
+				m_RValues = Expression.ExprList(lcontext);
+			} 
+			
 			Token last = lcontext.Lexer.Current;
 			m_Ref = first.GetSourceRefUpTo(last);
 			lcontext.Source.Refs.Add(m_Ref);
-
-		}
-
-		private IVariable CheckVar(ScriptLoadingContext lcontext, Expression firstExpression)
-		{
-			IVariable v = firstExpression as IVariable;
-
-			if (v == null)
-				throw new SyntaxErrorException(lcontext.Lexer.Current, "unexpected symbol near '{0}' - not a l-value", lcontext.Lexer.Current);
-
-			return v;
 		}
 
 
@@ -94,17 +135,28 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		{
 			using (bc.EnterSource(m_Ref))
 			{
-				foreach (var exp in m_RValues)
+				if (isIncDec)
 				{
-					exp.CompilePossibleLiteral(bc);
+					foreach (var v in m_LValues)
+					{
+						(v as Expression).Compile(bc);
+						bc.Emit_Pop();
+					}
 				}
+				else
+				{
+					foreach (var exp in m_RValues)
+					{
+						exp.CompilePossibleLiteral(bc);
+					}
 
-				for (int i = 0; i < m_LValues.Count; i++)
-					m_LValues[i].CompileAssignment(bc,
+					for (int i = 0; i < m_LValues.Count; i++)
+						m_LValues[i].CompileAssignment(bc, AssignmentOp,
 							Math.Max(m_RValues.Count - 1 - i, 0), // index of r-value
 							i - Math.Min(i, m_RValues.Count - 1)); // index in last tuple
 
-				bc.Emit_Pop(m_RValues.Count);
+					bc.Emit_Pop(m_RValues.Count);
+				}
 			}
 		}
 

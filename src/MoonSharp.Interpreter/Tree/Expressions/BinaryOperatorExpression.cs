@@ -5,35 +5,34 @@ using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Expressions
 {
+	[Flags]
+	public enum Operator
+	{
+		NotAnOperator = 0, 
+			
+		Or = 0x1, 
+		And = 0x2,
+		Less = 0x4,
+		Greater = 0x8,
+		LessOrEqual = 0x10,
+
+		GreaterOrEqual = 0x20,
+		NotEqual = 0x40,
+		Equal = 0x80,
+		StrConcat = 0x100,
+		Add = 0x200,
+		Sub = 0x400,
+		Mul = 0x1000,
+		Div = 0x2000,
+		Mod = 0x4000,
+		Power = 0x8000,
+	}
+	
 	/// <summary>
 	/// 
 	/// </summary>
 	class BinaryOperatorExpression : Expression
 	{
-		[Flags]
-		private enum Operator
-		{
-			NotAnOperator = 0, 
-			
-			Or = 0x1, 
-			And = 0x2,
-			Less = 0x4,
-			Greater = 0x8,
-			LessOrEqual = 0x10,
-
-			GreaterOrEqual = 0x20,
-			NotEqual = 0x40,
-			Equal = 0x80,
-			StrConcat = 0x100,
-			Add = 0x200,
-			Sub = 0x400,
-			Mul = 0x1000,
-			Div = 0x2000,
-			Mod = 0x4000,
-			Power = 0x8000,
-		}
-
-
 		class Node
 		{
 			public Expression Expr;
@@ -265,7 +264,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				|| (op == Operator.Greater);
 		}
 
-		private static OpCode OperatorToOpCode(Operator op)
+		public static OpCode OperatorToOpCode(Operator op)
 		{
 			switch (op)
 			{

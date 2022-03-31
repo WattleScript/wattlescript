@@ -17,7 +17,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
 
-			m_Block = new CompositeStatement(lcontext);
+			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 
 			if (lcontext.Lexer.Current.Type != TokenType.Eof)
 				throw new SyntaxErrorException(lcontext.Lexer.Current, "<eof> expected near '{0}'", lcontext.Lexer.Current.Text);

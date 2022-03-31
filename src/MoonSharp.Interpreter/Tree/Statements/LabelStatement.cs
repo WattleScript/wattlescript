@@ -21,9 +21,17 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public LabelStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			CheckTokenType(lcontext, TokenType.DoubleColon);
-			NameToken = CheckTokenType(lcontext, TokenType.Name);
-			CheckTokenType(lcontext, TokenType.DoubleColon);
+			if (lcontext.Syntax == ScriptSyntax.CLike)
+			{
+				NameToken = CheckTokenType(lcontext, TokenType.Name);
+				CheckTokenType(lcontext, TokenType.Colon);
+			}
+			else
+			{
+				CheckTokenType(lcontext, TokenType.DoubleColon);
+				NameToken = CheckTokenType(lcontext, TokenType.Name);
+				CheckTokenType(lcontext, TokenType.DoubleColon);
+			}
 
 			SourceRef = NameToken.GetSourceRef();
 			Label = NameToken.Text;

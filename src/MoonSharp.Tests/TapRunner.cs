@@ -32,15 +32,17 @@ namespace MoonSharp.Interpreter.Tests
 	{
 		string m_File;
 
-		/// <summary>
-		/// Prints the specified string.
-		/// </summary>
-		/// <param name="str">The string.</param>
+		private bool fail = false;
+		private string firstFail = null;
+		private StringBuilder output = new StringBuilder();
 		public void Print(string str)
 		{
-			// System.Diagnostics.Debug.WriteLine(str);
-
-			Assert.IsFalse(str.Trim().StartsWith("not ok"), string.Format("TAP fail ({0}) : {1}", m_File, str));
+			if (str.Trim().StartsWith("not ok"))
+			{
+				fail = true;
+				firstFail = string.Format("TAP fail ({0}) : {1}", m_File, str);
+			}
+			output.AppendLine(str);
 		}
 
 		public TapRunner(string filename)
@@ -69,6 +71,12 @@ namespace MoonSharp.Interpreter.Tests
 			((ScriptLoaderBase)S.Options.ScriptLoader).ModulePaths = new string[] { "TestMore/Modules/?", "TestMore/Modules/?.lua" };
 
 			S.DoFile(m_File);
+
+			if (fail)
+			{
+				Assert.Fail(firstFail + "\n" + output.ToString());
+			}
+			
 		}
 
 		public static void Run(string filename)

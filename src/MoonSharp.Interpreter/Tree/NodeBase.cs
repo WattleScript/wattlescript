@@ -25,6 +25,21 @@ namespace MoonSharp.Interpreter.Tree
 			};
 		}
 
+		protected static Token CheckTokenTypeEx(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
+		{
+			if (lcontext.Syntax != ScriptSyntax.Lua)
+			{
+				Token t = lcontext.Lexer.Current;
+				if (t.Type != tokenType1 &&
+				    t.Type != tokenType2)
+					return UnexpectedTokenType(t);
+				lcontext.Lexer.Next();
+				return t;
+			}
+			else
+				return CheckTokenType(lcontext, tokenType1);
+		}
+
 		protected static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType)
 		{
 			Token t = lcontext.Lexer.Current;

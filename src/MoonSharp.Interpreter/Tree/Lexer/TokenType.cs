@@ -8,6 +8,7 @@ namespace MoonSharp.Interpreter.Tree
 		Name,
 		And,
 		Break,
+		Continue,
 		Do,
 		Else,
 		ElseIf,
@@ -55,6 +56,16 @@ namespace MoonSharp.Interpreter.Tree
 		Op_Mul,
 		Op_MinusOrSub,
 		Op_Add,
+		Op_AddEq,
+		Op_SubEq,
+		Op_DivEq,
+		Op_ModEq,
+		Op_MulEq,
+		Op_PwrEq,
+		Op_ConcatEq,
+		Op_Inc,
+		Op_Dec,
+		Ternary,
 		Comment,
 
 		String,
@@ -68,6 +79,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		Brk_Open_Curly_Shared,
 		Op_Dollar,
+		
+		Arrow
 	}
 
 

@@ -17,7 +17,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		Statement m_Block;
 		SourceRef m_RefFor, m_RefEnd;
 
-		public ForEachLoopStatement(ScriptLoadingContext lcontext, Token firstNameToken, Token forToken)
+		public ForEachLoopStatement(ScriptLoadingContext lcontext, Token firstNameToken, Token forToken, bool paren)
 			: base(lcontext)
 		{
 			//	for namelist in explist do block end | 		
@@ -37,7 +37,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			m_RValues = new ExprListExpression(Expression.ExprList(lcontext), lcontext);
 
 			lcontext.Scope.PushBlock();
-
+			
 			m_Names = names
 				.Select(n => lcontext.Scope.TryDefineLocal(n))
 				.ToArray();
@@ -46,12 +46,30 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				.Select(s => new SymbolRefExpression(lcontext, s))
 				.Cast<IVariable>()
 				.ToArray();
-
-			m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
-
-			m_Block = new CompositeStatement(lcontext);
-
-			m_RefEnd = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			if (paren) CheckTokenType(lcontext, TokenType.Brk_Close_Round);
+			
+			
+			if (lcontext.Syntax == ScriptSyntax.Lua || lcontext.Lexer.Current.Type == TokenType.Do)
+			{
+				m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
+				m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+				m_RefEnd = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			}
+			else if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
+			{
+				m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Brk_Open_Curly));
+				m_Block = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+				m_RefEnd = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+			}
+			else
+			{
+				m_RefFor = forToken.GetSourceRef(lcontext.Lexer.Current);
+				m_Block = CreateStatement(lcontext, out _);
+				if (m_Block is IBlockStatement block)
+					m_RefEnd = block.End;
+				else
+					m_RefEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+			}
 
 			m_StackFrame = lcontext.Scope.PopBlock();
 
@@ -90,7 +108,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			// perform assignment of iteration result- stack : iterator-tuple, iteration result
 			for (int i = 0; i < m_NameExps.Length; i++)
-				m_NameExps[i].CompileAssignment(bc, 0, i);
+				m_NameExps[i].CompileAssignment(bc, Operator.NotAnOperator, 0, i);
 
 			// pops  - stack : iterator-tuple
 			bc.Emit_Pop();
@@ -111,6 +129,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			bc.PushSourceRef(m_RefEnd);
 
 			// loop back again - stack : iterator-tuple
+			int continuePoint = bc.GetJumpPointForNextInstruction();
 			bc.Emit_Leave(m_StackFrame);
 			bc.Emit_Jump(OpCode.Jump, start);
 
@@ -127,6 +146,9 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			{
 				bc.SetNumVal(i, exitpointBreaks);
 			}
+			            
+			foreach (int i in L.ContinueJumps)
+				bc.SetNumVal(i, continuePoint);
 
 			bc.SetNumVal(endjump, exitpointLoopExit);
 			

@@ -35,8 +35,21 @@ namespace MoonSharp.Interpreter.Tree
 			return string.Format("{0}  - {1} - '{2}'", tokenTypeString, location, this.Text ?? "");
 		}
 
-		public static TokenType? GetReservedTokenType(string reservedWord)
+		public static TokenType? GetReservedTokenType(string reservedWord, bool extended)
 		{
+			if (extended)
+			{
+				switch (reservedWord)
+				{
+					case "let":
+					case "var":
+						return TokenType.Local;
+					case "of":
+						return TokenType.In;
+					case "continue":
+						return TokenType.Continue;
+				}
+			}
 			switch (reservedWord)
 			{
 				case "and":
@@ -118,7 +131,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		public bool IsUnaryOperator()
 		{
-			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len;
+			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len ||
+			       Type == TokenType.Op_Inc || Type == TokenType.Op_Dec;
 		}
 
 		public bool IsBinaryOperator()
