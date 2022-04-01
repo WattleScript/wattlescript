@@ -60,7 +60,7 @@ namespace MoonSharp.Interpreter.Tree
 			m_Current = FetchNewToken();
 		}
 
-		struct Snapshot
+		internal struct Snapshot
 		{
 			public int Cursor;
 			public Token Current;
@@ -70,7 +70,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		private Snapshot s;
 
-		public void SavePos()
+		public Snapshot SavePos()
 		{
 			s = new Snapshot() {
 				Cursor = m_Cursor,
@@ -78,6 +78,8 @@ namespace MoonSharp.Interpreter.Tree
 				Line = m_Line,
 				Col = m_Col
 			};
+
+			return s;
 		}
 
 		public void RestorePos()
@@ -86,6 +88,14 @@ namespace MoonSharp.Interpreter.Tree
 			m_Current = s.Current;
 			m_Line = s.Line;
 			m_Col = s.Col;
+		}
+		
+		public void RestorePos(Snapshot snapshot)
+		{
+			m_Cursor = snapshot.Cursor;
+			m_Current = snapshot.Current;
+			m_Line = snapshot.Line;
+			m_Col = snapshot.Col;
 		}
 
 		public Token PeekNext()

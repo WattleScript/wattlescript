@@ -34,6 +34,10 @@ public class CLikeTestRunner
         Script script = new Script();
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
+        if (path.Contains("SyntaxCLike"))
+        {
+            script.Options.Syntax = ScriptSyntax.CLike;
+        }
 
         await script.DoStringAsync(code);
 

@@ -25,5 +25,8 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="EndToEnd\CLike\SyntaxCLike" />
+    </ItemGroup>
 
 </Project>

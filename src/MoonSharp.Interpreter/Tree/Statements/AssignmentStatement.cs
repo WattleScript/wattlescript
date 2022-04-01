@@ -14,6 +14,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		SourceRef m_Ref;
 
 		public Operator AssignmentOp = Operator.NotAnOperator;
+		internal List<Expression>? RightHand => m_RValues;
 
 		private bool isIncDec;
 
