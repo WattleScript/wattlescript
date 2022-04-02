@@ -42,6 +42,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				CheckTokenType(lcontext, TokenType.Op_Assignment);
 				m_RValues = Expression.ExprList(lcontext);
 			}
+			else if (lcontext.Syntax == ScriptSyntax.CLike && lcontext.Lexer.Current.Type == TokenType.Op_NullCoalescingAssignment)
+			{
+				CheckTokenType(lcontext, TokenType.Op_NullCoalescingAssignment);
+				AssignmentOp = Operator.NullCoalescingAssignment;
+				m_RValues = Expression.ExprList(lcontext);
+			}
 			else
 			{
 				if (names.Count > 0)
@@ -118,6 +124,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 							AssignmentOp = Operator.StrConcat;
 							lcontext.Lexer.Next();
 							break;
+						case TokenType.Op_NullCoalescingAssignment:
+							AssignmentOp = Operator.NullCoalescingAssignment;
+							lcontext.Lexer.Next();
+							break;
 						default:
 							CheckTokenType(lcontext, TokenType.Op_Assignment);
 							break;
@@ -143,7 +153,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				{
 					foreach (var v in m_LValues)
 					{
-						(v as Expression).Compile(bc);
+						(v as Expression)?.Compile(bc);
 						bc.Emit_Pop();
 					}
 				}

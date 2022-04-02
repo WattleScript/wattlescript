@@ -82,5 +82,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
+		
+		NullCoalescingAssignment
 	}
 }
