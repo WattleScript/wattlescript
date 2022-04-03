@@ -425,7 +425,7 @@ namespace MoonSharp.Interpreter.Tree
 							}
 						}
 						
-						return CreateSingleCharToken(TokenType.Ternary, fromLine, fromCol);
+						return CreateToken(TokenType.Ternary, fromLine, fromCol, "?:");
 					}
 				case ':':
 					return PotentiallyDoubleCharOperator(':', TokenType.Colon, TokenType.DoubleColon, fromLine, fromCol);

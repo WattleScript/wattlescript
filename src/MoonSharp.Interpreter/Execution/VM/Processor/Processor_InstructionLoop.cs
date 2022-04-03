@@ -269,7 +269,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.NullCoalescingAssignment:
-							instructionPtr = ExecNullCoalescingAssignment(i, instructionPtr);
+							instructionPtr = ExecNilCoalesce(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Invalid:
@@ -934,21 +934,20 @@ namespace MoonSharp.Interpreter.Execution.VM
 				return instructionPtr;
 			}
 		}
-
-		private int ExecNullCoalescingAssignment(Instruction i, int instructionPtr)
+		
+		private int ExecNilCoalesce(Instruction i, int instructionPtr)
 		{
-			var lPeek = m_ValueStack.Peek(1).ToScalar();
-			if (lPeek.IsNotNil())
+			ref DynValue lhs = ref m_ValueStack.Peek(1);
+			
+			if (lhs.IsNil()) 
 			{
-				m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				
-				m_ValueStack.Set(0, l);
+				m_ValueStack.Set(1, m_ValueStack.Peek());
 			}
-	
+			
+			m_ValueStack.Pop();
 			return instructionPtr;
 		}
-		
+
 		private int ExecAdd(Instruction i, int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
