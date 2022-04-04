@@ -82,7 +82,9 @@ namespace MoonSharp.Interpreter.Tree
 		Op_OrEq,
 		//Nil operators
 		Op_NilCoalesce,
+		Op_NilCoalesceInverse,
 		Op_NilCoalescingAssignment,
+		Op_NilCoalescingAssignmentInverse,
 		
 		Ternary,
 		Comment,

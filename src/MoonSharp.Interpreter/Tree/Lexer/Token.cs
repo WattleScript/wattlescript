@@ -135,6 +135,7 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Op_MinusOrSub:
 				case TokenType.Op_Add:
 				case TokenType.Op_NilCoalesce:
+				case TokenType.Op_NilCoalesceInverse:
 				case TokenType.Op_Or:
 				case TokenType.Op_And: 
 				case TokenType.Op_Xor:

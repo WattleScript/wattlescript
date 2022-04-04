@@ -293,6 +293,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = ExecNilCoalescingAssignment(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.NilCoalescingInverse:
+							instructionPtr = ExecNilCoalescingAssignmentInverse(i, instructionPtr);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException(string.Format("Invalid opcode : {0}", i.String));
 						default:
@@ -857,6 +861,18 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			ref DynValue lhs = ref m_ValueStack.Peek(1);
 			if (lhs.IsNil()) 
+			{
+				m_ValueStack.Set(1, m_ValueStack.Peek());
+			}
+			
+			m_ValueStack.Pop();
+			return instructionPtr;
+		}
+		
+		private int ExecNilCoalescingAssignmentInverse(Instruction i, int instructionPtr)
+		{
+			ref DynValue lhs = ref m_ValueStack.Peek(1);
+			if (lhs.IsNotNil()) 
 			{
 				m_ValueStack.Set(1, m_ValueStack.Peek());
 			}

@@ -33,7 +33,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		BitXor = 0x100000,
 		BitLShift = 0x200000,
 		BitRShiftA = 0x400000,
-		BitRShiftL = 0x4800000
+		BitRShiftL = 0x4800000,
+		NilCoalescingInverse = 0x9000000,
 	}
 	
 	/// <summary>
@@ -65,6 +66,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		const Operator LOGIC_OR = Operator.Or;
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
 		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
+		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
 
 		public static object BeginOperatorChain()
 		{
@@ -158,6 +160,9 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			if ((opfound & NIL_COAL_ASSIGN) != 0)
 				nodes = PrioritizeLeftAssociative(nodes, lcontext, NIL_COAL_ASSIGN);
+			
+			if ((opfound & NIL_COAL_INVERSE) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, NIL_COAL_INVERSE);
 
 			if (nodes.Next != null || nodes.Prev != null)
 				throw new InternalErrorException("Expression reduction didn't work! - 1");
@@ -261,6 +266,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return Operator.Power;
 				case TokenType.Op_NilCoalesce:
 					return Operator.NilCoalescing;
+				case TokenType.Op_NilCoalesceInverse:
+					return Operator.NilCoalescingInverse;
 				case TokenType.Op_Or:
 					return Operator.BitOr;
 				case TokenType.Op_And:
@@ -346,6 +353,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return OpCode.BRShiftA;
 				case Operator.BitRShiftL:
 					return OpCode.BRShiftL;
+				case Operator.NilCoalescingInverse:
+					return OpCode.NilCoalescingInverse;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
@@ -401,6 +410,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				else dv = v1;
 				return true;
 			}
+			if (m_Operator == Operator.NilCoalescingInverse)
+			{
+				if (v1.IsNotNil()) dv = v2;
+				else dv = v1;
+				return true;
+			}
 			if (m_Operator == Operator.Or)
 			{
 				if (v1.CastToBool())
@@ -453,7 +468,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (m_Operator == Operator.NilCoalescing)
 			{
 				if (v1.IsNil()) return m_Exp2.Eval(context);
-				else return v1;
+				return v1;
+			}
+			if (m_Operator == Operator.NilCoalescingInverse)
+			{
+				if (v1.IsNotNil()) return m_Exp2.Eval(context);
+				return v1;
 			}
 			if (m_Operator == Operator.Or)
 			{
