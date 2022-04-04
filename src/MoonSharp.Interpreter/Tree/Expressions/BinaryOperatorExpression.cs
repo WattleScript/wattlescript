@@ -27,7 +27,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Mod = 0x4000,
 		Power = 0x8000,
 		AddConcat = 0x10000,
-		NilCoalescing = 0x20000
+		NilCoalescing = 0x20000,
+		BitAnd = 0x40000,
+		BitOr = 0x80000,
+		BitXor = 0x100000,
+		BitLShift = 0x200000,
+		BitRShiftA = 0x400000,
+		BitRShiftL = 0x4800000
 	}
 	
 	/// <summary>
@@ -58,6 +64,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		const Operator LOGIC_AND = Operator.And;
 		const Operator LOGIC_OR = Operator.Or;
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
+		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
 
 		public static object BeginOperatorChain()
 		{
@@ -128,8 +135,20 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if ((opfound & STRCAT) != 0)
 				nodes = PrioritizeRightAssociative(nodes, lcontext, STRCAT);
 
+			if ((opfound & SHIFTS) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, SHIFTS);
+
 			if ((opfound & COMPARES) != 0)
 				nodes = PrioritizeLeftAssociative(nodes, lcontext, COMPARES);
+
+			if ((opfound & Operator.BitAnd) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitAnd);
+			
+			if ((opfound & Operator.BitXor) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitXor);
+			
+			if ((opfound & Operator.BitOr) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitOr);
 
 			if ((opfound & LOGIC_AND) != 0)
 				nodes = PrioritizeLeftAssociative(nodes, lcontext, LOGIC_AND);
@@ -242,6 +261,18 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return Operator.Power;
 				case TokenType.Op_NilCoalesce:
 					return Operator.NilCoalescing;
+				case TokenType.Op_Or:
+					return Operator.BitOr;
+				case TokenType.Op_And:
+					return Operator.BitAnd;
+				case TokenType.Op_Xor:
+					return Operator.BitXor;
+				case TokenType.Op_LShift:
+					return Operator.BitLShift;
+				case TokenType.Op_RShiftArithmetic:
+					return Operator.BitRShiftA;
+				case TokenType.Op_RShiftLogical:
+					return Operator.BitRShiftL;
 				default:
 					throw new InternalErrorException("Unexpected binary operator '{0}'", token.Text);
 			}
@@ -303,6 +334,18 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return OpCode.AddStr;
 				case Operator.NilCoalescing:
 					return OpCode.NilCoalescing;
+				case Operator.BitAnd:
+					return OpCode.BAnd;
+				case Operator.BitOr:
+					return OpCode.BOr;
+				case Operator.BitXor:
+					return OpCode.BXor;
+				case Operator.BitLShift:
+					return OpCode.BLShift;
+				case Operator.BitRShiftA:
+					return OpCode.BRShiftA;
+				case Operator.BitRShiftL:
+					return OpCode.BRShiftL;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
@@ -463,6 +506,18 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			switch (m_Operator)
 			{
+				case Operator.BitAnd:
+					return (int) d1 & (int) d2;
+				case Operator.BitOr:
+					return (int) d1 | (int) d2;
+				case Operator.BitXor:
+					return (int) d1 ^ (int) d2;
+				case Operator.BitLShift:
+					return (int) d1 << (int) d2;
+				case Operator.BitRShiftA:
+					return (int) d1 >> (int) d2;
+				case Operator.BitRShiftL:
+					return (int) ((uint) d1 >> (int) d2);
 				case Operator.Add:
 				case Operator.AddConcat:
 					return d1 + d2;

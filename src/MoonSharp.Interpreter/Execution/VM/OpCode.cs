@@ -65,7 +65,15 @@ namespace MoonSharp.Interpreter.Execution.VM
 		Neg,		// Negation (unary minus) operator of the topmost operand on the v-stack
 		Power,		// Power of the two topmost operands on the v-stack
 		CNot,		// Conditional NOT - takes second operand from the v-stack (must be bool), if true execs a NOT otherwise execs a TOBOOL
-
+		
+		//Bit Operators
+		BAnd,
+		BOr,
+		BXor,
+		BLShift,
+		BRShiftA,
+		BRShiftL,
+		BNot,
 
 		// Type conversions and manipulations
 		MkTuple,	// Creates a tuple from the topmost n values

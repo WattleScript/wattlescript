@@ -57,6 +57,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 							"--");
 					break;
 				}
+				case "~":
+					m_Exp.Compile(bc);
+					bc.Emit_Operator(OpCode.BNot);
+					break;
 				case "!":
 				case "not":
 					m_Exp.Compile(bc);
@@ -83,6 +87,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			switch (m_OpText)
 			{
+				case "~":
+				{
+					double? d = v.CastToNumber();
+
+					if (d.HasValue)
+					{
+						return DynValue.NewNumber(~(int)d.Value);
+					}
+
+					throw new DynamicExpressionException("Attempt to perform arithmetic on non-numbers.");
+				}
 				case "!":
 				case "not":
 					return DynValue.NewBoolean(!v.CastToBool());
@@ -120,13 +135,26 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				case "--":
 					return false;
 				case "-":
+				{
 					double? d = v.CastToNumber();
 					if (d.HasValue)
 					{
 						dv = DynValue.NewNumber(-d.Value);
 						return true;
 					}
+
 					break;
+				}
+				case "~":
+				{
+					double? d = v.CastToNumber();
+					if (d.HasValue)
+					{
+						dv = DynValue.NewNumber(~(int)d.Value);
+						return true;
+					}
+					break;
+				}
 			}
 			//Could not evaluate literal - give runtime error later
 			return false; 

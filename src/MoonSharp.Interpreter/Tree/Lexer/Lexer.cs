@@ -186,8 +186,24 @@ namespace MoonSharp.Interpreter.Tree
 			switch (c)
 			{
 				case '|':
-					if (m_Extended)
+					if (m_IncDec)
+					{
+						var next = CursorCharNext();
+						if (next == '=')
+						{
+							CursorCharNext();
+							return CreateToken(TokenType.Op_OrEq, fromLine, fromCol, "|=");
+						}
+						else if (next == '|')
+						{
+							CursorCharNext();
+							return CreateToken(TokenType.Or, fromLine, fromCol, "||");
+						}
+						return CreateToken(TokenType.Op_Or, fromLine, fromCol, "|");
+					}
+					else if (m_Extended) {
 						return PotentiallyDoubleCharOperator('|', TokenType.Lambda, TokenType.Or, fromLine, fromCol);
+					}
 					else
 					{
 						CursorCharNext();
@@ -202,6 +218,13 @@ namespace MoonSharp.Interpreter.Tree
 					if (next == '&') {
 						CursorCharNext();
 						return CreateToken(TokenType.And, fromLine, fromCol, "&&");
+					}
+					else if (m_IncDec && next == '=') {
+						CursorCharNext();
+						return CreateToken(TokenType.Op_AndEq, fromLine, fromCol, "&=");
+					}
+					else if (m_IncDec) {
+						return CreateToken(TokenType.Op_And, fromLine, fromCol, "&");
 					}
 					else {
 						throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar());
@@ -230,14 +253,56 @@ namespace MoonSharp.Interpreter.Tree
 							fromCol);
 					}
 				}
-				case '<':
+				case '<' when m_IncDec:
+				{
+					char next = CursorCharNext();
+					if (next == '<')
+					{
+						return PotentiallyDoubleCharOperator('=', TokenType.Op_LShift, TokenType.Op_LShiftEq, fromLine, fromCol);
+					}  
+					if (next == '=')
+					{
+						CursorCharNext();
+						return CreateToken(TokenType.Op_LessThanEqual, fromLine, fromCol, "<=");
+					}
+					return CreateToken(TokenType.Op_LessThan, fromLine, fromCol, "<");
+				}
+				case '>' when m_IncDec:
+				{
+					char next = CursorCharNext();
+					if (next == '>')
+					{
+						next = CursorCharNext();
+						if (next == '>') {
+							//>>>, >>>= logical shift (zero)
+							return PotentiallyDoubleCharOperator('=', 
+								TokenType.Op_RShiftLogical, TokenType.Op_RShiftLogicalEq, 
+								fromLine, fromCol
+								);
+						}
+						//>>, >>= - arithmetic shift (sign bit)
+						return PotentiallyDoubleCharOperator('=', 
+							TokenType.Op_RShiftArithmetic, TokenType.Op_RShiftArithmeticEq, 
+							fromLine, fromCol
+						);
+					}
+					else if (next == '=')
+					{
+						CursorCharNext();
+						return CreateToken(TokenType.Op_GreaterThanEqual, fromLine, fromCol, ">=");
+					}
+					return CreateToken(TokenType.Op_GreaterThan, fromLine, fromCol, ">");
+				}
+				case '<' when !m_IncDec:
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_LessThan, TokenType.Op_LessThanEqual, fromLine, fromCol);
-				case '>':
+				case '>' when !m_IncDec:
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_GreaterThan, TokenType.Op_GreaterThanEqual, fromLine, fromCol);
 				case '!' when m_Extended:
 					return PotentiallyDoubleCharOperator('=', TokenType.Not, TokenType.Op_NotEqual, fromLine, fromCol);
+				case '~' when m_IncDec:
+					return CreateSingleCharToken(TokenType.Op_Not, fromLine, fromCol);
 				case '!' when !m_Extended:
-				case '~':
+				case '~' when !m_IncDec:
 					if (CursorCharNext() != '=')
 						throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", c);
 					CursorCharNext();
@@ -368,9 +433,11 @@ namespace MoonSharp.Interpreter.Tree
 							fromCol);
 					return CreateSingleCharToken(TokenType.Op_Mod, fromLine, fromCol);
 				case '^':
-					if (m_Extended)
-						return PotentiallyDoubleCharOperator('=', TokenType.Op_Pwr, TokenType.Op_PwrEq, fromLine,
+					if (m_IncDec)
+					{
+						return PotentiallyDoubleCharOperator('=', TokenType.Op_Xor, TokenType.Op_XorEq, fromLine,
 							fromCol);
+					}
 					return CreateSingleCharToken(TokenType.Op_Pwr, fromLine, fromCol);
 				case '$':
 					return PotentiallyDoubleCharOperator('{', TokenType.Op_Dollar, TokenType.Brk_Open_Curly_Shared, fromLine, fromCol);

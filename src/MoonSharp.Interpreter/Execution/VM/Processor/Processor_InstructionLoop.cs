@@ -79,6 +79,27 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.PushString:
 							m_ValueStack.Push(DynValue.NewString(i.String));
 							break;
+						case OpCode.BNot:
+							ExecBNot(i);
+							break;
+						case OpCode.BAnd:
+							ExecBAnd(i);
+							break;
+						case OpCode.BOr:
+							ExecBOr(i);
+							break;
+						case OpCode.BXor:
+							ExecBXor(i);
+							break;
+						case OpCode.BLShift:
+							ExecBLShift(i);
+							break;
+						case OpCode.BRShiftA:
+							ExecBRShiftA(i);
+							break;
+						case OpCode.BRShiftL:
+							ExecBRShiftL(i);
+							break;
 						case OpCode.Add:
 							instructionPtr = ExecAdd(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
@@ -943,7 +964,119 @@ namespace MoonSharp.Interpreter.Execution.VM
 				return instructionPtr;
 			}
 		}
+		
+		private void ExecBNot(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Set(0, DynValue.NewNumber(~(int)ln)); 
+			}
+			else
+			{
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l);
+			}
+		}
 
+		
+		private void ExecBAnd(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)ln & (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBOr(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)ln | (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBXor(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)ln ^ (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBLShift(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)ln << (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBRShiftA(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)ln >> (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBRShiftL(Instruction i)
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)(
+					(uint)ln >> (int)rn
+				))); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
 
 		private int ExecAdd(Instruction i, int instructionPtr)
 		{

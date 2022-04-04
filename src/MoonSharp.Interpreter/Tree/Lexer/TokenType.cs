@@ -50,6 +50,7 @@ namespace MoonSharp.Interpreter.Tree
 		Brk_Close_Square,
 		Brk_Open_Square,
 		Op_Len,
+		//Number arithmetic
 		Op_Pwr,
 		Op_Mod,
 		Op_Div,
@@ -65,8 +66,24 @@ namespace MoonSharp.Interpreter.Tree
 		Op_ConcatEq,
 		Op_Inc,
 		Op_Dec,
+		//Bitwise ops
+		Op_Not,
+		Op_LShift,
+		Op_RShiftArithmetic,
+		Op_RShiftLogical,
+		Op_And,
+		Op_Xor,
+		Op_Or,
+		Op_LShiftEq,
+		Op_RShiftArithmeticEq,
+		Op_RShiftLogicalEq,
+		Op_AndEq,
+		Op_XorEq,
+		Op_OrEq,
+		//Nil operators
 		Op_NilCoalesce,
 		Op_NilCoalescingAssignment,
+		
 		Ternary,
 		Comment,
 

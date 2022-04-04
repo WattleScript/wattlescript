@@ -85,7 +85,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(5, b, 'outer local');
             b = 0;
             for(var z = 1; z <= 5; z++) {
-                assert.istrue(z ~= nil, 'z should not be nil');
+                assert.istrue(z != nil, 'z should not be nil');
                 b++;
             }
             assert.areequal(nil, z, 'inner local'); //scope doesn't leak
@@ -242,7 +242,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             c *= 2; //mul
             d /= 2; //div
             e **= 2; //pwr
-            f ^= 2;  //pwr
+            //f ^= 2;  //pwr
             g %= 3; //mod
             h ..= 'bc'; //concat
             assert.areequal(2, a, '+=');
@@ -250,7 +250,7 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(6, c, '*=');
             assert.areequal(2, d, '/=');
             assert.areequal(4, e, '**=');
-            assert.areequal(4, f, '^=');
+            //assert.areequal(4, f, '^=');
             assert.areequal(1, g, '%=');
             assert.areequal('abc', h, '..=');
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
@@ -392,6 +392,78 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             assert.areequal(1.0, tbl[1] ?? 2.0);
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
+
+        
+        [Test]
+        public void BitNot()
+        {
+            TestScript.Run(@"
+            function bnot(a) { return ~a };
+            assert.areequal(-4096, ~4095);
+            assert.areequal(-4096, bnot(4095));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitAnd()
+        {
+            TestScript.Run(@"
+            function band(a,b) { return a & b };
+            assert.areequal(255, 4095 & 255);
+            assert.areequal(255, band(4095, 255));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitOr()
+        {
+            TestScript.Run(@"
+            function bor(a,b) { return a | b };
+            assert.areequal(1279, 1024 | 255);
+            assert.areequal(1279, bor(1024, 255));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitXor()
+        {
+            TestScript.Run(@"
+            function bxor(a,b) { return a ^ b };
+            assert.areequal(3840, 4095 ^ 255);
+            assert.areequal(3840, bxor(4095, 255));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitLShift()
+        {
+            TestScript.Run(@"
+            function blshift(a,b) { return a << b };
+            assert.areequal(64, 16 << 2);
+            assert.areequal(64, blshift(16,2));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitRShiftA()
+        {
+            TestScript.Run(@"
+            function brshifta(a,b) { return a >> b };
+            assert.areequal(-256, -1024 >> 2);
+            assert.areequal(-256, brshifta(-1024, 2));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void BitRShiftL()
+        {
+            TestScript.Run(@"
+            function brshiftl(a,b) { return a >>> b };
+            assert.areequal(0x3FFFFF00, -1024 >>> 2);
+            assert.areequal(0x3FFFFF00, brshiftl(-1024, 2));
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
 
         [Test]
         public void Not()
