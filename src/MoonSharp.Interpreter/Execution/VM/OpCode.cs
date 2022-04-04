@@ -80,7 +80,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 		IterPrep,   // Prepares an iterator for execution 
 		IterUpd,	// Updates the var part of an iterator
 		
-		NilCoalesing,
+		NilCoalescing,
 
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum

@@ -268,7 +268,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = ExecIndexSet(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
-						case OpCode.NilCoalesing:
+						case OpCode.NilCoalescing:
 							instructionPtr = ExecNilCoalescingAssignment(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;

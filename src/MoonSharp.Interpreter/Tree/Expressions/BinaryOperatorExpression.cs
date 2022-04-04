@@ -302,7 +302,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				case Operator.AddConcat:
 					return OpCode.AddStr;
 				case Operator.NilCoalescingAssignment:
-					return OpCode.NilCoalesing;
+					return OpCode.NilCoalescing;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
