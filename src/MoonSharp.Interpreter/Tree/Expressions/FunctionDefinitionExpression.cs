@@ -158,7 +158,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			// method decls with ':' must push an implicit 'self' param
 			if (pushSelfParam)
-				paramnames.Add("self");
+				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? "this" : "self");
 
 			while (lcontext.Lexer.Current.Type != closeToken)
 			{
