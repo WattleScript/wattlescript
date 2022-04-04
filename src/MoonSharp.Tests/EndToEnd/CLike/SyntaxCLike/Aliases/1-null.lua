@@ -1,0 +1,2 @@
+x = null
+print(x)
