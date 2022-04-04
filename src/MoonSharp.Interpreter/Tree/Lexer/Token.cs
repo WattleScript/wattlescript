@@ -48,57 +48,37 @@ namespace MoonSharp.Interpreter.Tree
 						return TokenType.In;
 					case "continue":
 						return TokenType.Continue;
+					case "null":
+						return TokenType.Nil;
 				}
 			}
-			switch (reservedWord)
+
+			return reservedWord switch
 			{
-				case "and":
-					return TokenType.And;
-				case "break":
-					return TokenType.Break;
-				case "do":
-					return TokenType.Do;
-				case "else":
-					return TokenType.Else;
-				case "elseif":
-					return TokenType.ElseIf;
-				case "end":
-					return TokenType.End;
-				case "false":
-					return TokenType.False;
-				case "for":
-					return TokenType.For;
-				case "function":
-					return TokenType.Function;
-				case "goto":
-					return TokenType.Goto;
-				case "if":
-					return TokenType.If;
-				case "in":
-					return TokenType.In;
-				case "local":
-					return TokenType.Local;
-				case "nil":
-					return TokenType.Nil;
-				case "not":
-					return TokenType.Not;
-				case "or":
-					return TokenType.Or;
-				case "repeat":
-					return TokenType.Repeat;
-				case "return":
-					return TokenType.Return;
-				case "then":
-					return TokenType.Then;
-				case "true":
-					return TokenType.True;
-				case "until":
-					return TokenType.Until;
-				case "while":
-					return TokenType.While;
-				default:
-					return null;
-			}
+				"and" => TokenType.And,
+				"break" => TokenType.Break,
+				"do" => TokenType.Do,
+				"else" => TokenType.Else,
+				"elseif" => TokenType.ElseIf,
+				"end" => TokenType.End,
+				"false" => TokenType.False,
+				"for" => TokenType.For,
+				"function" => TokenType.Function,
+				"goto" => TokenType.Goto,
+				"if" => TokenType.If,
+				"in" => TokenType.In,
+				"local" => TokenType.Local,
+				"nil" => TokenType.Nil,
+				"not" => TokenType.Not,
+				"or" => TokenType.Or,
+				"repeat" => TokenType.Repeat,
+				"return" => TokenType.Return,
+				"then" => TokenType.Then,
+				"true" => TokenType.True,
+				"until" => TokenType.Until,
+				"while" => TokenType.While,
+				_ => null
+			};
 		}
 
 		public double GetNumberValue()
