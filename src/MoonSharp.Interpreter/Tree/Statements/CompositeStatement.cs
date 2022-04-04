@@ -48,17 +48,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 					
 					switch (statement)
 					{
-						case AssignmentStatement assignmentStatement:
-						{
-							bool containsFnDef = assignmentStatement.RightHand?.FirstOrDefault(x => x is FunctionDefinitionExpression) != null;
-							if (containsFnDef)
-							{
-								reordered.Insert(0, statement);
-								resolved = true;
-							}
-
-							break;
-						}
 						case FunctionDefinitionStatement _:
 						{
 							reordered.Insert(0, statement);
