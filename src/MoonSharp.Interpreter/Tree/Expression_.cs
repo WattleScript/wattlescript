@@ -13,6 +13,8 @@ namespace MoonSharp.Interpreter.Tree
 			: base(lcontext)
 		{ }
 
+		public bool LexerCarry { get; set; } // currently used to indicate whether ternary parsing in in progress
+		
 		public virtual string GetFriendlyDebugName()
 		{
 			return null;
@@ -74,7 +76,7 @@ namespace MoonSharp.Interpreter.Tree
 			return SubExpr(lcontext, true);
 		}
 
-		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary)
+		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary, bool binaryChainInProgress = false)
 		{
 			Expression e = null;
 
@@ -120,7 +122,13 @@ namespace MoonSharp.Interpreter.Tree
 
 			if (T.Type == TokenType.Ternary)
 			{
-				return new TernaryExpression(lcontext, e);
+				if (!binaryChainInProgress)
+				{
+					return new TernaryExpression(lcontext, e);	
+				}
+
+				e.LexerCarry = true;
+				return e;
 			}
 
 			if (isPrimary && T.IsBinaryOperator())
@@ -128,17 +136,28 @@ namespace MoonSharp.Interpreter.Tree
 				object chain = BinaryOperatorExpression.BeginOperatorChain();
 
 				BinaryOperatorExpression.AddExpressionToChain(chain, e);
-
+				bool forceReturnTernary = false;
+				
 				while (T.IsBinaryOperator())
 				{
 					BinaryOperatorExpression.AddOperatorToChain(chain, T);
 					lcontext.Lexer.Next();
-					Expression right = SubExpr(lcontext, false);
+					Expression right = SubExpr(lcontext, false, true);
 					BinaryOperatorExpression.AddExpressionToChain(chain, right);
 					T = lcontext.Lexer.Current;
+					
+					if (right.LexerCarry)
+					{
+						forceReturnTernary = true;
+					}
 				}
 
 				e = BinaryOperatorExpression.CommitOperatorChain(chain, lcontext);
+				
+				if (forceReturnTernary)
+				{
+					return new TernaryExpression(lcontext, e);	
+				}
 			}
 
 			return e;
