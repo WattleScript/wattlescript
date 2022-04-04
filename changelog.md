@@ -52,27 +52,27 @@ Milestone 1 (completed 4/1/22)
 
 Milestone 2 (started 4/4/22)
 
-- [ ] Template literals `` (equivalent to $”” + multiline support in c#)
+- [ ] Template literals `` (equivalent to `$""` + multiline support in c#)
 
-- [ ] Replace # with .length, free # for other uses
+- [ ] Replace `#` with `.length`, free # for other uses
 
-- [ ] Ditch Moonsharp’s | lambda | syntax, free pipe for bitwise & implement bitwise operators
+- [ ] Ditch Moonsharp’s `| lambda |` syntax, free pipe for bitwise & implement bitwise operators
 
 - [ ] Nill coalescing operators
   
-  [x] ??= (nill coalescing assignment)
+  - [x] `??=` (nill coalescing assignment)
   
-  [ ] ?. (nill coalescing member access)
+  - [ ] `?.` (nill coalescing member access)
   
-  [ ] ?[] (nill coalescing element access)
+  - [ ] `?[]` (nill coalescing element access)
   
-  [x] ?? (nill coalescing)
+  - [x] `??` (nill coalescing)
   
-  [ ] ?! (inverse nill coalescing)
+  - [ ] `?!` (inverse nill coalescing)
 
-- [ ] “null” as alias for nill
+- [ ] `null` as alias for `nill`
 
-- [ ] “this” as alias for self
+- [ ] `this` as alias for `self`
 
 
 
@@ -82,7 +82,7 @@ Backlog
 
 - class syntax, oop extensions
 
-- razor-esque syntax, Moonsharp.Templating assembly. See `doc/razor_like_templating_proposal` for details
+- razor-esque syntax, Moonsharp.Templating assembly. See [Razor like templating proposal](doc/razor_like_templating_proposal.md) for details
 
 - declaration hoisting  (attempted in #7, failed with local/global interop)
 
