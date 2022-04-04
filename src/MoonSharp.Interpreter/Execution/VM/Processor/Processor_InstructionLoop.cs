@@ -268,6 +268,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = ExecIndexSet(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.NilCoalescing:
+							instructionPtr = ExecNilCoalescingAssignment(i, instructionPtr);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException(string.Format("Invalid opcode : {0}", i.String));
 						default:
@@ -640,7 +644,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private IList<DynValue> CreateArgsListForFunctionCall(int numargs, int offsFromTop)
 		{
-			if (numargs == 0) return new DynValue[0];
+			if (numargs == 0) return Array.Empty<DynValue>();
 
 			DynValue lastParam = m_ValueStack.Peek(offsFromTop);
 
@@ -827,9 +831,18 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			return retpoint;
 		}
-
-
-
+		
+		private int ExecNilCoalescingAssignment(Instruction i, int instructionPtr)
+		{
+			ref DynValue lhs = ref m_ValueStack.Peek(1);
+			if (lhs.IsNil()) 
+			{
+				m_ValueStack.Set(1, m_ValueStack.Peek());
+			}
+			
+			m_ValueStack.Pop();
+			return instructionPtr;
+		}
 
 		private int ExecRet(Instruction i, int currentPtr)
 		{

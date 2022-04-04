@@ -26,7 +26,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Div = 0x2000,
 		Mod = 0x4000,
 		Power = 0x8000,
-		AddConcat = 0x10000
+		AddConcat = 0x10000,
+		NilCoalescingAssignment = 0x20000
 	}
 	
 	/// <summary>
@@ -56,7 +57,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		const Operator COMPARES = Operator.Less | Operator.Greater | Operator.GreaterOrEqual | Operator.LessOrEqual | Operator.Equal | Operator.NotEqual;
 		const Operator LOGIC_AND = Operator.And;
 		const Operator LOGIC_OR = Operator.Or;
-
+		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescingAssignment;
 
 		public static object BeginOperatorChain()
 		{
@@ -136,6 +137,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if ((opfound & LOGIC_OR) != 0)
 				nodes = PrioritizeLeftAssociative(nodes, lcontext, LOGIC_OR);
 
+			if ((opfound & NIL_COAL_ASSIGN) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, NIL_COAL_ASSIGN);
 
 			if (nodes.Next != null || nodes.Prev != null)
 				throw new InternalErrorException("Expression reduction didn't work! - 1");
@@ -237,6 +240,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return Operator.Mod;
 				case TokenType.Op_Pwr:
 					return Operator.Power;
+				case TokenType.Op_NilCoalescingAssignment:
+					return Operator.NilCoalescingAssignment;
 				default:
 					throw new InternalErrorException("Unexpected binary operator '{0}'", token.Text);
 			}
@@ -296,6 +301,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return OpCode.Power;
 				case Operator.AddConcat:
 					return OpCode.AddStr;
+				case Operator.NilCoalescingAssignment:
+					return OpCode.NilCoalescing;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
