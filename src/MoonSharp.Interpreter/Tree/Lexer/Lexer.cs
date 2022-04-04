@@ -402,7 +402,21 @@ namespace MoonSharp.Interpreter.Tree
 				case ',':
 					return CreateSingleCharToken(TokenType.Comma, fromLine, fromCol);
 				case '?' when m_IncDec:
-					return CreateSingleCharToken(TokenType.Ternary, fromLine, fromCol);
+				{
+					char next = CursorCharNext();
+
+					if (next == '?')
+					{
+						char next2 = CursorCharNext();
+						if (next2 == '=')
+						{
+							CursorCharNext();
+							return CreateToken(TokenType.Op_NilCoalescingAssignment, fromLine, fromCol, "??=");
+						}
+					}
+
+					return CreateToken(TokenType.Ternary, fromLine, fromCol, "?:");
+				}
 				case ':':
 					return PotentiallyDoubleCharOperator(':', TokenType.Colon, TokenType.DoubleColon, fromLine, fromCol);
 				case '"':
