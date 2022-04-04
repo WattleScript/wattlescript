@@ -27,7 +27,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Mod = 0x4000,
 		Power = 0x8000,
 		AddConcat = 0x10000,
-		NilCoalescingAssignment = 0x20000
+		NilCoalescing = 0x20000
 	}
 	
 	/// <summary>
@@ -57,7 +57,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		const Operator COMPARES = Operator.Less | Operator.Greater | Operator.GreaterOrEqual | Operator.LessOrEqual | Operator.Equal | Operator.NotEqual;
 		const Operator LOGIC_AND = Operator.And;
 		const Operator LOGIC_OR = Operator.Or;
-		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescingAssignment;
+		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
 
 		public static object BeginOperatorChain()
 		{
@@ -240,8 +240,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return Operator.Mod;
 				case TokenType.Op_Pwr:
 					return Operator.Power;
-				case TokenType.Op_NilCoalescingAssignment:
-					return Operator.NilCoalescingAssignment;
+				case TokenType.Op_NilCoalesce:
+					return Operator.NilCoalescing;
 				default:
 					throw new InternalErrorException("Unexpected binary operator '{0}'", token.Text);
 			}
@@ -301,7 +301,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					return OpCode.Power;
 				case Operator.AddConcat:
 					return OpCode.AddStr;
-				case Operator.NilCoalescingAssignment:
+				case Operator.NilCoalescing:
 					return OpCode.NilCoalescing;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
@@ -352,6 +352,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (!m_Exp2.EvalLiteral(out var v2))
 				return false;
 			v2 = v2.ToScalar();
+			if (m_Operator == Operator.NilCoalescing)
+			{
+				if (v1.IsNil()) dv = v2;
+				else dv = v1;
+				return true;
+			}
 			if (m_Operator == Operator.Or)
 			{
 				if (v1.CastToBool())
@@ -401,6 +407,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		{
 			DynValue v1 = m_Exp1.Eval(context).ToScalar();
 
+			if (m_Operator == Operator.NilCoalescing)
+			{
+				if (v1.IsNil()) return m_Exp2.Eval(context);
+				else return v1;
+			}
 			if (m_Operator == Operator.Or)
 			{
 				if (v1.CastToBool())

@@ -413,9 +413,13 @@ namespace MoonSharp.Interpreter.Tree
 							CursorCharNext();
 							return CreateToken(TokenType.Op_NilCoalescingAssignment, fromLine, fromCol, "??=");
 						}
+						else
+						{
+							return CreateToken(TokenType.Op_NilCoalesce, fromLine, fromCol, "??");
+						}
 					}
 
-					return CreateToken(TokenType.Ternary, fromLine, fromCol, "?:");
+					return CreateToken(TokenType.Ternary, fromLine, fromCol, "?");
 				}
 				case ':':
 					return PotentiallyDoubleCharOperator(':', TokenType.Colon, TokenType.DoubleColon, fromLine, fromCol);

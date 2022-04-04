@@ -44,7 +44,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			else if (lcontext.Syntax == ScriptSyntax.CLike && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalescingAssignment)
 			{
 				CheckTokenType(lcontext, TokenType.Op_NilCoalescingAssignment);
-				AssignmentOp = Operator.NilCoalescingAssignment;
+				AssignmentOp = Operator.NilCoalescing;
 				m_RValues = Expression.ExprList(lcontext);
 			}
 			else
@@ -124,7 +124,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 							lcontext.Lexer.Next();
 							break;
 						case TokenType.Op_NilCoalescingAssignment:
-							AssignmentOp = Operator.NilCoalescingAssignment;
+							AssignmentOp = Operator.NilCoalescing;
 							lcontext.Lexer.Next();
 							break;
 						default:

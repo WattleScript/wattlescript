@@ -381,6 +381,17 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
+        [Test]
+        public void NilCoalesce()
+        {
+            TestScript.Run(@"
+            local tbl = { 1 }
+            assert.areequal(1.0, nil ?? 1.0);
+            assert.areequal(2.0, 2.0 ?? 1.0);
+            assert.areequal(1.0, tbl[3] ?? 1.0);
+            assert.areequal(1.0, tbl[1] ?? 2.0);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
 
         [Test]
         public void Not()

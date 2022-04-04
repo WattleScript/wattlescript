@@ -154,6 +154,7 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Op_Mul:
 				case TokenType.Op_MinusOrSub:
 				case TokenType.Op_Add:
+				case TokenType.Op_NilCoalesce:
 					return true;
 				default:
 					return false;
