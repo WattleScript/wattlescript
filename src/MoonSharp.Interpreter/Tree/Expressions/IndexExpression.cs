@@ -10,9 +10,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Expression m_BaseExp;
 		Expression m_IndexExp;
 		string m_Name;
+		private Token nameToken;
 		private bool inc;
 		private bool dec;
 		private bool nilCheck;
+		private bool isLength = false;
 
 		public bool IsAssignment => inc || dec;
 
@@ -38,20 +40,28 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
-		public IndexExpression(Expression baseExp, string name, bool nilCheck, ScriptLoadingContext lcontext)
+		public IndexExpression(Expression baseExp, Token nameToken, bool nilCheck, ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
 			m_BaseExp = baseExp;
-			m_Name = name;
+			m_Name = nameToken.Text;
 			this.nilCheck = nilCheck;
+			//
+			if (lcontext.Syntax == ScriptSyntax.CLike && m_Name.Equals("length")) {
+				isLength = true;
+			}
 			//inc/dec expr
 			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
 			{
+				if (isLength)
+					throw new SyntaxErrorException(lcontext.Lexer.Current, "Cannot assign to readonly property .length");
 				inc = true;
 				lcontext.Lexer.Next();
 			} 
 			else if (lcontext.Lexer.Current.Type == TokenType.Op_Dec)
 			{
+				if (isLength)
+					throw new SyntaxErrorException(lcontext.Lexer.Current, "Cannot assign to readonly property .length");
 				dec = true;
 				lcontext.Lexer.Next();
 			}
@@ -61,6 +71,17 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		public override void Compile(ByteCode bc)
 		{
 			m_BaseExp.Compile(bc);
+			if (isLength) {
+				if (nilCheck) {
+					bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));
+				}
+				bc.Emit_Operator(OpCode.Len);
+				if (bc.NilChainTargets.Count > 0 && NilChainNext == null)
+				{
+					bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());
+				}
+				return;
+			}
 			if (nilCheck)
 			{
 				bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));
@@ -102,6 +123,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public void CompileAssignment(ByteCode bc, Operator op, int stackofs, int tupleidx)
 		{
+			if (isLength)
+			{ 
+				throw new SyntaxErrorException(nameToken, "Cannot assign to readonly property .length");
+			}
 			if (op != Operator.NotAnOperator)
 			{
 				Compile(bc); //left

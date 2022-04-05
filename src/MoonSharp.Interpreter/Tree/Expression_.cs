@@ -241,7 +241,7 @@ namespace MoonSharp.Interpreter.Tree
 					{
 						lcontext.Lexer.Next();
 						Token name = CheckTokenType(lcontext, TokenType.Name);
-						var ne = new IndexExpression(e, name.Text, T.Type == TokenType.DotNil, lcontext);
+						var ne = new IndexExpression(e, name, T.Type == TokenType.DotNil, lcontext);
 						//Break nil checking chain on next nil check
 						if (e is IndexExpression ie && T.Type != TokenType.DotNil) ie.NilChainNext = ne;
 						e = ne;

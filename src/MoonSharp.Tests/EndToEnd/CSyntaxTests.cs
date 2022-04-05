@@ -406,6 +406,30 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
+        [Test]
+        public void LengthProperty()
+        {
+            TestScript.Run(@"
+            assert.areequal(nil, blah?.length);
+            local tbl = { 1, 2 };
+            tbl['length'] = 1;
+            assert.areequal(2, tbl.length);
+            assert.areequal(1, tbl['length']);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void LengthPropertyReadonly()
+        {
+            Assert.Throws<SyntaxErrorException>(() =>
+            {
+                TestScript.Run(@"
+                    table = {}
+                    table.length = 3;
+                ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            });
+        }
+
         
         [Test]
         public void BitNot()
