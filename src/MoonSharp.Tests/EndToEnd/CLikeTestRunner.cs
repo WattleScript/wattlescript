@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ public class CLikeTestRunner
         string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
 
-        Script script = new Script(CoreModules.Preset_HardSandbox);
+        ScriptWithMetadata script = new ScriptWithMetadata(CoreModules.Preset_HardSandbox);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         
@@ -40,8 +41,31 @@ public class CLikeTestRunner
             script.Options.Syntax = ScriptSyntax.CLike;
         }
 
-        await script.DoStringAsync(code);
-
-        Assert.AreEqual(output.Trim(), stdOut.ToString().Trim(), $"Test {path} did not pass.");
+        try
+        {
+            await script.DoStringAsync(code);
+            Assert.AreEqual(output.Trim(), stdOut.ToString().Trim(), $"Test {path} did not pass.");
+            
+            if (path.Contains("invalid"))
+            {
+                Assert.Fail("Expected to crash but 'passed'");
+            }
+        }
+        catch (Exception e)
+        {
+            if (e is AssertionException ae)
+            {
+                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}");
+                return;
+            }
+            
+            if (path.Contains("invalid"))
+            {
+                Assert.Pass($"Crashed as expected: {e.Message}");
+                return;
+            }
+            
+            Assert.Fail($"Test {path} did not pass.\nMessage: {e.Message}\n{e.StackTrace}");
+        }
     }
 }

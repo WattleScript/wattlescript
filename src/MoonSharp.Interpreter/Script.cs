@@ -9,8 +9,6 @@ using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Diagnostics;
 using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Execution.VM;
-using MoonSharp.Interpreter.Interop;
-using MoonSharp.Interpreter.IO;
 using MoonSharp.Interpreter.Platforms;
 using MoonSharp.Interpreter.Tree.Expressions;
 using MoonSharp.Interpreter.Tree.Fast_Interface;
@@ -352,7 +350,6 @@ namespace MoonSharp.Interpreter
 			return CallAsync(func);
 		}
 
-
 		/// <summary>
 		/// Loads and executes a stream containing a Lua/MoonSharp script.
 		/// </summary>
@@ -431,7 +428,7 @@ namespace MoonSharp.Interpreter
 				}
 				else
 				{
-					c = new Closure(this, address, new SymbolRef[0], new Upvalue[0]);
+					c = new Closure(this, address, Array.Empty<SymbolRef>(), Array.Empty<Upvalue>());
 				}
 			}
 			else
@@ -460,12 +457,12 @@ namespace MoonSharp.Interpreter
 		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public DynValue Call(DynValue function)
 		{
-			return Call(function, new DynValue[0]);
+			return Call(function, Array.Empty<DynValue>());
 		}
 
 		public Task<DynValue> CallAsync(DynValue function)
 		{
-			return CallAsync(function, new DynValue[0]);
+			return CallAsync(function, Array.Empty<DynValue>());
 		}
 
 		/// <summary>

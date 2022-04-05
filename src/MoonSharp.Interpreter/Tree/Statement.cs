@@ -63,6 +63,8 @@ namespace MoonSharp.Interpreter.Tree
 					return new BreakStatement(lcontext);
 				case TokenType.Continue:
 					return new ContinueStatement(lcontext);
+				case TokenType.Using when lcontext.Syntax == ScriptSyntax.CLike:
+					return new UsingStatement(lcontext);
 				default:
 				{
 						//Check for labels in CLike mode

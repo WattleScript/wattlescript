@@ -50,6 +50,10 @@ namespace MoonSharp.Interpreter.Tree
 						return TokenType.Continue;
 					case "null":
 						return TokenType.Nil;
+					case "using":
+						return TokenType.Using;
+					case "use":
+						return TokenType.Using;
 				}
 			}
 
