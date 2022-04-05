@@ -10,7 +10,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 {
 	sealed partial class Processor
 	{
-		const ulong DUMP_CHUNK_MAGIC = 0x504D5544234E4D01; // "\x1MN#DUMP"
+		const ulong DUMP_CHUNK_MAGIC = 0x0A04504D55444342; // "BCDUMP^D\n"
 		const byte DUMP_CHUNK_VERSION = 0x01; //version
 
 		internal static bool IsDumpStream(Stream stream)
