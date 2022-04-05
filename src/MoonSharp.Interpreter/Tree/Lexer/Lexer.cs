@@ -646,9 +646,8 @@ namespace MoonSharp.Interpreter.Tree
 						goto redo_Loop;
 					}
 				}
-				else if (c == '$' && CursorMatches("${"))
+				else if (c == '{')
 				{
-					CursorCharNext();
 					CursorCharNext();
 					Token t = CreateToken(TokenType.String_TemplateFragment, fromLine, fromCol);
 					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
