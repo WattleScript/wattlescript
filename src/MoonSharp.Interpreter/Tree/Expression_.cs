@@ -306,7 +306,10 @@ namespace MoonSharp.Interpreter.Tree
 			switch (T.Type)
 			{
 				case TokenType.String when lcontext.Syntax == ScriptSyntax.CLike:
+				case TokenType.String_EndTemplate:
 					return new LiteralExpression(lcontext, T);
+				case TokenType.String_TemplateFragment:
+					return new TemplatedStringExpression(lcontext, T);
 				case TokenType.Brk_Open_Round:
 					lcontext.Lexer.Next();
 					Expression e = Expr(lcontext);

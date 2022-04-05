@@ -56,6 +56,7 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Ret:
 				case OpCode.MkTuple:
 				case OpCode.CloseUp:
+				case OpCode.StrFormat:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:

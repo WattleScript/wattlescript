@@ -144,6 +144,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 			throw new InvalidOperationException(value.Type.ToString());
 		}
 
+		public int Emit_StrFormat(int argCount)
+		{
+			return AppendInstruction(new Instruction() {OpCode = OpCode.StrFormat, NumVal = argCount});
+		}
+
 		public int Emit_Jump(OpCode jumpOpCode, int idx, int optPar = 0)
 		{
 			return AppendInstruction(new Instruction() { OpCode = jumpOpCode, NumVal = idx, NumVal2 = optPar });
