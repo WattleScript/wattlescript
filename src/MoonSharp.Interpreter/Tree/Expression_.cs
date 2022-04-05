@@ -172,7 +172,7 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Number:
 				case TokenType.Number_Hex:
 				case TokenType.Number_HexFloat:
-				case TokenType.String:
+				case TokenType.String when lcontext.Syntax != ScriptSyntax.CLike:
 				case TokenType.String_Long:
 				case TokenType.Nil:
 				case TokenType.True:
@@ -305,6 +305,8 @@ namespace MoonSharp.Interpreter.Tree
 			Token T = lcontext.Lexer.Current;
 			switch (T.Type)
 			{
+				case TokenType.String when lcontext.Syntax == ScriptSyntax.CLike:
+					return new LiteralExpression(lcontext, T);
 				case TokenType.Brk_Open_Round:
 					lcontext.Lexer.Next();
 					Expression e = Expr(lcontext);

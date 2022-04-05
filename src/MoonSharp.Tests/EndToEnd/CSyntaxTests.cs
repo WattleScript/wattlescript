@@ -419,6 +419,14 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void LengthStringLiteral()
+        {
+            TestScript.Run(@"
+                assert.areequal(5, 'hello'.length);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
         public void LengthPropertyReadonly()
         {
             Assert.Throws<SyntaxErrorException>(() =>
