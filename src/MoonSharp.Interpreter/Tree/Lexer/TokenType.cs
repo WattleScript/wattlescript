@@ -85,6 +85,9 @@ namespace MoonSharp.Interpreter.Tree
 		Op_NilCoalesceInverse,
 		Op_NilCoalescingAssignment,
 		Op_NilCoalescingAssignmentInverse,
+		//Nil Accessing
+		DotNil,
+		BrkOpenSquareNil,
 		
 		Ternary,
 		Comment,

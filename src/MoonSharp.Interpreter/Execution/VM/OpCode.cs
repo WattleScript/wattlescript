@@ -44,7 +44,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 		Jump,		// Jumps to the specified PC
 		Jf,			// Pops the top of the v-stack and jumps to the specified location if it's false
 		Jt,			// Pops the top of the v-stack and jumps to the specified location if it's true
-		JNil,		// Jumps if the top of the stack is nil
+		JNil,		// Jumps if the top of the stack is nil (pops stack)
+		JNilChk,	// Jumps if the top of the stack is nil (does not pop stack)
 		JFor,		// Peeks at the top, top-1 and top-2 values of the v-stack which it assumes to be numbers. Then if top-1 is less than zero, checks if top is <= top-2, otherwise it checks that top is >= top-2. Then if the condition is false, it jumps.
 		JtOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If true, it performs a jump, otherwise it removes the topmost value from the v-stack.
 		JfOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If false, it performs a jump, otherwise it removes the topmost value from the v-stack.

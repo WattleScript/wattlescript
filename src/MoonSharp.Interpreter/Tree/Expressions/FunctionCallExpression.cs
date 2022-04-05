@@ -93,6 +93,9 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				bc.Emit_Call(argslen, m_DebugErr);
 			}
+			if (bc.NilChainTargets.Count > 0) {
+				bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());
+			}
 		}
 
 		public override bool EvalLiteral(out DynValue dv)

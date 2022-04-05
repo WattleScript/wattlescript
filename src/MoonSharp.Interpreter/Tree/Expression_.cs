@@ -233,33 +233,39 @@ namespace MoonSharp.Interpreter.Tree
 			{
 				Token T = lcontext.Lexer.Current;
 				Token thisCallName = null;
-
+				
 				switch (T.Type)
 				{
 					case TokenType.Dot:
-						{
-							lcontext.Lexer.Next();
-							Token name = CheckTokenType(lcontext, TokenType.Name);
-							e = new IndexExpression(e, name.Text, lcontext);
-						}
+					case TokenType.DotNil:
+					{
+						lcontext.Lexer.Next();
+						Token name = CheckTokenType(lcontext, TokenType.Name);
+						var ne = new IndexExpression(e, name.Text, T.Type == TokenType.DotNil, lcontext);
+						//Break nil checking chain on next nil check
+						if (e is IndexExpression ie && T.Type != TokenType.DotNil) ie.NilChainNext = ne;
+						e = ne;
 						break;
+					}
+					case TokenType.BrkOpenSquareNil:
 					case TokenType.Brk_Open_Square:
 						{
 							Token openBrk = lcontext.Lexer.Current;
 							lcontext.Lexer.Next(); // skip bracket
 							Expression index = Expr(lcontext);
-
 							// support moonsharp multiple indexers for userdata
 							if (lcontext.Lexer.Current.Type == TokenType.Comma)
 							{
 								var explist = ExprListAfterFirstExpr(lcontext, index);
 								index = new ExprListExpression(explist, lcontext);
 							}
-
 							CheckMatch(lcontext, openBrk, TokenType.Brk_Close_Square, "]");
-							e = new IndexExpression(e, index, lcontext);
+							var ne = new IndexExpression(e, index, T.Type == TokenType.BrkOpenSquareNil, lcontext);
+							//Break nil checking chain on next nil check
+							if (e is IndexExpression ie && T.Type != TokenType.BrkOpenSquareNil) ie.NilChainNext = ne;
+							e = ne;
+							break;
 						}
-						break;
 					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.CLike:
 					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.CLike:
 						lcontext.Lexer.Next();
@@ -269,14 +275,23 @@ namespace MoonSharp.Interpreter.Tree
 					case TokenType.String:
 					case TokenType.String_Long:
 					case TokenType.Brk_Open_Curly_Shared:
-						e = new FunctionCallExpression(lcontext, e, thisCallName);
+					{
+						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
+						if (e is IndexExpression ie) ie.NilChainNext = ne;
+						e = ne;
 						break;
+					}
 					case TokenType.Brk_Open_Curly:
-						if (e is AdjustmentExpression) {
+					{
+						if (e is AdjustmentExpression)
+						{
 							return e;
 						}
-						e = new FunctionCallExpression(lcontext, e, thisCallName);
+						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
+						if (e is IndexExpression ie) ie.NilChainNext = ne;
+						e = ne;
 						break;
+					}
 					default:
 						return e;
 				}

@@ -194,6 +194,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 							}
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.JNilChk:
+							{
+								if(m_ValueStack.Peek().IsNil())
+									instructionPtr = i.NumVal;
+							}
+							break;
 						case OpCode.Jf:
 							instructionPtr = JumpBool(i, false, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;

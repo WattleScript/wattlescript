@@ -19,6 +19,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		internal LoopTracker LoopTracker = new LoopTracker();
 
+		public Stack<int> NilChainTargets = new Stack<int>();
+
 		public ByteCode(Script script)
 		{
 			Script = script;

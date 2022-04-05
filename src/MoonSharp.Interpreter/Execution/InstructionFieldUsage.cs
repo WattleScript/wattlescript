@@ -61,6 +61,7 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Jf:
 				case OpCode.Jt:
 				case OpCode.JNil:
+				case OpCode.JNilChk:
 				case OpCode.JFor:
 				case OpCode.JtOrPop:
 				case OpCode.JfOrPop:

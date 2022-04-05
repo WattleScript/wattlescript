@@ -495,7 +495,16 @@ namespace MoonSharp.Interpreter.Tree
 						
 						return CreateToken(TokenType.Op_NilCoalesceInverse, fromLine, fromCol, "?!");
 					}
-
+					if (next == '.')
+					{
+						CursorCharNext();
+						return CreateToken(TokenType.DotNil, fromLine, fromCol, "?.");
+					}
+					if (next == '[')
+					{
+						CursorCharNext();
+						return CreateToken(TokenType.BrkOpenSquareNil, fromLine, fromCol, "?[");
+					}
 					return CreateToken(TokenType.Ternary, fromLine, fromCol, "?");
 				}
 				case ':':

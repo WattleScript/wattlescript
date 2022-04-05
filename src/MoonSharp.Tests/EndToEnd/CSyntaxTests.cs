@@ -393,6 +393,19 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
+        [Test]
+        public void NilCheck()
+        {
+            TestScript.Run(@"
+                local tbl = {
+                    extra = 2.0
+                };
+                assert.areequal(nil, tbl?.x?.y()?.z);
+                assert.areequal(nil, tbl['hello']?[2]);
+                assert.areequal(2.0, tbl[asdf?['hello'] ?? 'extra']);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
         
         [Test]
         public void BitNot()

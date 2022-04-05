@@ -12,14 +12,19 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		string m_Name;
 		private bool inc;
 		private bool dec;
+		private bool nilCheck;
 
 		public bool IsAssignment => inc || dec;
 
-		public IndexExpression(Expression baseExp, Expression indexExp, ScriptLoadingContext lcontext)
+		public bool NilCheck => nilCheck;
+		public Expression NilChainNext { get; set; }
+
+		public IndexExpression(Expression baseExp, Expression indexExp, bool nilCheck, ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
 			m_BaseExp = baseExp;
 			m_IndexExp = indexExp;
+			this.nilCheck = nilCheck;
 			//inc/dec expr
 			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
 			{
@@ -33,11 +38,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
-		public IndexExpression(Expression baseExp, string name, ScriptLoadingContext lcontext)
+		public IndexExpression(Expression baseExp, string name, bool nilCheck, ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
 			m_BaseExp = baseExp;
 			m_Name = name;
+			this.nilCheck = nilCheck;
 			//inc/dec expr
 			if (lcontext.Lexer.Current.Type == TokenType.Op_Inc)
 			{
@@ -55,7 +61,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		public override void Compile(ByteCode bc)
 		{
 			m_BaseExp.Compile(bc);
-
+			if (nilCheck)
+			{
+				bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));
+			}
 			if (m_Name != null)
 			{
 				bc.Emit_Index(m_Name, true);
@@ -69,7 +78,6 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				m_IndexExp.Compile(bc);
 				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression));
 			}
-
 			if (inc)
 			{
 				bc.Emit_Copy(0);
@@ -85,6 +93,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				bc.Emit_Operator(OpCode.Sub);
 				CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
 				bc.Emit_Pop();
+			}
+			if (bc.NilChainTargets.Count > 0 && NilChainNext == null)
+			{
+				bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());
 			}
 		}
 
