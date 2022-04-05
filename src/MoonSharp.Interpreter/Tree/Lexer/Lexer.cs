@@ -480,10 +480,20 @@ namespace MoonSharp.Interpreter.Tree
 							CursorCharNext();
 							return CreateToken(TokenType.Op_NilCoalescingAssignment, fromLine, fromCol, "??=");
 						}
-						else
+
+						return CreateToken(TokenType.Op_NilCoalesce, fromLine, fromCol, "??");
+					}
+					
+					if (next == '!')
+					{
+						char next2 = CursorCharNext();
+						if (next2 == '=')
 						{
-							return CreateToken(TokenType.Op_NilCoalesce, fromLine, fromCol, "??");
+							CursorCharNext();
+							return CreateToken(TokenType.Op_NilCoalescingAssignmentInverse, fromLine, fromCol, "?!=");
 						}
+						
+						return CreateToken(TokenType.Op_NilCoalesceInverse, fromLine, fromCol, "?!");
 					}
 
 					return CreateToken(TokenType.Ternary, fromLine, fromCol, "?");

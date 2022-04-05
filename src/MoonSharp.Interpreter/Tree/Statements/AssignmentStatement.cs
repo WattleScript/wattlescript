@@ -47,6 +47,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				AssignmentOp = Operator.NilCoalescing;
 				m_RValues = Expression.ExprList(lcontext);
 			}
+			else if (lcontext.Syntax == ScriptSyntax.CLike && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalesceInverse)
+			{
+				CheckTokenType(lcontext, TokenType.Op_NilCoalesceInverse);
+				AssignmentOp = Operator.NilCoalescingInverse;
+				m_RValues = Expression.ExprList(lcontext);
+			}
 			else
 			{
 				if (names.Count > 0)
@@ -125,6 +131,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 							break;
 						case TokenType.Op_NilCoalescingAssignment:
 							AssignmentOp = Operator.NilCoalescing;
+							lcontext.Lexer.Next();
+							break;
+						case TokenType.Op_NilCoalescingAssignmentInverse:
+							AssignmentOp = Operator.NilCoalescingInverse;
 							lcontext.Lexer.Next();
 							break;
 						default:
