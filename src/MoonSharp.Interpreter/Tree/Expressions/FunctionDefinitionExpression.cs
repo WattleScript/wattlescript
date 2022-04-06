@@ -38,9 +38,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda, string name)
 			: this(lcontext, pushSelfParam, false, isLambda, name)
 		{ }
+		
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda, List<string> names)
+			: this(lcontext, pushSelfParam, false, isLambda, null, names)
+		{ }
 
 
-		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda, string name = "")
+		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda, string name = null, List<string> names = null)
 			: base(lcontext)
 		{
 			this.lcontext = lcontext;
@@ -95,8 +99,20 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				lcontext.Scope.ForceEnvUpValue();
 			}
+
+			if (!string.IsNullOrWhiteSpace(name))
+			{
+				lcontext.Scope.AddFunction(new FunctionRef() {Name = name, Params = paramnames});	
+			}
+
+			if (names != null)
+			{
+				foreach (string lName in names)
+				{
+					lcontext.Scope.AddFunction(new FunctionRef() {Name = lName, Params = paramnames});		
+				}
+			}
 			
-			lcontext.Scope.AddFunction(new FunctionRef() {Name = name, Params = paramnames});
 			m_ParamNames = DefineArguments(paramnames, lcontext);
 
 			if(isLambda)

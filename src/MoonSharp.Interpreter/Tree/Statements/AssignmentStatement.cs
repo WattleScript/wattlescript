@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Execution;
 
@@ -145,7 +146,17 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				else {
 					CheckTokenType(lcontext, TokenType.Op_Assignment);
 				}
-				m_RValues = Expression.ExprList(lcontext);
+
+				List<string> lNames = new List<string>();
+				foreach (IVariable ivar in m_LValues)
+				{
+					if (ivar is SymbolRefExpression sre)
+					{
+						lNames.Add(sre.Symbol.Name);
+					}
+				}
+				
+				m_RValues = Expression.ExprList(lcontext, lNames);
 			} 
 			
 			Token last = lcontext.Lexer.Current;
