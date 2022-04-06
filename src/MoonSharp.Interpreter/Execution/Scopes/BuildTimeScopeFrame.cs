@@ -1,4 +1,6 @@
-﻿using MoonSharp.Interpreter.Tree.Statements;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
 {

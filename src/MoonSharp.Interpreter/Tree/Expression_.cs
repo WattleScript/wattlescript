@@ -52,8 +52,7 @@ namespace MoonSharp.Interpreter.Tree
 
 			return exps;
 		}
-
-
+		
 		internal static List<Expression> ExprList(ScriptLoadingContext lcontext)
 		{
 			List<Expression> exps = new List<Expression>();
@@ -78,8 +77,7 @@ namespace MoonSharp.Interpreter.Tree
 
 		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary, bool binaryChainInProgress = false)
 		{
-			Expression e = null;
-
+			Expression e;
 			Token T = lcontext.Lexer.Current;
 
 			if (T.IsUnaryOperator())
@@ -202,7 +200,7 @@ namespace MoonSharp.Interpreter.Tree
 						lcontext.Lexer.Next();
 					}
 					lcontext.Lexer.Next();
-					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow;
+					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow || lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
 					lcontext.Lexer.RestorePos();
 					if (arrowLambda) 					
 						return new FunctionDefinitionExpression(lcontext, false, true);
@@ -222,11 +220,11 @@ namespace MoonSharp.Interpreter.Tree
 		/// <returns></returns>
 		internal static Expression PrimaryExp(ScriptLoadingContext lcontext)
 		{
-			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow &&
-			    lcontext.Lexer.Current.Type == TokenType.Name)
+			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow && lcontext.Lexer.Current.Type == TokenType.Name)
 			{
 				return new FunctionDefinitionExpression(lcontext, false, true);
 			}
+
 			Expression e = PrefixExp(lcontext);
 
 			while (true)
