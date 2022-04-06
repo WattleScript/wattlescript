@@ -70,6 +70,7 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.Swap:
 				case OpCode.Clean:
 				case OpCode.CopyValue:
+				case OpCode.JLclInit:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:
