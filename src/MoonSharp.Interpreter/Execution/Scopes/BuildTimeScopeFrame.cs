@@ -1,4 +1,6 @@
-﻿using MoonSharp.Interpreter.Tree.Statements;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
 {
@@ -14,6 +16,22 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 		{
 			HasVarArgs = hasVarArgs;
 			m_ScopeTreeHead = m_ScopeTreeRoot = new BuildTimeScopeBlock(null);
+		}
+		
+		internal FunctionRef? FindFunctionRef(string name)
+		{
+			FunctionRef? candidate = m_ScopeTreeHead.FindFunctionRef(name);
+			if (candidate == null)
+			{
+				candidate = m_ScopeTreeRoot.FindFunctionRef(name);
+			}
+
+			return candidate;
+		}
+		
+		internal void AddFunction(FunctionRef functionRef)
+		{
+			m_ScopeTreeHead.AddFunction(functionRef);
 		}
 
 		internal void PushBlock()

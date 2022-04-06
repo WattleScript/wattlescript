@@ -13,11 +13,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		string m_DebugErr;
 
 		internal SourceRef SourceRef { get; private set; }
-
+		ScriptLoadingContext lcontext;
 
 		public FunctionCallExpression(ScriptLoadingContext lcontext, Expression function, Token thisCallName)
 			: base(lcontext)
 		{
+			this.lcontext = lcontext;
 			Token callToken = thisCallName ?? lcontext.Lexer.Current;
 
 			m_Name = thisCallName != null ? thisCallName.Text : null;
@@ -64,6 +65,32 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					{
 						IsPrematureStreamTermination = (lcontext.Lexer.Current.Type == TokenType.Eof)
 					};
+			}
+
+			if (lcontext.Syntax == ScriptSyntax.CLike)
+			{
+				if (m_Function is SymbolRefExpression sre)
+				{
+					if (!string.IsNullOrEmpty(sre.Symbol?.Name))
+					{
+						FunctionRef? fref = lcontext.Scope.FindFunctionRef(sre.Symbol.Name);
+
+						if (fref != null)
+						{
+							for (int i = m_Arguments.Count + 1; i <= fref.Params.Count; i++)
+							{
+								FunctionParamRef fRef = fref.Params[i - 1];
+								
+								if (fRef.DefaultValue == null)
+								{
+									continue;
+								}
+								
+								m_Arguments.Add(fRef.DefaultValue);
+							}	
+						}
+					}
+				}
 			}
 		}
 

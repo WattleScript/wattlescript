@@ -27,17 +27,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			funcKeyword = localToken ?? funcKeyword; // for debugger purposes
 			
 			m_Local = local;
-
+			Token name = CheckTokenType(lcontext, TokenType.Name);
+			
 			if (m_Local)
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
 				m_FuncSymbol = lcontext.Scope.TryDefineLocal(name.Text);
 				m_FriendlyName = string.Format("{0} (local)", name.Text);
 				m_SourceRef = funcKeyword.GetSourceRef(name);
 			}
 			else
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
 				string firstName = name.Text;
 
 				m_SourceRef = funcKeyword.GetSourceRef(name);
@@ -83,7 +82,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				}
 			}
 
-			m_FuncDef = new FunctionDefinitionExpression(lcontext, m_IsMethodCallingConvention, false);
+			m_FuncDef = new FunctionDefinitionExpression(lcontext, m_IsMethodCallingConvention, false, name.Text);
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 

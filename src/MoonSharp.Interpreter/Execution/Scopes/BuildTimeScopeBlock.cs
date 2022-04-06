@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
@@ -8,11 +9,26 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 	{
 		internal BuildTimeScopeBlock Parent { get; private set; }
 		internal List<BuildTimeScopeBlock> ChildNodes { get; private set; }
-
 		internal RuntimeScopeBlock ScopeBlock { get; private set; }
 
 		Dictionary<string, SymbolRef> m_DefinedNames = new Dictionary<string, SymbolRef>();
+		internal List<FunctionRef> m_FunctionRefs = new List<FunctionRef>();
 
+		internal void AddFunction(FunctionRef functionRef)
+		{
+			FunctionRef dupeCandidate = m_FunctionRefs.FirstOrDefault(x => x.Name == functionRef.Name);
+			if (dupeCandidate != null)
+			{
+				m_FunctionRefs.Remove(dupeCandidate);
+			}
+			
+			m_FunctionRefs.Add(functionRef);
+		}
+
+		internal FunctionRef? FindFunctionRef(string name)
+		{
+			return m_FunctionRefs.FirstOrDefault(x => x.Name == name);
+		}
 
 
 		internal void Rename(string name)
