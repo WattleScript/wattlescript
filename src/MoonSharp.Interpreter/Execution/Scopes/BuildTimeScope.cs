@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using MoonSharp.Interpreter.Execution.Scopes;
+using MoonSharp.Interpreter.Tree;
 using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution
@@ -9,7 +10,6 @@ namespace MoonSharp.Interpreter.Execution
 	{
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
-
 
 		public void PushFunction(IClosureBuilder closureBuilder, bool hasVarArgs)
 		{
