@@ -11,14 +11,14 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		internal class FunctionParamRef
 		{
 			public string Name { get; set; }
-			public Expression? DefaultValue { get; set; }
+			public Expression DefaultValue { get; set; }
 
 			public FunctionParamRef(string name)
 			{
 				Name = name;
 			}
 
-			public FunctionParamRef(string name, Expression? defaultValue)
+			public FunctionParamRef(string name, Expression defaultValue)
 			{
 				Name = name;
 				DefaultValue = defaultValue;
