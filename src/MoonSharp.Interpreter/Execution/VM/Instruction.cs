@@ -35,7 +35,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 			get => _object as string;
 			set => _object = value;
 		}
-		
+
+		internal Annotation[] Annotations
+		{
+			get => _object as Annotation[];
+			set => _object = value;
+		}
 		
 		
 		public override string ToString()
@@ -65,6 +70,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (((usage & ((int)InstructionFieldUsage.SymbolList)) != 0) && (SymbolList != null))
 				append += " " + string.Join(",", SymbolList.Select(s => s.ToString()).ToArray());
 
+			if (((usage & ((int) InstructionFieldUsage.Annotations)) != 0) && (Annotations != null))
+				append += " " + string.Join(",", Annotations.Select((x => x.ToString())));
+
 			return append;
 		}
 
@@ -88,7 +96,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 			
 			if ((usage & ((int)InstructionFieldUsage.String)) == 0 &&
 				(usage & ((int)InstructionFieldUsage.Symbol)) == 0 && 
-					(usage & ((int)InstructionFieldUsage.SymbolList)) == 0 &&
+			    (usage & ((int)InstructionFieldUsage.SymbolList)) == 0 &&
+				(usage & ((int)InstructionFieldUsage.Annotations)) == 0 && 
 				_object != null)
 			{
 				throw new Exception("Object usage");
@@ -121,6 +130,16 @@ namespace MoonSharp.Interpreter.Execution.VM
 				for (int i = 0; i < this.SymbolList.Length; i++)
 					WriteSymbol(wr, SymbolList[i], symbolMap);
 			}
+			
+			if ((usage & ((int) InstructionFieldUsage.Annotations)) != 0)
+			{
+				wr.WriteVarUInt32((uint)this.Annotations.Length);
+				for (int i = 0; i < Annotations.Length; i++)
+				{
+					wr.WriteString(Annotations[i].Name);
+					WriteDynValue(wr, Annotations[i].Value, true);
+				}
+			}
 		}
 
 		private static void WriteSymbol(BinDumpWriter wr, SymbolRef symbolRef, Dictionary<SymbolRef, int> symbolMap)
@@ -135,6 +154,83 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 			if (id < 1) return null;
 			return deserializedSymbols[id - 1];
+		}
+
+		static void WriteDynValue(BinDumpWriter wr, DynValue d, bool allowTable)
+		{
+			switch (d.Type) {
+				case DataType.Nil:
+					wr.WriteByte((byte)d.Type);
+					break;
+				case DataType.Void:
+					wr.WriteByte((byte)d.Type);
+					break;
+				case DataType.Boolean:
+					if(d.Boolean) wr.WriteByte((byte)DataType.Boolean | 0x80);
+					else wr.WriteByte((byte)DataType.Boolean);
+					break;
+				case DataType.String:
+					wr.WriteByte((byte)d.Type);
+					wr.WriteString(d.String);
+					break;
+				case DataType.Number:
+					wr.WriteByte((byte)d.Type);
+					wr.WriteDouble(d.Number);
+					break;
+				case DataType.Table when allowTable:
+					wr.WriteByte((byte)d.Type);
+					WriteTable(wr, d.Table);
+					break;
+				case DataType.Table when !allowTable:
+					throw new Exception("Stored table key cannot be table"); 
+				default:
+					throw new Exception("Can only store DynValue of string/number/bool/nil/table");
+			}
+		}
+
+		static void WriteTable(BinDumpWriter wr, Table t)
+		{
+			//this enumerates twice. not ideal
+			wr.WriteVarInt32(t.Pairs.Count());
+			foreach (var p in t.Pairs)
+			{
+				WriteDynValue(wr, p.Key, false);
+				WriteDynValue(wr, p.Value, true);
+			}
+		}
+
+		static DynValue ReadDynValue(BinDumpReader rd, bool allowTable)
+		{
+			var b = rd.ReadByte();
+			var type = (DataType) (b & 0x7f);
+			switch (type) {
+				case DataType.Nil:
+					return DynValue.Nil;
+				case DataType.Void:
+					return DynValue.Void;
+				case DataType.Boolean:
+					if ((b & 0x80) == 0x80) return DynValue.True;
+					return DynValue.False;
+				case DataType.String:
+					return DynValue.NewString(rd.ReadString());
+				case DataType.Number:
+					return DynValue.NewNumber(rd.ReadDouble());
+				case DataType.Table when allowTable:
+					return ReadTable(rd);
+				default:
+					throw new InternalErrorException("Invalid DynValue storage in bytecode");
+			}
+		}
+
+		static DynValue ReadTable(BinDumpReader rd)
+		{
+			var d = DynValue.NewPrimeTable();
+			var table = d.Table;
+			var c = rd.ReadVarInt32();
+			for (int i = 0; i < c; i++) {
+				table.Set(ReadDynValue(rd, false), ReadDynValue(rd, true));
+			}
+			return d;
 		}
 
 		internal static Instruction ReadBinary(BinDumpReader rd, int baseAddress, Table envTable, SymbolRef[] deserializedSymbols)
@@ -175,6 +271,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 				for (int i = 0; i < that.SymbolList.Length; i++)
 					that.SymbolList[i] = ReadSymbol(rd, deserializedSymbols);
 			}
+
+			if ((usage & ((int) InstructionFieldUsage.Annotations)) != 0)
+			{
+				int len = (int) rd.ReadVarUInt32();
+				that.Annotations = new Annotation[len];
+				for (int i = 0; i < that.Annotations.Length; i++)
+				{
+					that.Annotations[i] = new Annotation(rd.ReadString(), ReadDynValue(rd, true));
+				}
+			}
+			
 
 			return that;
 		}

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -127,6 +128,76 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
                 assert.areequal(5, table['g'], 'map field');
             ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
+
+        [Test]
+        public void UsingDirective()
+        {
+            var s = new Script();
+            s.Options.Syntax = ScriptSyntax.CLike;
+            s.Options.Directives.Add("using");
+            var chunk = s.LoadString("using a.b.c;");
+            var a = chunk.Function.Annotations[0];
+            Assert.AreEqual("using", a.Name);
+            Assert.AreEqual("a.b.c", a.Value.String);
+        }
+        
+        [Test]
+        public void ChunkAnnotations()
+        {
+            var s = new Script();
+            s.Options.Syntax = ScriptSyntax.CLike;
+            var chunk = s.LoadString(@"
+            @@number (1.0)
+            @@string ('hello')
+            @@boolean (true)
+            @@nilarg (nil)
+            @@empty
+            @@table ({ key: 'value' })");
+            //Go through bytecode to make sure all the annotations are kept
+            using (var mem = new MemoryStream())
+            {
+                s.Dump(chunk, mem);
+                mem.Seek(0, SeekOrigin.Begin);
+                chunk = s.LoadStream(mem);
+            }
+            //Check values
+            var a = chunk.Function.Annotations;
+            
+            Assert.AreEqual("number", a[0].Name);
+            Assert.AreEqual(1.0, a[0].Value.Number);
+            
+            Assert.AreEqual("string", a[1].Name);
+            Assert.AreEqual("hello", a[1].Value.String);
+            
+            Assert.AreEqual("boolean", a[2].Name);
+            Assert.AreEqual(true, a[2].Value.Boolean);
+            
+            Assert.AreEqual("nilarg", a[3].Name);
+            Assert.IsTrue(a[3].Value.IsNil());
+            
+            Assert.AreEqual("empty", a[4].Name);
+            Assert.IsTrue(a[4].Value.IsNil());
+            
+            Assert.AreEqual("table", a[5].Name);
+            Assert.AreEqual("value", a[5].Value.Table["key"]);
+        }
+
+        [Test]
+        public void FunctionAnnotations()
+        {
+            var s = new Script();
+            s.Options.Syntax = ScriptSyntax.CLike;
+            s.DoString(@"
+            @bind ({name: 'hello', value: 10 })
+            function myfunc(args)
+            {
+            }
+            ");
+            var myfunc = s.Globals.Get("myfunc").Function;
+            Assert.AreEqual("hello", myfunc.Annotations[0].Value.Table["name"]);
+            Assert.AreEqual(10, myfunc.Annotations[0].Value.Table["value"]);
+        }
+        
 
         [Test]
         public void Continue()

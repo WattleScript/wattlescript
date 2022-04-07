@@ -21,6 +21,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		{
 			while (true)
 			{
+				ParseAnnotations(lcontext);
 				Token t = lcontext.Lexer.Current;
 				EndToken = lcontext.Lexer.Current;
 				if (t.IsEndOfBlock()) break;

@@ -17,8 +17,9 @@ namespace MoonSharp.Interpreter.Tree
 		bool m_AutoSkipComments = false;
 		bool m_Extended = false;
 		private bool m_IncDec;
+		private HashSet<string> m_Directives;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, bool extended, bool incdec)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, bool extended, bool incdec, HashSet<string> directives)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -30,6 +31,7 @@ namespace MoonSharp.Interpreter.Tree
 			m_AutoSkipComments = autoSkipComments;
 			m_Extended = extended;
 			m_IncDec = incdec;
+			m_Directives = directives;
 		}
 
 		public Token Current
@@ -240,6 +242,9 @@ namespace MoonSharp.Interpreter.Tree
 
 			switch (c)
 			{
+				case '@' when m_IncDec:
+					return PotentiallyDoubleCharOperator('@', TokenType.FunctionAnnotation, TokenType.ChunkAnnotation,
+						fromLine, fromCol);
 				case '|':
 					if (m_IncDec)
 					{
@@ -992,10 +997,42 @@ namespace MoonSharp.Interpreter.Tree
 			{
 				return CreateToken(reservedType.Value, fromLine, fromCol, name);
 			}
+			else if (m_Directives != null && m_Directives.Contains(name))
+			{
+				return ReadDirective(name, fromLine, fromCol);
+			}
 			else
 			{
 				return CreateToken(TokenType.Name, fromLine, fromCol, name);
 			}
+		}
+		
+		Token ReadDirective(string name, int fromLine, int fromCol)
+		{
+			//Skip space characters
+			for (; CursorNotEof() && CursorChar() != '\n' && IsWhiteSpace(CursorChar()); CursorNext()) ;
+			bool ValidCursorChar()
+			{
+				if (!CursorNotEof()) return false; //return on eof
+				var c = CursorChar();
+				return char.IsLetterOrDigit(c) || c == '.' || c == '_';
+			}
+			//Blank directive
+			if (!ValidCursorChar())
+			{
+				return CreateToken(TokenType.Directive, fromLine, fromCol, name);
+			}
+			//Directive with value
+			//Directive values can contain letters, digits, underscores, or periods.
+			//They may not contain whitespace or other punctuation/control characters
+			var builder = new StringBuilder();
+			builder.Append(name).Append(" ");
+			while (ValidCursorChar())
+			{
+				builder.Append(CursorChar());
+				CursorCharNext();
+			}
+			return CreateToken(TokenType.Directive, fromLine, fromCol, builder.ToString());
 		}
 
 

@@ -9,6 +9,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		RuntimeScopeFrame m_StackFrame;
 		SymbolRef m_Env;
 		SymbolRef m_VarArgs;
+		private Annotation[] annotations;
 
 		public ChunkStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
@@ -24,13 +25,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				throw new SyntaxErrorException(lcontext.Lexer.Current, "<eof> expected near '{0}'", lcontext.Lexer.Current.Text);
 
 			m_StackFrame = lcontext.Scope.PopFunction();
+			annotations = lcontext.ChunkAnnotations.ToArray();
 		}
 
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			int meta = bc.Emit_Meta("<chunk-root>", OpCodeMetadataType.ChunkEntrypoint);
-
+			if (annotations.Length != 0) {
+				bc.Emit_Annot(annotations);
+			}
 			bc.Emit_BeginFn(m_StackFrame);
 			bc.Emit_Args(m_VarArgs);
 

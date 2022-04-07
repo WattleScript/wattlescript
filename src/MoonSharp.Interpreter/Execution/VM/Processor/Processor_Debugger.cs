@@ -27,6 +27,25 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return meta;
 		}
 
+		internal Annotation[] FindAnnotations(int baseAddress)
+		{
+			Instruction meta = m_RootChunk.Code[baseAddress];
+
+			// skip nops
+			while (meta.OpCode == OpCode.Nop)
+			{
+				baseAddress++;
+				meta = m_RootChunk.Code[baseAddress];
+			}
+
+			if (meta.OpCode != OpCode.Meta)
+				return null;
+			baseAddress++;
+			if (m_RootChunk.Code[baseAddress].OpCode != OpCode.Annot)
+				return null;
+			return m_RootChunk.Code[baseAddress].Annotations;
+		}
+
 
 		internal void AttachDebugger(IDebugger debugger)
 		{

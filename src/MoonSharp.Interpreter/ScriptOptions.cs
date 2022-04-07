@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using MoonSharp.Interpreter.Loaders;
 
@@ -115,5 +116,16 @@ namespace MoonSharp.Interpreter
 		/// Other values are not supported
 		/// </summary>
 		public int IndexTablesFrom { get; set; } = 1;
+
+		/// <summary>
+		/// Gets or sets the annotation policy for the script compiler (C-Like mode only)
+		/// </summary>
+		public IAnnotationPolicy AnnotationPolicy { get; set; } = AnnotationPolicies.Allow;
+
+		/// <summary>
+		/// List of keywords that will be interpreted as directives by the compiler (C-Like mode only).
+		/// These directions will store the RHS as a string annotation on the chunk.
+		/// </summary>
+		public HashSet<string> Directives { get; set; } = new HashSet<string>();
 	}
 }

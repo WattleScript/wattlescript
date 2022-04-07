@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MoonSharp.Interpreter.Execution;
 
@@ -27,6 +28,11 @@ namespace MoonSharp.Interpreter
 			/// </summary>
 			Closure
 		}
+		
+		/// <summary>
+		/// Gets the annotations made on this function.
+		/// </summary>
+		public IReadOnlyList<Annotation> Annotations { get; private set; }
 
 
 		/// <summary>
@@ -59,11 +65,13 @@ namespace MoonSharp.Interpreter
 		/// <param name="idx">The index.</param>
 		/// <param name="symbols">The symbols.</param>
 		/// <param name="resolvedLocals">The resolved locals.</param>
-		internal Closure(Script script, int idx, SymbolRef[] symbols, IEnumerable<Upvalue> resolvedLocals)
+		internal Closure(Script script, int idx, SymbolRef[] symbols, Annotation[] annotations, IEnumerable<Upvalue> resolvedLocals)
 		{
 			OwnerScript = script;
 
 			EntryPointByteCodeLocation = idx;
+
+			Annotations = annotations ?? Array.Empty<Annotation>();
 
 			if (symbols.Length > 0)
 				ClosureContext = new ClosureContext(symbols, resolvedLocals);
