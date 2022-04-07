@@ -122,6 +122,56 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_PositionalValues.Add(e);
 		}
 
+		
+		/// <summary>
+		/// Different to EvalLiteral, as this can't be stored in regular code.
+		/// dv is a prime table on success
+		/// </summary>
+		public bool TryGetLiteral(out DynValue dv)
+		{
+			dv = DynValue.Nil;
+			var tblVal = DynValue.NewPrimeTable();
+			var table = tblVal.Table;
+			foreach (var kvp in m_CtorArgs)
+			{
+				DynValue key, value;
+				//Key must be literal
+				if (!kvp.Key.EvalLiteral(out key)) return false;
+				//Value can be prime table or literal
+				if (kvp.Value is TableConstructor tbl) 
+				{
+					if (!tbl.TryGetLiteral(out value))
+					{
+						return false;
+					}
+				} 
+				else if (!kvp.Value.EvalLiteral(out value))
+				{
+					return false;
+				}
+				table.Set(key, value);
+			}
+			for (int i = 0; i < m_PositionalValues.Count; i++)
+			{
+				var exp = m_PositionalValues[i];
+				DynValue value;
+				if (exp is TableConstructor tbl) 
+				{
+					if (!tbl.TryGetLiteral(out value))
+					{
+						return false;
+					}
+				} 
+				else if (!exp.EvalLiteral(out value))
+				{
+					return false;
+				}
+				table.Set(i + 1, value);
+			}
+			dv = tblVal;
+			return true;
+		}
+
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{

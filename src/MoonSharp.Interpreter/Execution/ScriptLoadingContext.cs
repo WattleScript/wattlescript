@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.Debugging;
+﻿using System.Collections.Generic;
+using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Tree;
 
 namespace MoonSharp.Interpreter.Execution
@@ -13,6 +14,11 @@ namespace MoonSharp.Interpreter.Execution
 		public Lexer Lexer { get; set; }
 		
 		public ScriptSyntax Syntax { get; set; }
+
+		//Compiler state
+		internal List<Annotation> ChunkAnnotations { get; set; } = new List<Annotation>();
+		internal List<Annotation> FunctionAnnotations { get; set; } = new List<Annotation>();
+
 
 		public ScriptLoadingContext(Script s)
 		{

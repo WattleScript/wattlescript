@@ -417,7 +417,7 @@ namespace MoonSharp.Interpreter
 		{
 			this.CheckScriptOwnership(envTable);
 			Closure c;
-
+			var annotations = m_MainProcessor.FindAnnotations(address);
 			if (envTable == null)
 			{
 				Instruction? meta = m_MainProcessor.FindMeta(ref address);
@@ -426,12 +426,12 @@ namespace MoonSharp.Interpreter
 				if ((meta != null) && (meta.Value.NumVal2 == (int)OpCodeMetadataType.ChunkEntrypoint))
 				{
 					c = new Closure(this, address,
-						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
+						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) }, annotations,
 						new Upvalue[1]);
 				}
 				else
 				{
-					c = new Closure(this, address, new SymbolRef[0], new Upvalue[0]);
+					c = new Closure(this, address, new SymbolRef[0], annotations, new Upvalue[0]);
 				}
 			}
 			else
@@ -444,7 +444,7 @@ namespace MoonSharp.Interpreter
 					Upvalue.Create(DynValue.NewTable(envTable))
 				};
 
-				c = new Closure(this, address, syms, vals);
+				c = new Closure(this, address, syms, annotations, vals);
 			}
 
 			return DynValue.NewClosure(c);

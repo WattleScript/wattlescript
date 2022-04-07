@@ -255,6 +255,15 @@ namespace MoonSharp.Interpreter.Execution.VM
 				NumVal2 = (int)metaType
 			});
 		}
+		
+		public int Emit_Annot(Annotation[] annotations)
+		{
+			return AppendInstruction(new Instruction()
+			{
+				OpCode = OpCode.Annot,
+				Annotations = annotations
+			});
+		}
 
 
 		public int Emit_BeginFn(RuntimeScopeFrame stackFrame)

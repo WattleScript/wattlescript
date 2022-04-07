@@ -15,6 +15,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Statement m_Statement;
 		RuntimeScopeFrame m_StackFrame;
 		List<SymbolRef> m_Closure = new List<SymbolRef>();
+		private Annotation[] m_Annotations;
 		bool m_HasVarArgs = false;
 		
 		int m_ClosureInstruction = -1;
@@ -41,6 +42,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (m_UsesGlobalEnv = usesGlobalEnv)
 				CheckTokenType(lcontext, TokenType.Function);
 
+			m_Annotations = lcontext.FunctionAnnotations.ToArray();
+			lcontext.FunctionAnnotations = new List<Annotation>();
 			// here lexer should be at the '(' or at the '|'
 			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
 
@@ -251,6 +254,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			int meta = bc.Emit_Meta(funcName, OpCodeMetadataType.FunctionEntrypoint);
 
+			if (m_Annotations.Length != 0)
+			{
+				bc.Emit_Annot(m_Annotations);
+			}
+			
 			bc.Emit_BeginFn(m_StackFrame);
 
 			bc.LoopTracker.Loops.Push(new LoopBoundary());

@@ -105,7 +105,10 @@ namespace MoonSharp.Interpreter.Tree
 		Brk_Open_Curly_Shared,
 		Op_Dollar,
 		
-		Arrow
+		Arrow,
+		ChunkAnnotation,
+		FunctionAnnotation,
+		Directive,
 	}
 
 

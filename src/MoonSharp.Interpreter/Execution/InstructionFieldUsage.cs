@@ -13,7 +13,8 @@ namespace MoonSharp.Interpreter.Execution
 		Number = 0x8,
 		NumVal = 0x10,
 		NumVal2 = 0x20,
-		NumValAsCodeAddress = 0x8010
+		NumValAsCodeAddress = 0x8010,
+		Annotations = 0x10000
 	}
 
 	internal static class InstructionFieldUsage_Extensions
@@ -47,6 +48,8 @@ namespace MoonSharp.Interpreter.Execution
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
 					return InstructionFieldUsage.None;
+				case OpCode.Annot:
+					return InstructionFieldUsage.Annotations;
 				case OpCode.Pop:
 				case OpCode.Copy:
 				case OpCode.TblInitI:

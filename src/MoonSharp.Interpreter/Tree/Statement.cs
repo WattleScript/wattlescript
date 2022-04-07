@@ -21,6 +21,108 @@ namespace MoonSharp.Interpreter.Tree
 			return v;
 		}
 
+		static void ProcessDirective(ScriptLoadingContext lcontext)
+		{
+			var str = lcontext.Lexer.Current.Text;
+			var firstSpace = str.IndexOf(' ');
+			string name = str;
+			string value = "";
+			if (firstSpace != -1)
+			{
+				name = str.Substring(0, firstSpace);
+				value = str.Substring(firstSpace + 1).Trim();
+			}
+			var check = lcontext.Script.Options.AnnotationPolicy.OnChunkAnnotation(name, DynValue.NewString(value));
+			if (check == AnnotationAction.Allow)
+			{
+				lcontext.ChunkAnnotations.Add(new Annotation(name, DynValue.NewString(value)));
+			}
+			if (check == AnnotationAction.Error)
+			{
+				throw new SyntaxErrorException(lcontext.Lexer.Current, "invalid directive '{0}'", name);
+			}
+			lcontext.Lexer.Next();
+		}
+
+		static Annotation ParseAnnotation(ScriptLoadingContext lcontext)
+		{
+			lcontext.Lexer.Next(); //Skip annotation marker
+			var nameToken = CheckTokenType(lcontext, TokenType.Name); //name
+			DynValue value = DynValue.Nil;
+			//value
+			if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round)
+			{
+				lcontext.Lexer.Next();
+				if (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Round)
+				{
+					var exprToken = lcontext.Lexer.Current;
+					var expr = Expression.Expr(lcontext);
+					if (expr is TableConstructor tbl)
+					{
+						if(!tbl.TryGetLiteral(out value))
+							throw new SyntaxErrorException(exprToken, "annotation value must be literal or prime table");
+					}
+					else if (!expr.EvalLiteral(out value))
+					{
+						throw new SyntaxErrorException(exprToken, "annotation value must be literal or prime table");
+					}
+				}
+				CheckTokenType(lcontext, TokenType.Brk_Close_Round);
+			}
+			return new Annotation(nameToken.Text, value);
+		}
+
+		static void ProcessChunkAnnotation(ScriptLoadingContext lcontext)
+		{
+			var tkn = lcontext.Lexer.Current;
+			var ant = ParseAnnotation(lcontext);
+			var check = lcontext.Script.Options.AnnotationPolicy.OnChunkAnnotation(ant.Name, ant.Value);
+			if (check == AnnotationAction.Allow)
+			{
+				lcontext.ChunkAnnotations.Add(ant);
+			}
+			if (check == AnnotationAction.Error)
+			{
+				throw new SyntaxErrorException(tkn, "invalid chunk annotation");
+			}
+		}
+		
+		static void ProcessFunctionAnnotation(ScriptLoadingContext lcontext)
+		{
+			var tkn = lcontext.Lexer.Current;
+			var ant = ParseAnnotation(lcontext);
+			var check = lcontext.Script.Options.AnnotationPolicy.OnFunctionAnnotation(ant.Name, ant.Value);
+			if (check == AnnotationAction.Allow)
+			{
+				lcontext.FunctionAnnotations.Add(ant);
+			}
+			if (check == AnnotationAction.Error)
+			{
+				throw new SyntaxErrorException(tkn, "invalid function annotation");
+			}
+		}
+
+		protected static void ParseAnnotations(ScriptLoadingContext lcontext)
+		{
+			//Process Annotations
+			while (true)
+			{
+				switch (lcontext.Lexer.Current.Type)
+				{
+					case TokenType.Directive:
+						ProcessDirective(lcontext);
+						continue;
+					case TokenType.ChunkAnnotation:
+						ProcessChunkAnnotation(lcontext);
+						continue;
+					case TokenType.FunctionAnnotation:
+						ProcessFunctionAnnotation(lcontext);
+						continue;
+				}
+				break;
+			}
+		}
+
 
 		protected static Statement CreateStatement(ScriptLoadingContext lcontext, out bool forceLast)
 		{
@@ -28,6 +130,21 @@ namespace MoonSharp.Interpreter.Tree
 
 			forceLast = false;
 
+			if (lcontext.FunctionAnnotations.Count != 0)
+			{
+				if (tkn.Type == TokenType.Local)
+				{
+					if (lcontext.Lexer.PeekNext().Type != TokenType.Function)
+					{
+						throw new SyntaxErrorException(tkn, "function annotations may only be applied to function declarations");
+					}
+				} 
+				else if (tkn.Type != TokenType.Function)
+				{
+					throw new SyntaxErrorException(tkn, "function annotations may only be applied to function declarations");
+				}
+			}
+			
 			switch (tkn.Type)
 			{
 				case TokenType.DoubleColon when lcontext.Syntax != ScriptSyntax.CLike:

@@ -51,6 +51,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.Nop:
 						case OpCode.Debug:
 						case OpCode.Meta:
+						case OpCode.Annot:
 							break;
 						case OpCode.Pop:
 							m_ValueStack.RemoveLast(i.NumVal);
@@ -490,9 +491,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 
 		private void ExecClosure(Instruction i)
 		{
-			Closure c = new Closure(this.m_Script, i.NumVal, i.SymbolList,
+			Closure c = new Closure(this.m_Script, i.NumVal, i.SymbolList, FindAnnotations(i.NumVal),
 				i.SymbolList.Select(s => this.GetUpvalueSymbol(s)).ToList());
-
 			m_ValueStack.Push(DynValue.NewClosure(c));
 		}
 
