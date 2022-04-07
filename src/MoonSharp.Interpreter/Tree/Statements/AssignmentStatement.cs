@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Execution;
 
@@ -145,6 +146,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				else {
 					CheckTokenType(lcontext, TokenType.Op_Assignment);
 				}
+
 				m_RValues = Expression.ExprList(lcontext);
 			} 
 			

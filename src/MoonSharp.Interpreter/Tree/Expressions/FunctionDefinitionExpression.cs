@@ -24,7 +24,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		SymbolRef m_Env;
 
 		SourceRef m_Begin, m_End;
-
+		private ScriptLoadingContext lcontext;
+		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool usesGlobalEnv)
 			: this(lcontext, false, usesGlobalEnv, false)
@@ -33,11 +34,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda)
 			: this(lcontext, pushSelfParam, false, isLambda)
 		{ }
-
-
+		
 		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda)
 			: base(lcontext)
 		{
+			this.lcontext = lcontext;
+			
 			if (m_UsesGlobalEnv = usesGlobalEnv)
 				CheckTokenType(lcontext, TokenType.Function);
 
@@ -45,14 +47,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
 
 			Token openRound;
-			List<string> paramnames;
 			bool openCurly = false;
 			if (isLambda)
 			{
 				openRound = lcontext.Lexer.Current;
 				lcontext.Lexer.Next();
 				if (openRound.Type == TokenType.Name)
-					paramnames = new List<string>(new[] {openRound.Text});
+					paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>(new FunctionDefinitionStatement.FunctionParamRef[] {new FunctionDefinitionStatement.FunctionParamRef(openRound.Text)});
 				else
 					paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
 			}
@@ -150,33 +151,61 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return s;
 		}
 
-		private List<string> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
+		private List<FunctionDefinitionStatement.FunctionParamRef> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
 		{
 			TokenType closeToken = openBracketToken.Type == TokenType.Lambda ? TokenType.Lambda : TokenType.Brk_Close_Round;
 
-			List<string> paramnames = new List<string>();
+			List<FunctionDefinitionStatement.FunctionParamRef> paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>();
 
 			// method decls with ':' must push an implicit 'self' param
 			if (pushSelfParam)
-				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? "this" : "self");
+				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
 
+			bool parsingDefaultParams = false;
 			while (lcontext.Lexer.Current.Type != closeToken)
 			{
 				Token t = lcontext.Lexer.Current;
+				bool nextAfterParamDeclr = true;
 
 				if (t.Type == TokenType.Name)
 				{
-					paramnames.Add(t.Text);
+					string paramName = t.Text;
+					
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_Assignment)
+					{
+						parsingDefaultParams = true;
+						lcontext.Lexer.Next();
+						lcontext.Lexer.Next();
+						Expression defaultVal = Expr(lcontext);
+						nextAfterParamDeclr = false;
+
+						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName, defaultVal));
+					}
+					else
+					{
+						if (parsingDefaultParams)
+						{
+							throw new SyntaxErrorException(t, "after first parameter with default value a parameter without default value cannot be declared", t.Text)
+							{
+								IsPrematureStreamTermination = (t.Type == TokenType.Eof)
+							};
+						}
+						
+						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName));
+					}
 				}
 				else if (t.Type == TokenType.VarArgs)
 				{
 					m_HasVarArgs = true;
-					paramnames.Add(WellKnownSymbols.VARARGS);
+					paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(WellKnownSymbols.VARARGS));
 				}
 				else
 					UnexpectedTokenType(t);
 
-				lcontext.Lexer.Next();
+				if (nextAfterParamDeclr)
+				{
+					lcontext.Lexer.Next();	
+				}
 
 				t = lcontext.Lexer.Current;
 
@@ -197,7 +226,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return paramnames;
 		}
 
-		private SymbolRef[] DefineArguments(List<string> paramnames, ScriptLoadingContext lcontext)
+		private SymbolRef[] DefineArguments(List<FunctionDefinitionStatement.FunctionParamRef> paramnames, ScriptLoadingContext lcontext)
 		{
 			HashSet<string> names = new HashSet<string>();
 
@@ -205,10 +234,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			for (int i = paramnames.Count - 1; i >= 0; i--)
 			{
-				if (!names.Add(paramnames[i]))
-					paramnames[i] = paramnames[i] + "@" + i.ToString();
+				if (!names.Add(paramnames[i].Name))
+					paramnames[i].Name = paramnames[i].Name + "@" + i.ToString();
 
-				ret[i] = lcontext.Scope.DefineLocal(paramnames[i]);
+				ret[i] = lcontext.Scope.DefineLocal(paramnames[i].Name);
 			}
 
 			return ret;
@@ -243,6 +272,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		public int CompileBody(ByteCode bc, string friendlyName)
 		{
+			//LoadingContext.Scope.PopFunction()
+			
 			string funcName = friendlyName ?? ("<" + this.m_Begin.FormatLocation(bc.Script, true) + ">");
 
 			bc.PushSourceRef(m_Begin);
@@ -265,8 +296,25 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 
 			if (m_ParamNames.Length > 0)
+			{
 				bc.Emit_Args(m_ParamNames);
 
+				for (int i = 0; i < m_ParamNames.Length; i++)
+				{
+					FunctionDefinitionStatement.FunctionParamRef fr = paramnames[i];
+					SymbolRef sr = m_ParamNames[i];
+					
+					if (fr.DefaultValue != null)
+					{
+						var jp = bc.Emit_JLclInit(sr, -1);
+						fr.DefaultValue.CompilePossibleLiteral(bc);
+						new SymbolRefExpression(lcontext, sr).CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+						bc.Emit_Pop();
+						bc.SetNumVal(jp, bc.GetJumpPointForNextInstruction());		
+					}
+				}
+			}
+			
 			m_Statement.Compile(bc);
 
 			bc.PopSourceRef();

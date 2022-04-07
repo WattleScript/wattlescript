@@ -419,6 +419,14 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void LengthStringLiteral()
+        {
+            TestScript.Run(@"
+                assert.areequal(5, 'hello'.length);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
         public void LengthPropertyReadonly()
         {
             Assert.Throws<SyntaxErrorException>(() =>
@@ -428,6 +436,33 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
                     table.length = 3;
                 ", s => s.Options.Syntax = ScriptSyntax.CLike);
             });
+        }
+
+        [Test]
+        public void NestedStringTemplate()
+        {
+            TestScript.Run(@"assert.areequal('hello', ``{``hello``}``);", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
+        public void EscapeStringTemplate()
+        {
+            TestScript.Run(@"assert.areequal('${hello}', ``$\{hello}``);", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+        
+        [Test]
+        public void StringTemplate()
+        {
+            TestScript.Run(@"
+            assert.areequal('3', ``{3}``);
+            function getFirst(tbl) { return tbl[1]; }
+            assert.areequal('hello', ``{ //4
+                getFirst({ //5
+                     'hello' //6
+                }) //7
+            }``);
+            assert.areequal('hello world', ``{'hello'} {'world'}``);
+            ", s => s.Options.Syntax = ScriptSyntax.CLike);
         }
 
         

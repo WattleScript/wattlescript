@@ -230,6 +230,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 							top = DynValue.NewBoolean(top.CastToBool());
 							break;
 						}
+						case OpCode.StrFormat:
+							ExecStrFormat(i);
+							break;
 						case OpCode.Args:
 							ExecArgs(i);
 							break;
@@ -302,6 +305,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 						case OpCode.NilCoalescingInverse:
 							instructionPtr = ExecNilCoalescingAssignmentInverse(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							break;
+						case OpCode.JLclInit:
+							if(m_ValueStack[m_ExecutionStack.Peek().BasePointer + i.NumVal2].IsNotNil())
+								instructionPtr = i.NumVal;
 							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException(string.Format("Invalid opcode : {0}", i.String));
@@ -1155,6 +1162,25 @@ namespace MoonSharp.Interpreter.Execution.VM
 				s = null;
 				return false;
 			}
+		}
+
+		private void ExecStrFormat(Instruction i)
+		{
+			string[] formatValues = new string[i.NumVal];
+			if (i.NumVal > 0)
+			{
+				for (int j = 0; j < i.NumVal; j++)
+				{
+					var off = (i.NumVal - j - 1);
+					int mCount = 0;
+					if (!ToConcatString(ref m_ValueStack.Peek(off), out formatValues[j], ref mCount))
+					{
+						formatValues[j] = m_ValueStack.Peek(off).ToPrintString();
+					}
+				}
+			}
+			m_ValueStack.RemoveLast(i.NumVal);
+			m_ValueStack.Set(0, DynValue.NewString(string.Format(m_ValueStack.Peek(0).String, formatValues)));
 		}
 		
 		private int ExecAddStr(Instruction i, int instructionPtr)

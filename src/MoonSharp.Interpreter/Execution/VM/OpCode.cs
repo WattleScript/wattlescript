@@ -49,7 +49,8 @@ namespace MoonSharp.Interpreter.Execution.VM
 		JFor,		// Peeks at the top, top-1 and top-2 values of the v-stack which it assumes to be numbers. Then if top-1 is less than zero, checks if top is <= top-2, otherwise it checks that top is >= top-2. Then if the condition is false, it jumps.
 		JtOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If true, it performs a jump, otherwise it removes the topmost value from the v-stack.
 		JfOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If false, it performs a jump, otherwise it removes the topmost value from the v-stack.
-
+		//
+		StrFormat,  // Format using string.Format
 		// Operators
 		Concat,		// Concatenation of the two topmost operands on the v-stack
 		LessEq,		// Compare <= of the two topmost operands on the v-stack
@@ -89,9 +90,12 @@ namespace MoonSharp.Interpreter.Execution.VM
 		IterPrep,   // Prepares an iterator for execution 
 		IterUpd,	// Updates the var part of an iterator
 		
+		// Nil coalescing
 		NilCoalescing,
 		NilCoalescingInverse,
 
+		JLclInit, // Inits a param value if a default one is specified and not provided at callsite.
+		
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

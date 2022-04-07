@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace MoonSharp.Interpreter.Tree
@@ -60,15 +61,49 @@ namespace MoonSharp.Interpreter.Tree
 			m_Current = FetchNewToken();
 		}
 
+		private List<int> templateStringState = new List<int>();
+
+		void PushTemplateString()
+		{
+			templateStringState.Add(0);
+		}
+
+		bool InTemplateString() => templateStringState.Count > 0;
+
+		void TemplateStringAddBracket()
+		{
+			if (InTemplateString()) {
+				templateStringState[templateStringState.Count - 1]++;
+			}
+		}
+
+		bool ReturnToTemplateString()
+		{
+			var c = templateStringState[templateStringState.Count - 1];
+			if (c == 0) return true;
+			templateStringState[templateStringState.Count - 1]--;
+			return false;
+		}
+
+		void PopTemplateString()
+		{
+			templateStringState.RemoveAt(templateStringState.Count - 1);
+		}
+		
+
 		struct Snapshot
 		{
 			public int Cursor;
 			public Token Current;
 			public int Line;
 			public int Col;
+			public int[] TemplateStringState;
 		}
+		
 
 		private Snapshot s;
+		
+		
 
 		public void SavePos()
 		{
@@ -76,7 +111,8 @@ namespace MoonSharp.Interpreter.Tree
 				Cursor = m_Cursor,
 				Current = m_Current,
 				Line = m_Line,
-				Col = m_Col
+				Col = m_Col,
+				TemplateStringState = templateStringState.ToArray(),
 			};
 		}
 
@@ -86,6 +122,7 @@ namespace MoonSharp.Interpreter.Tree
 			m_Current = s.Current;
 			m_Line = s.Line;
 			m_Col = s.Col;
+			templateStringState = new List<int>(s.TemplateStringState);
 		}
 
 		public Token PeekNext()
@@ -94,6 +131,12 @@ namespace MoonSharp.Interpreter.Tree
 			Token current = m_Current;
 			int line = m_Line;
 			int col = m_Col;
+			//Save the template string state
+			int stateC = templateStringState.Count;
+			int lastC = 0;
+			if (templateStringState.Count > 0) {
+				lastC = templateStringState[templateStringState.Count - 1];
+			}
 
 			Next();
 			Token t = Current;
@@ -102,7 +145,19 @@ namespace MoonSharp.Interpreter.Tree
 			m_Current = current;
 			m_Line = line;
 			m_Col = col;
-
+			//Restore the template string state
+			if (templateStringState.Count < stateC) 
+			{
+				templateStringState.Add(lastC);
+			} 
+			else if (templateStringState.Count > stateC)
+			{
+				templateStringState.RemoveAt(templateStringState.Count - 1);
+			} 
+			else if (stateC != 0)
+			{
+				templateStringState[templateStringState.Count - 1] = lastC;
+			}
 			return t;
 		}
 
@@ -463,8 +518,17 @@ namespace MoonSharp.Interpreter.Tree
 				case ')':
 					return CreateSingleCharToken(TokenType.Brk_Close_Round, fromLine, fromCol);
 				case '{':
+					TemplateStringAddBracket();
 					return CreateSingleCharToken(TokenType.Brk_Open_Curly, fromLine, fromCol);
-				case '}':
+				case '}' when InTemplateString(): {
+					if (ReturnToTemplateString()) {
+						return ReadTemplateString(fromLine, fromCol, false);
+					}
+					else {
+						return CreateSingleCharToken(TokenType.Brk_Close_Curly, fromLine, fromCol);
+					}
+				}
+				case '}' when !InTemplateString():
 					return CreateSingleCharToken(TokenType.Brk_Close_Curly, fromLine, fromCol);
 				case ',':
 					return CreateSingleCharToken(TokenType.Comma, fromLine, fromCol);
@@ -509,6 +573,19 @@ namespace MoonSharp.Interpreter.Tree
 				}
 				case ':':
 					return PotentiallyDoubleCharOperator(':', TokenType.Colon, TokenType.DoubleColon, fromLine, fromCol);
+				case '`':
+				{
+					char next = CursorCharNext();
+					if (next == '`')
+					{
+						PushTemplateString();
+						return ReadTemplateString(fromLine, fromCol, true);
+					}
+					throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar())
+					{
+						IsPrematureStreamTermination = true
+					};
+				}
 				case '"':
 				case '\'':
 					return ReadSimpleStringToken(fromLine, fromCol);
@@ -533,6 +610,69 @@ namespace MoonSharp.Interpreter.Tree
 					throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar());
 			}
 		}
+
+
+		Token ReadTemplateString(int fromLine, int fromCol, bool isStart)
+		{
+			StringBuilder text = new StringBuilder(32);
+			
+			for (char c = CursorCharNext(); CursorNotEof(); c = CursorCharNext())
+			{
+				redo_Loop:
+
+				if (c == '\\')
+				{
+					text.Append(c);
+					c = CursorCharNext();
+					text.Append(c);
+
+					if (c == '\r')
+					{
+						c = CursorCharNext();
+						if (c == '\n')
+							text.Append(c);
+						else
+							goto redo_Loop;
+					}
+					else if (c == 'z')
+					{
+						c = CursorCharNext();
+
+						if (char.IsWhiteSpace(c))
+							SkipWhiteSpace();
+
+						c = CursorChar();
+
+						goto redo_Loop;
+					}
+				}
+				else if (c == '{')
+				{
+					CursorCharNext();
+					Token t = CreateToken(TokenType.String_TemplateFragment, fromLine, fromCol);
+					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
+					return t;
+				}
+				else if (c == '`' && CursorMatches("``"))
+				{
+					CursorCharNext();
+					CursorCharNext();
+					PopTemplateString();
+					Token t = CreateToken(isStart ? TokenType.String_Long : TokenType.String_EndTemplate, fromLine, fromCol);
+					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
+					return t;
+				}
+				else
+				{
+					text.Append(c);
+				}
+			}
+
+			throw new SyntaxErrorException(
+				CreateToken(TokenType.Invalid, fromLine, fromCol),
+				"unfinished string near '{0}'", text.ToString()) { IsPrematureStreamTermination = true };
+		}
+		
 
 		private string ReadLongString(int fromLine, int fromCol, string startpattern, string subtypeforerrors)
 		{
@@ -711,9 +851,7 @@ namespace MoonSharp.Interpreter.Tree
 		private Token ReadCMultilineComment(int fromLine, int fromCol)
 		{
 			StringBuilder text = new StringBuilder(32);
-
-			bool extraneousFound = false;
-
+			
 			for (char c = CursorChar(); ; c = CursorCharNext())
 			{
 				if (c == '\r') continue;
@@ -754,7 +892,6 @@ namespace MoonSharp.Interpreter.Tree
 				}
 				else if (c == '\n')
 				{
-					extraneousFound = true;
 					CursorCharNext();
 					return CreateToken(TokenType.Comment, fromLine, fromCol, text.ToString());
 				}

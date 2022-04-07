@@ -94,7 +94,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		String,
 		String_Long,
-
+		String_TemplateFragment,
+		String_EndTemplate,
 		Number,
 		Number_HexFloat,
 		Number_Hex,

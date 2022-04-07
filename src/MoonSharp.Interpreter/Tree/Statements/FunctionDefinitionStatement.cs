@@ -8,6 +8,29 @@ namespace MoonSharp.Interpreter.Tree.Statements
 {
 	class FunctionDefinitionStatement : Statement
 	{
+		internal class FunctionParamRef
+		{
+			public string Name { get; set; }
+			public Expression DefaultValue { get; set; }
+
+			public FunctionParamRef(string name)
+			{
+				Name = name;
+			}
+
+			public FunctionParamRef(string name, Expression defaultValue)
+			{
+				Name = name;
+				DefaultValue = defaultValue;
+			}
+		}
+	
+		internal class FunctionRef
+		{
+			public string Name { get; set; }
+			public List<FunctionParamRef> Params { get; set; }
+		}
+		
 		SymbolRef m_FuncSymbol;
 		SourceRef m_SourceRef;
 
@@ -27,17 +50,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			funcKeyword = localToken ?? funcKeyword; // for debugger purposes
 			
 			m_Local = local;
-
+			Token name = CheckTokenType(lcontext, TokenType.Name);
+			
 			if (m_Local)
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
 				m_FuncSymbol = lcontext.Scope.TryDefineLocal(name.Text);
 				m_FriendlyName = string.Format("{0} (local)", name.Text);
 				m_SourceRef = funcKeyword.GetSourceRef(name);
 			}
 			else
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
 				string firstName = name.Text;
 
 				m_SourceRef = funcKeyword.GetSourceRef(name);

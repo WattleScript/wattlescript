@@ -144,6 +144,11 @@ namespace MoonSharp.Interpreter.Execution.VM
 			throw new InvalidOperationException(value.Type.ToString());
 		}
 
+		public int Emit_StrFormat(int argCount)
+		{
+			return AppendInstruction(new Instruction() {OpCode = OpCode.StrFormat, NumVal = argCount});
+		}
+
 		public int Emit_Jump(OpCode jumpOpCode, int idx, int optPar = 0)
 		{
 			return AppendInstruction(new Instruction() { OpCode = jumpOpCode, NumVal = idx, NumVal2 = optPar });
@@ -351,5 +356,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Swap, NumVal = p1, NumVal2 = p2 });
 		}
 
+		public int Emit_JLclInit(SymbolRef sym, int target)
+		{
+			if(sym.Type != SymbolRefType.Local) throw new InternalErrorException("Unexpected symbol type : {0}", sym);
+			return AppendInstruction(new Instruction() { OpCode = OpCode.JLclInit, NumVal = target, NumVal2 = sym.Index });
+		}
 	}
 }

@@ -32,6 +32,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 					break;
 				case TokenType.String:
 				case TokenType.String_Long:
+				case TokenType.String_EndTemplate:
 					m_Value = DynValue.NewString(t.Text);
 					break;
 				case TokenType.True:
