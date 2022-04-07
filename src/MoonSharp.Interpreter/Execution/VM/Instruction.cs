@@ -182,8 +182,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 					WriteTable(wr, d.Table);
 					break;
 				case DataType.Table when !allowTable:
-					throw new Exception("Stored table key cannot be table");
-					break;
+					throw new Exception("Stored table key cannot be table"); 
 				default:
 					throw new Exception("Can only store DynValue of string/number/bool/nil/table");
 			}
