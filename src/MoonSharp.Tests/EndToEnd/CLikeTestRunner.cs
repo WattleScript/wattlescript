@@ -41,6 +41,12 @@ public class CLikeTestRunner
             script.Options.Syntax = ScriptSyntax.CLike;
         }
 
+        if (path.Contains("flaky"))
+        {
+            Assert.Inconclusive($"Test {path} marked as flaky");
+            return;
+        }
+
         try
         {
             await script.DoStringAsync(code);
