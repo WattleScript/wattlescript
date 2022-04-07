@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
@@ -8,13 +9,9 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 	{
 		internal BuildTimeScopeBlock Parent { get; private set; }
 		internal List<BuildTimeScopeBlock> ChildNodes { get; private set; }
-
 		internal RuntimeScopeBlock ScopeBlock { get; private set; }
-
 		Dictionary<string, SymbolRef> m_DefinedNames = new Dictionary<string, SymbolRef>();
-
-
-
+	
 		internal void Rename(string name)
 		{
 			SymbolRef sref = m_DefinedNames[name];

@@ -307,6 +307,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 							instructionPtr = ExecNilCoalescingAssignmentInverse(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.JLclInit:
+							if(m_ValueStack[m_ExecutionStack.Peek().BasePointer + i.NumVal2].IsNotNil())
+								instructionPtr = i.NumVal;
+							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException(string.Format("Invalid opcode : {0}", i.String));
 						default:

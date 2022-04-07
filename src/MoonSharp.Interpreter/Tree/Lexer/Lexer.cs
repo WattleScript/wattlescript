@@ -856,9 +856,7 @@ namespace MoonSharp.Interpreter.Tree
 		private Token ReadCMultilineComment(int fromLine, int fromCol)
 		{
 			StringBuilder text = new StringBuilder(32);
-
-			bool extraneousFound = false;
-
+			
 			for (char c = CursorChar(); ; c = CursorCharNext())
 			{
 				if (c == '\r') continue;
@@ -899,7 +897,6 @@ namespace MoonSharp.Interpreter.Tree
 				}
 				else if (c == '\n')
 				{
-					extraneousFound = true;
 					CursorCharNext();
 					return CreateToken(TokenType.Comment, fromLine, fromCol, text.ToString());
 				}

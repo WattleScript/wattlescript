@@ -10,7 +10,6 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Expression m_BaseExp;
 		Expression m_IndexExp;
 		string m_Name;
-		private Token nameToken;
 		private bool inc;
 		private bool dec;
 		private bool nilCheck;
@@ -125,7 +124,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		{
 			if (isLength)
 			{ 
-				throw new SyntaxErrorException(nameToken, "Cannot assign to readonly property .length");
+				throw new SyntaxErrorException(null, "Cannot assign to readonly property .length");
 			}
 			if (op != Operator.NotAnOperator)
 			{

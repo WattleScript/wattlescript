@@ -255,6 +255,16 @@ namespace MoonSharp.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void CallDefaultFunc()
+        {
+            TestScript.Run(@"
+            f = (x = () => {print('yes')}) => {
+                    x()
+            }
+            f();", s => s.Options.Syntax = ScriptSyntax.CLike);
+        }
+
+        [Test]
         public void AddConcat()
         {
             TestScript.Run(@"

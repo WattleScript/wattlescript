@@ -365,5 +365,10 @@ namespace MoonSharp.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction() { OpCode = OpCode.Swap, NumVal = p1, NumVal2 = p2 });
 		}
 
+		public int Emit_JLclInit(SymbolRef sym, int target)
+		{
+			if(sym.Type != SymbolRefType.Local) throw new InternalErrorException("Unexpected symbol type : {0}", sym);
+			return AppendInstruction(new Instruction() { OpCode = OpCode.JLclInit, NumVal = target, NumVal2 = sym.Index });
+		}
 	}
 }

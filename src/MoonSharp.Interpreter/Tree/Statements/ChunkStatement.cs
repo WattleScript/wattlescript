@@ -14,7 +14,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public ChunkStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			lcontext.Scope.PushFunction(this, true);
+			lcontext.Scope.PushFunction(this);
+			lcontext.Scope.SetHasVarArgs();
 			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
 
