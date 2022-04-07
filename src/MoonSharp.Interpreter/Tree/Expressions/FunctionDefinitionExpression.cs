@@ -43,6 +43,23 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (m_UsesGlobalEnv = usesGlobalEnv)
 				CheckTokenType(lcontext, TokenType.Function);
 
+			
+			// create scope
+			// This needs to be up here to allow for arguments to correctly close over ENV
+			// Arguments, however, must come before any other local definitions to avoid closing
+			// over uninitialised variables. (Note for hoisting).
+			lcontext.Scope.PushFunction(this);
+
+			if (m_UsesGlobalEnv)
+			{
+				m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
+			}
+			else
+			{
+				lcontext.Scope.ForceEnvUpValue();
+			}
+			
+			// Parse arguments
 			// here lexer should be at the '(' or at the '|'
 			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
 
@@ -78,19 +95,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
 
-			// create scope
-			lcontext.Scope.PushFunction(this, m_HasVarArgs);
-
-			if (m_UsesGlobalEnv)
-			{
-				m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
-			}
-			else
-			{
-				lcontext.Scope.ForceEnvUpValue();
-			}
 
 			m_ParamNames = DefineArguments(paramnames, lcontext);
+			
+			if(m_HasVarArgs) lcontext.Scope.SetHasVarArgs(); //Moved here
 
 			if(isLambda)
 				m_Statement = CreateLambdaBody(lcontext, arrowFunc);

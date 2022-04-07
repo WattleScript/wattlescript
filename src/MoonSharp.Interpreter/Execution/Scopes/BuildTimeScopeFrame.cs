@@ -10,11 +10,10 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 		BuildTimeScopeBlock m_ScopeTreeHead;
 		RuntimeScopeFrame m_ScopeFrame = new RuntimeScopeFrame();
 
-		public bool HasVarArgs { get; private set;}
+		public bool HasVarArgs { get; set;}
 
-		internal BuildTimeScopeFrame(bool hasVarArgs)
+		internal BuildTimeScopeFrame()
 		{
-			HasVarArgs = hasVarArgs;
 			m_ScopeTreeHead = m_ScopeTreeRoot = new BuildTimeScopeBlock(null);
 		}
 

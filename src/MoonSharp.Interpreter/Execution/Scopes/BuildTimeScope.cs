@@ -11,10 +11,15 @@ namespace MoonSharp.Interpreter.Execution
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
 
-		public void PushFunction(IClosureBuilder closureBuilder, bool hasVarArgs)
+		public void PushFunction(IClosureBuilder closureBuilder)
 		{
 			m_ClosureBuilders.Add(closureBuilder);
-			m_Frames.Add(new BuildTimeScopeFrame(hasVarArgs));
+			m_Frames.Add(new BuildTimeScopeFrame());
+		}
+
+		public void SetHasVarArgs()
+		{
+			m_Frames.Last().HasVarArgs = true;
 		}
 
 		public void PushBlock()
