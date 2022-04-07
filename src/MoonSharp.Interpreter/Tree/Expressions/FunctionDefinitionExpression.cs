@@ -25,7 +25,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 		SourceRef m_Begin, m_End;
 		private ScriptLoadingContext lcontext;
-
+		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool usesGlobalEnv)
 			: this(lcontext, false, usesGlobalEnv, false)
@@ -35,16 +35,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			: this(lcontext, pushSelfParam, false, isLambda)
 		{ }
 		
-		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda, string name)
-			: this(lcontext, pushSelfParam, false, isLambda, name)
-		{ }
-		
-		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda, List<string> names)
-			: this(lcontext, pushSelfParam, false, isLambda, null, names)
-		{ }
-
-
-		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda, string name = null, List<string> names = null)
+		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda)
 			: base(lcontext)
 		{
 			this.lcontext = lcontext;
@@ -56,14 +47,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
 
 			Token openRound;
-			List<FunctionParamRef> paramnames;
 			bool openCurly = false;
 			if (isLambda)
 			{
 				openRound = lcontext.Lexer.Current;
 				lcontext.Lexer.Next();
 				if (openRound.Type == TokenType.Name)
-					paramnames = new List<FunctionParamRef>(new FunctionParamRef[] {new FunctionParamRef(openRound.Text)});
+					paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>(new FunctionDefinitionStatement.FunctionParamRef[] {new FunctionDefinitionStatement.FunctionParamRef(openRound.Text)});
 				else
 					paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
 			}
@@ -100,19 +90,6 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				lcontext.Scope.ForceEnvUpValue();
 			}
 
-			if (!string.IsNullOrWhiteSpace(name))
-			{
-				lcontext.Scope.AddFunction(new FunctionRef() {Name = name, Params = paramnames});	
-			}
-
-			if (names != null)
-			{
-				foreach (string lName in names)
-				{
-					lcontext.Scope.AddFunction(new FunctionRef() {Name = lName, Params = paramnames});		
-				}
-			}
-			
 			m_ParamNames = DefineArguments(paramnames, lcontext);
 
 			if(isLambda)
@@ -174,15 +151,15 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return s;
 		}
 
-		private List<FunctionParamRef> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
+		private List<FunctionDefinitionStatement.FunctionParamRef> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
 		{
 			TokenType closeToken = openBracketToken.Type == TokenType.Lambda ? TokenType.Lambda : TokenType.Brk_Close_Round;
 
-			List<FunctionParamRef> paramnames = new List<FunctionParamRef>();
+			List<FunctionDefinitionStatement.FunctionParamRef> paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>();
 
 			// method decls with ':' must push an implicit 'self' param
 			if (pushSelfParam)
-				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? new FunctionParamRef("this") : new FunctionParamRef("self"));
+				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
 
 			bool parsingDefaultParams = false;
 			while (lcontext.Lexer.Current.Type != closeToken)
@@ -202,7 +179,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 						Expression defaultVal = Expr(lcontext);
 						nextAfterParamDeclr = false;
 
-						paramnames.Add(new FunctionParamRef(paramName, defaultVal));
+						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName, defaultVal));
 					}
 					else
 					{
@@ -214,13 +191,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 							};
 						}
 						
-						paramnames.Add(new FunctionParamRef(paramName));
+						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName));
 					}
 				}
 				else if (t.Type == TokenType.VarArgs)
 				{
 					m_HasVarArgs = true;
-					paramnames.Add(new FunctionParamRef(WellKnownSymbols.VARARGS));
+					paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(WellKnownSymbols.VARARGS));
 				}
 				else
 					UnexpectedTokenType(t);
@@ -249,7 +226,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return paramnames;
 		}
 
-		private SymbolRef[] DefineArguments(List<FunctionParamRef> paramnames, ScriptLoadingContext lcontext)
+		private SymbolRef[] DefineArguments(List<FunctionDefinitionStatement.FunctionParamRef> paramnames, ScriptLoadingContext lcontext)
 		{
 			HashSet<string> names = new HashSet<string>();
 
@@ -319,8 +296,25 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 
 			if (m_ParamNames.Length > 0)
+			{
 				bc.Emit_Args(m_ParamNames);
 
+				for (int i = 0; i < m_ParamNames.Length; i++)
+				{
+					FunctionDefinitionStatement.FunctionParamRef fr = paramnames[i];
+					SymbolRef sr = m_ParamNames[i];
+					
+					if (fr.DefaultValue != null)
+					{
+						var jp = bc.Emit_JLclInit(sr, -1);
+						fr.DefaultValue.CompilePossibleLiteral(bc);
+						new SymbolRefExpression(lcontext, sr).CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+						bc.Emit_Pop();
+						bc.SetNumVal(jp, bc.GetJumpPointForNextInstruction());		
+					}
+				}
+			}
+			
 			m_Statement.Compile(bc);
 
 			bc.PopSourceRef();

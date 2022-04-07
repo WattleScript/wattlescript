@@ -6,47 +6,10 @@ using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution
 {
-	internal class FunctionParamRef
-	{
-		public string Name { get; set; }
-		public Expression? DefaultValue { get; set; }
-
-		public FunctionParamRef(string name)
-		{
-			Name = name;
-		}
-
-		public FunctionParamRef(string name, Expression? defaultValue)
-		{
-			Name = name;
-			DefaultValue = defaultValue;
-		}
-	}
-	
-	internal class FunctionRef
-	{
-		public string Name { get; set; }
-		public List<FunctionParamRef> Params { get; set; }
-	}
-	
 	internal class BuildTimeScope
 	{
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
-
-		internal FunctionRef? FindFunctionRef(string name)
-		{
-			FunctionRef? candidate = m_Frames.Last().FindFunctionRef(name);
-			return candidate;
-		}
-		
-		internal void AddFunction(FunctionRef functionRef)
-		{
-			foreach (BuildTimeScopeFrame frame in m_Frames)
-			{
-				frame.AddFunction(functionRef);	
-			}
-		}
 
 		public void PushFunction(IClosureBuilder closureBuilder, bool hasVarArgs)
 		{

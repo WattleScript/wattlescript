@@ -8,6 +8,29 @@ namespace MoonSharp.Interpreter.Tree.Statements
 {
 	class FunctionDefinitionStatement : Statement
 	{
+		internal class FunctionParamRef
+		{
+			public string Name { get; set; }
+			public Expression? DefaultValue { get; set; }
+
+			public FunctionParamRef(string name)
+			{
+				Name = name;
+			}
+
+			public FunctionParamRef(string name, Expression? defaultValue)
+			{
+				Name = name;
+				DefaultValue = defaultValue;
+			}
+		}
+	
+		internal class FunctionRef
+		{
+			public string Name { get; set; }
+			public List<FunctionParamRef> Params { get; set; }
+		}
+		
 		SymbolRef m_FuncSymbol;
 		SourceRef m_SourceRef;
 
@@ -82,7 +105,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				}
 			}
 
-			m_FuncDef = new FunctionDefinitionExpression(lcontext, m_IsMethodCallingConvention, false, name.Text);
+			m_FuncDef = new FunctionDefinitionExpression(lcontext, m_IsMethodCallingConvention, false);
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 

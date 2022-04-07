@@ -147,16 +147,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 					CheckTokenType(lcontext, TokenType.Op_Assignment);
 				}
 
-				List<string> lNames = new List<string>();
-				foreach (IVariable ivar in m_LValues)
-				{
-					if (ivar is SymbolRefExpression sre)
-					{
-						lNames.Add(sre.Symbol.Name);
-					}
-				}
-				
-				m_RValues = Expression.ExprList(lcontext, lNames);
+				m_RValues = Expression.ExprList(lcontext);
 			} 
 			
 			Token last = lcontext.Lexer.Current;
