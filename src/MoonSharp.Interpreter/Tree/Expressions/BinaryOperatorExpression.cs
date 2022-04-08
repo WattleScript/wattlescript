@@ -360,6 +360,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Exp1.ResolveScope(lcontext);
+			m_Exp2.ResolveScope(lcontext);
+		}
+
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{

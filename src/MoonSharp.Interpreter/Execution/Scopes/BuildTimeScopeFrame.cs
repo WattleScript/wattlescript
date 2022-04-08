@@ -64,6 +64,13 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 			return m_ScopeTreeHead.Define(name);
 		}
 
+		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		{
+			m_ScopeTreeHead.BlockResolution(locals);
+		}
+
+		internal void UnblockResolution() => m_ScopeTreeHead.UnblockResolution();
+
 		internal SymbolRef TryDefineLocal(string name)
 		{
 			if (m_ScopeTreeHead.Find(name) != null)

@@ -21,6 +21,8 @@ namespace MoonSharp.Interpreter.Tree
 			return v;
 		}
 
+		public abstract void ResolveScope(ScriptLoadingContext lcontext);
+
 		static void ProcessDirective(ScriptLoadingContext lcontext)
 		{
 			var str = lcontext.Lexer.Current.Text;

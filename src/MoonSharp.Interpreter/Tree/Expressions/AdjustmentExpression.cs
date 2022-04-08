@@ -25,6 +25,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return expression.Eval(context).ToScalar();
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			expression.ResolveScope(lcontext);
+		}
+
 		public override bool EvalLiteral(out DynValue dv)
 		{
 			if (expression.EvalLiteral(out dv))

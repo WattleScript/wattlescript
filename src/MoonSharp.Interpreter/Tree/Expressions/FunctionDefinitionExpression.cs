@@ -46,22 +46,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 
 			m_Annotations = lcontext.FunctionAnnotations.ToArray();
 			lcontext.FunctionAnnotations = new List<Annotation>();
-			
-			// create scope
-			// This needs to be up here to allow for arguments to correctly close over ENV
-			// Arguments, however, must come before any other local definitions to avoid closing
-			// over uninitialised variables. (Note for hoisting).
-			lcontext.Scope.PushFunction(this);
-
-			if (m_UsesGlobalEnv)
-			{
-				m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
-			}
-			else
-			{
-				lcontext.Scope.ForceEnvUpValue();
-			}
-			
+	
 			// Parse arguments
 			// here lexer should be at the '(' or at the '|'
 			//Token openRound = CheckTokenType(lcontext, isLambda ? TokenType.Lambda : TokenType.Brk_Open_Round);
@@ -97,22 +82,39 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			// here lexer is at first token of body
 
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
-
-
-			m_ParamNames = DefineArguments(paramnames, lcontext);
 			
-			if(m_HasVarArgs) lcontext.Scope.SetHasVarArgs(); //Moved here
-
 			if(isLambda)
 				m_Statement = CreateLambdaBody(lcontext, arrowFunc);
 			else
 				m_Statement = CreateBody(lcontext, openCurly);
 
-			m_StackFrame = lcontext.Scope.PopFunction();
 
 			lcontext.Source.Refs.Add(m_Begin);
 			lcontext.Source.Refs.Add(m_End);
 
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			resolved = true;
+			lcontext.Scope.PushFunction(this);
+
+			if (m_UsesGlobalEnv)
+			{
+				m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
+			}
+			else
+			{
+				lcontext.Scope.ForceEnvUpValue();
+			}
+			
+			m_ParamNames = DefineArguments(paramnames, lcontext);
+			
+			if(m_HasVarArgs) lcontext.Scope.SetHasVarArgs(); //Moved here
+			
+			m_Statement.ResolveScope(lcontext);
+			
+			m_StackFrame = lcontext.Scope.PopFunction();
 		}
 
 
@@ -247,7 +249,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				if (!names.Add(paramnames[i].Name))
 					paramnames[i].Name = paramnames[i].Name + "@" + i.ToString();
-
+				paramnames[i].DefaultValue?.ResolveScope(lcontext);
 				ret[i] = lcontext.Scope.DefineLocal(paramnames[i].Name);
 			}
 
@@ -281,8 +283,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			throw new DynamicExpressionException("Dynamic Expressions cannot define new functions.");
 		}
 
+		private bool resolved = false;
+
 		public int CompileBody(ByteCode bc, string friendlyName)
 		{
+			if (!resolved) throw new InternalErrorException("Function definition scope not resolved");
 			//LoadingContext.Scope.PopFunction()
 			
 			string funcName = friendlyName ?? ("<" + this.m_Begin.FormatLocation(bc.Script, true) + ">");

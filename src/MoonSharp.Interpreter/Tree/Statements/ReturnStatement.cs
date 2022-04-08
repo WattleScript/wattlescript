@@ -18,8 +18,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(sref);
 		}
 
-
-
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Expression?.ResolveScope(lcontext);
+		}
 
 		public ReturnStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)

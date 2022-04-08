@@ -42,7 +42,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		IfBlock CreateIfBlock(ScriptLoadingContext lcontext, out bool cstyle, out bool endBlock)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.If, TokenType.ElseIf);
-			lcontext.Scope.PushBlock();
 			var ifblock = new IfBlock();
 			ifblock.Exp = Expression.Expr(lcontext);
 			cstyle = false;
@@ -87,7 +86,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 					cstyle = true;
 				}
 			}
-			ifblock.StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(ifblock.Source);
 			return ifblock;
 		}
@@ -96,9 +94,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		IfBlock CreateElseBlock(ScriptLoadingContext lcontext, bool cstyle)
 		{
 			Token type = CheckTokenType(lcontext, TokenType.Else);
-
-			lcontext.Scope.PushBlock();
-
 			var ifblock = new IfBlock();
 			if (cstyle)
 			{
@@ -123,9 +118,25 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				ifblock.Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			}
-			ifblock.StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(ifblock.Source);
 			return ifblock;
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			foreach (var block in m_Ifs)
+			{
+				lcontext.Scope.PushBlock();
+				block.Exp?.ResolveScope(lcontext);
+				block.Block?.ResolveScope(lcontext);
+				block.StackFrame = lcontext.Scope.PopBlock();
+			}
+			if (m_Else != null)
+			{
+				lcontext.Scope.PushBlock();
+				m_Else.Block?.ResolveScope(lcontext);
+				m_Else.StackFrame = lcontext.Scope.PopBlock();
+			}
 		}
 
 

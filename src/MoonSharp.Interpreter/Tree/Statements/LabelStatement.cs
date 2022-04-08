@@ -35,7 +35,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			SourceRef = NameToken.GetSourceRef();
 			Label = NameToken.Text;
+		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
 			lcontext.Scope.DefineLabel(this);
 		}
 

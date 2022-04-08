@@ -1,4 +1,5 @@
-﻿using MoonSharp.Interpreter.Execution;
+﻿using System;
+using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Statements
@@ -14,18 +15,24 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public ChunkStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
+			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+
+			if (lcontext.Lexer.Current.Type != TokenType.Eof)
+				throw new SyntaxErrorException(lcontext.Lexer.Current, "<eof> expected near '{0}'", lcontext.Lexer.Current.Text);
+			
+			annotations = lcontext.ChunkAnnotations.ToArray();
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
 			lcontext.Scope.PushFunction(this);
 			lcontext.Scope.SetHasVarArgs();
 			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
 
-			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
-
-			if (lcontext.Lexer.Current.Type != TokenType.Eof)
-				throw new SyntaxErrorException(lcontext.Lexer.Current, "<eof> expected near '{0}'", lcontext.Lexer.Current.Text);
-
+			m_Block.ResolveScope(lcontext);
+			
 			m_StackFrame = lcontext.Scope.PopFunction();
-			annotations = lcontext.ChunkAnnotations.ToArray();
 		}
 
 

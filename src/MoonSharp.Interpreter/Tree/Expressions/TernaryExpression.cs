@@ -39,6 +39,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
             }
         }
 
+        public override void ResolveScope(ScriptLoadingContext lcontext)
+        {
+            condition.ResolveScope(lcontext);
+            exp1.ResolveScope(lcontext);
+            exp2.ResolveScope(lcontext);
+        }
+
         public override DynValue Eval(ScriptExecutionContext context)
         {
             if (condition.Eval(context).CastToBool())

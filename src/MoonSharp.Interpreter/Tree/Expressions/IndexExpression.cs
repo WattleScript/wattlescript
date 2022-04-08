@@ -67,6 +67,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		}
 
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_BaseExp.ResolveScope(lcontext);
+			m_IndexExp?.ResolveScope(lcontext);
+		}
+
 		public override void Compile(ByteCode bc)
 		{
 			m_BaseExp.Compile(bc);

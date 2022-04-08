@@ -10,7 +10,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 {
 	class AssignmentStatement : Statement
 	{
-		List<IVariable> m_LValues = new List<IVariable>();
+		List<IVariable> m_LValues;
+		List<string> localNames;
 		List<Expression> m_RValues;
 		SourceRef m_Ref;
 
@@ -22,14 +23,14 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public AssignmentStatement(ScriptLoadingContext lcontext, Token startToken)
 			: base(lcontext)
 		{
-			List<string> names = new List<string>();
+			localNames = new List<string>();
 
 			Token first = startToken;
 
 			while (true)
 			{
 				Token name = CheckTokenType(lcontext, TokenType.Name);
-				names.Add(name.Text);
+				localNames.Add(name.Text);
 
 				if (lcontext.Lexer.Current.Type != TokenType.Comma)
 					break;
@@ -56,16 +57,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			}
 			else
 			{
-				if (names.Count > 0)
+				if (localNames.Count > 0)
 					m_RValues = new List<Expression>(new Expression[] { new LiteralExpression(lcontext, DynValue.Nil) });
 			}
 
-			foreach (string name in names)
-			{
-				var localVar = lcontext.Scope.TryDefineLocal(name);
-				var symbol = new SymbolRefExpression(lcontext, localVar);
-				m_LValues.Add(symbol);
-			}
+			
 
 			Token last = lcontext.Lexer.Current;
 			m_Ref = first.GetSourceRefUpTo(last);
@@ -73,10 +69,37 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 		}
 
+		public void DefineLocals(ScriptLoadingContext lcontext)
+		{
+			if (localNames != null)
+			{
+				m_LValues = new List<IVariable>();
+				foreach (string name in localNames)
+				{
+					var localVar = lcontext.Scope.TryDefineLocal(name);
+					var symbol = new SymbolRefExpression(lcontext, localVar);
+					m_LValues.Add(symbol);
+				}
+			}
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			foreach(var l in m_LValues)((Expression)l).ResolveScope(lcontext);
+			if (localNames != null) // local definitions can't reference themselves
+			{
+				lcontext.Scope.BlockResolution(m_LValues.Select(x => ((SymbolRefExpression)x).Symbol));
+			}
+			if(m_RValues != null)
+				foreach(var r in m_RValues) r.ResolveScope(lcontext);
+			if(localNames != null) lcontext.Scope.UnblockResolution();
+		}
+
 
 		public AssignmentStatement(ScriptLoadingContext lcontext, Expression firstExpression, Token first)
 			: base(lcontext)
 		{
+			m_LValues = new List<IVariable>();
 			m_LValues.Add(CheckVar(lcontext, firstExpression));
 
 			while (lcontext.Lexer.Current.Type == TokenType.Comma)

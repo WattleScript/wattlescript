@@ -15,6 +15,10 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_Exp = exp;
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Exp.ResolveScope(lcontext);
+		}
 
 		public override DynValue Eval(ScriptExecutionContext context)
 		{

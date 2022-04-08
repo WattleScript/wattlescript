@@ -14,6 +14,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
         SymbolRef m_VarName;
         Expression m_Start, m_End, m_Step;
         SourceRef m_RefFor, m_RefEnd;
+        private Token nameToken;
 
         public SourceRef End => m_RefEnd;
 
@@ -27,8 +28,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
             m_End = new LiteralExpression(lcontext, DynValue.NewNumber(endNumber));
             m_Step = new LiteralExpression(lcontext, DynValue.NewNumber(startNumber > endNumber ? -1 : 1));
             if (paren) CheckTokenType(lcontext, TokenType.Brk_Close_Round);
-            lcontext.Scope.PushBlock();
-            m_VarName = lcontext.Scope.DefineLocal(nameToken.Text);
+            this.nameToken = nameToken;
+           
             if (lcontext.Syntax == ScriptSyntax.Lua || lcontext.Lexer.Current.Type == TokenType.Do)
             {
                 m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
@@ -50,9 +51,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
                 else
                     m_RefEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
             }
-            m_StackFrame = lcontext.Scope.PopBlock();
             lcontext.Source.Refs.Add(m_RefFor);
             lcontext.Source.Refs.Add(m_RefEnd);
+        }
+
+        public override void ResolveScope(ScriptLoadingContext lcontext)
+        {
+            lcontext.Scope.PushBlock();
+            m_VarName = lcontext.Scope.DefineLocal(nameToken.Text);
+            m_InnerBlock.ResolveScope(lcontext);
+            m_StackFrame = lcontext.Scope.PopBlock();
         }
 
         public override void Compile(ByteCode bc)

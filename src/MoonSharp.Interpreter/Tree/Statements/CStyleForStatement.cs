@@ -21,10 +21,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
         private RuntimeScopeBlock iteratorFrame;
         public SourceRef End => refEnd;
+
+        private string localDefName;
         
         public CStyleForStatement(ScriptLoadingContext lcontext, Token forTok) : base(lcontext)
         {
-            lcontext.Scope.PushBlock();
             //Init
             if (lcontext.Lexer.Current.Type != TokenType.SemiColon)
             {
@@ -32,11 +33,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
                 {
                     isDefLocal = true;
                     lcontext.Lexer.Next();
-                    var lcl = lcontext.Scope.TryDefineLocal(CheckTokenType(lcontext, TokenType.Name).Text);
+                    localDefName = CheckTokenType(lcontext, TokenType.Name).Text;
                     CheckTokenType(lcontext, TokenType.Op_Assignment);
                     initExpression = Expression.Expr(lcontext);
                     CheckTokenType(lcontext, TokenType.SemiColon);
-                    initAssignee = new SymbolRefExpression(lcontext, lcl);
                 }
                 else
                 {
@@ -75,7 +75,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
             CheckTokenType(lcontext, TokenType.Brk_Close_Round);
             refBegin = forTok.GetSourceRef(lcontext.Lexer.Current);
-            lcontext.Scope.PushBlock();
             if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
             {
                 lcontext.Lexer.Next();
@@ -86,10 +85,26 @@ namespace MoonSharp.Interpreter.Tree.Statements
             {
                 refEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
             }
-            stackFrame = lcontext.Scope.PopBlock();
-            iteratorFrame = lcontext.Scope.PopBlock();
+            
             lcontext.Source.Refs.Add(refBegin);
             lcontext.Source.Refs.Add(refEnd);
+        }
+
+        public override void ResolveScope(ScriptLoadingContext lcontext)
+        {
+            lcontext.Scope.PushBlock();
+            if (isDefLocal) {
+                var lcl = lcontext.Scope.TryDefineLocal(localDefName);
+                initAssignee = new SymbolRefExpression(lcontext, lcl);
+            }
+            (initAssignee as Expression)?.ResolveScope(lcontext);
+            initExpression?.ResolveScope(lcontext);
+            condition?.ResolveScope(lcontext);
+            modify?.ResolveScope(lcontext);
+            lcontext.Scope.PushBlock();
+            block.ResolveScope(lcontext);
+            stackFrame = lcontext.Scope.PopBlock();
+            iteratorFrame = lcontext.Scope.PopBlock();
         }
 
         public override void Compile(ByteCode bc)

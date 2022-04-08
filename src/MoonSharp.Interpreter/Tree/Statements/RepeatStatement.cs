@@ -19,7 +19,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		{
 			m_Repeat = CheckTokenType(lcontext, TokenType.Repeat).GetSourceRef();
 
-			lcontext.Scope.PushBlock();
 			bool openCurly = lcontext.Syntax != ScriptSyntax.Lua &&
 			                 lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly;
 			if (openCurly) lcontext.Lexer.Next();
@@ -30,9 +29,16 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			m_Condition = Expression.Expr(lcontext);
 			m_Until = until.GetSourceRefUpTo(lcontext.Lexer.Current);
 
-			m_StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(m_Repeat);
 			lcontext.Source.Refs.Add(m_Until);
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			lcontext.Scope.PushBlock();
+			m_Block.ResolveScope(lcontext);
+			m_Condition.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
 		}
 
 		public override void Compile(ByteCode bc)

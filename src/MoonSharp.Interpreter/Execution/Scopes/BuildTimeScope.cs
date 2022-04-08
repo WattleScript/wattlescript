@@ -103,6 +103,14 @@ namespace MoonSharp.Interpreter.Execution
 			return m_Frames.Last().TryDefineLocal(name);
 		}
 
+		public void BlockResolution(IEnumerable<SymbolRef> locals)
+		{
+			m_Frames.Last().BlockResolution(locals);
+		}
+		
+		public void UnblockResolution() => m_Frames.Last().UnblockResolution();
+
+
 		public bool CurrentFunctionHasVarArgs()
 		{
 			return m_Frames.Last().HasVarArgs;

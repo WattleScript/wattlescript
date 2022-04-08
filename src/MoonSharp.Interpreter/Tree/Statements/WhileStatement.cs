@@ -24,7 +24,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			m_Start = whileTk.GetSourceRefUpTo(lcontext.Lexer.Current);
 
-			lcontext.Scope.PushBlock();
+			
 			
 			if (lcontext.Syntax != ScriptSyntax.Lua &&
 			    lcontext.Lexer.Current.Type != TokenType.Do &&
@@ -44,10 +44,17 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_End = CheckTokenTypeEx(lcontext, TokenType.End, TokenType.Brk_Close_Curly).GetSourceRef();
 			}
 
-			m_StackFrame = lcontext.Scope.PopBlock();
 
 			lcontext.Source.Refs.Add(m_Start);
 			lcontext.Source.Refs.Add(m_End);
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			lcontext.Scope.PushBlock();
+			m_Condition.ResolveScope(lcontext);
+			m_Block.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
 		}
 
 
