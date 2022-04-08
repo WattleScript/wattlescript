@@ -9,7 +9,8 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 	{
 		SymbolRef m_Ref;
 		string m_VarName;
-
+		private Token T;
+		
 		private bool inc = false;
 		private bool dec = false;
 
@@ -20,22 +21,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			: base(lcontext)
 		{
 			m_VarName = T.Text;
-
-			if (T.Type == TokenType.VarArgs)
-			{
-				m_Ref = lcontext.Scope.Find(WellKnownSymbols.VARARGS);
-
-				if (!lcontext.Scope.CurrentFunctionHasVarArgs())
-					throw new SyntaxErrorException(T, "cannot use '...' outside a vararg function");
-
-				if (lcontext.IsDynamicExpression)
-					throw new DynamicExpressionException("cannot use '...' in a dynamic expression.");
-			}
-			else
-			{
-				if (!lcontext.IsDynamicExpression)
-					m_Ref = lcontext.Scope.Find(m_VarName);
-			}
+			this.T = T;
 
 			lcontext.Lexer.Next();
 			//inc/dec expr
@@ -48,6 +34,27 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				dec = true;
 				lcontext.Lexer.Next();
+			}
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			if (m_Ref == null) {
+				if (T.Type == TokenType.VarArgs)
+				{
+					m_Ref = lcontext.Scope.Find(WellKnownSymbols.VARARGS);
+
+					if (!lcontext.Scope.CurrentFunctionHasVarArgs())
+						throw new SyntaxErrorException(T, "cannot use '...' outside a vararg function");
+
+					if (lcontext.IsDynamicExpression)
+						throw new DynamicExpressionException("cannot use '...' in a dynamic expression.");
+				}
+				else
+				{
+					if (!lcontext.IsDynamicExpression)
+						m_Ref = lcontext.Scope.Find(m_VarName);
+				}
 			}
 		}
 

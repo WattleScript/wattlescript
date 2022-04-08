@@ -19,7 +19,11 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 
 				Expression exp;
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					exp = Expression.Expr(lcontext);
+					lcontext.Scope = new BuildTimeScope();
+					exp.ResolveScope(lcontext);
+				}
 
 				return new DynamicExprExpression(exp, lcontext);
 			}
@@ -35,7 +39,6 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 		{
 			return new ScriptLoadingContext(script)
 			{
-				Scope = new BuildTimeScope(),
 				Source = source,
 				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.Syntax != ScriptSyntax.Lua, script.Options.Syntax == ScriptSyntax.CLike, script.Options.Directives),
 				Syntax = script.Options.Syntax
@@ -52,7 +55,11 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				Statement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					stat = new ChunkStatement(lcontext);
+					lcontext.Scope = new BuildTimeScope();
+					stat.ResolveScope(lcontext);
+				}
 
 				int beginIp = -1;
 
@@ -91,7 +98,11 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				FunctionDefinitionExpression fnx;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					fnx = new FunctionDefinitionExpression(lcontext, usesGlobalEnv);
+					lcontext.Scope = new BuildTimeScope();
+					fnx.ResolveScope(lcontext);
+				}
 
 				int beginIp = -1;
 

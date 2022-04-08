@@ -20,6 +20,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return expressions.ToArray();
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			foreach(var exp in expressions)
+				exp.ResolveScope(lcontext);
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			foreach (var exp in expressions)

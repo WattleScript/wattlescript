@@ -16,7 +16,6 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		public DoBlockStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			lcontext.Scope.PushBlock();
 
 			m_Do = CheckTokenType(lcontext, TokenType.Do).GetSourceRef();
 
@@ -36,12 +35,18 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 				m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
 			}
-			m_StackFrame = lcontext.Scope.PopBlock();
 			lcontext.Source.Refs.Add(m_Do);
 			lcontext.Source.Refs.Add(m_End);
 
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			lcontext.Scope.PushBlock();
+			m_Block.ResolveScope(lcontext);
+			m_Condition?.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
+		}
 
 
 		public override void Compile(Execution.VM.ByteCode bc)

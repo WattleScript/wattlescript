@@ -34,8 +34,25 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 			return block;
 		}
 
+		private HashSet<string> blockedNames = new HashSet<string>();
+		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		{
+			foreach(var l in locals) {
+				if (!m_DefinedNames.ContainsValue(l))
+					throw new InternalErrorException("Tried to block resolution of local outside of block");
+				blockedNames.Add(l.Name);
+			}
+		}
+
+		internal void UnblockResolution()
+		{
+			blockedNames.Clear();
+		}
+		
+
 		internal SymbolRef Find(string name)
 		{
+			if (blockedNames.Contains(name)) return null;
 			return m_DefinedNames.GetOrDefault(name);
 		}
 

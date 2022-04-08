@@ -17,12 +17,14 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		Statement m_Block;
 		SourceRef m_RefFor, m_RefEnd;
 
+		private List<string> names;
+
 		public ForEachLoopStatement(ScriptLoadingContext lcontext, Token firstNameToken, Token forToken, bool paren)
 			: base(lcontext)
 		{
 			//	for namelist in explist do block end | 		
 
-			List<string> names = new List<string>();
+			names = new List<string>();
 			names.Add(firstNameToken.Text);
 
 			while (lcontext.Lexer.Current.Type == TokenType.Comma)
@@ -35,19 +37,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			CheckTokenType(lcontext, TokenType.In);
 
 			m_RValues = new ExprListExpression(Expression.ExprList(lcontext), lcontext);
-
-			lcontext.Scope.PushBlock();
 			
-			m_Names = names
-				.Select(n => lcontext.Scope.TryDefineLocal(n))
-				.ToArray();
-
-			m_NameExps = m_Names
-				.Select(s => new SymbolRefExpression(lcontext, s))
-				.Cast<IVariable>()
-				.ToArray();
 			if (paren) CheckTokenType(lcontext, TokenType.Brk_Close_Round);
-			
 			
 			if (lcontext.Syntax == ScriptSyntax.Lua || lcontext.Lexer.Current.Type == TokenType.Do)
 			{
@@ -71,10 +62,27 @@ namespace MoonSharp.Interpreter.Tree.Statements
 					m_RefEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
 			}
 
-			m_StackFrame = lcontext.Scope.PopBlock();
+			
 
 			lcontext.Source.Refs.Add(m_RefFor);
 			lcontext.Source.Refs.Add(m_RefEnd);
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			lcontext.Scope.PushBlock();
+			m_Names = names
+				.Select(n => lcontext.Scope.TryDefineLocal(n))
+				.ToArray();
+
+			m_NameExps = m_Names
+				.Select(s => new SymbolRefExpression(lcontext, s))
+				.Cast<IVariable>()
+				.ToArray();
+			
+			m_RValues?.ResolveScope(lcontext);
+			m_Block.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
 		}
 
 

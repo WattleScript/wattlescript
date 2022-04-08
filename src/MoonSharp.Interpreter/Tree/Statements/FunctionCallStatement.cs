@@ -16,6 +16,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(m_FunctionCallExpression.SourceRef);
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_FunctionCallExpression.ResolveScope(lcontext);
+		}
+
 
 		public override void Compile(ByteCode bc)
 		{

@@ -172,6 +172,19 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return true;
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			foreach (var kvp in m_CtorArgs)
+			{
+				kvp.Key.ResolveScope(lcontext);
+				kvp.Value.ResolveScope(lcontext);
+			}
+			foreach (var p in m_PositionalValues)
+			{
+				p.ResolveScope(lcontext);
+			}
+		}
+
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{

@@ -49,6 +49,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
             bc.Emit_StrFormat(arguments.Count);
         }
 
+        public override void ResolveScope(ScriptLoadingContext lcontext)
+        {
+            foreach(var exp in arguments)
+                exp.ResolveScope(lcontext);
+        }
+
         public override DynValue Eval(ScriptExecutionContext context)
         {
             return DynValue.NewString(string.Format(formatString, arguments.Select(x =>

@@ -42,6 +42,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		List<string> m_TableAccessors;
 		FunctionDefinitionExpression m_FuncDef;
 
+		private string m_FuncDefName;
+		private string m_FuncLookupSymbol;
+		
+		public bool CanHoist => m_MethodName == null || m_Local;
+
 		public FunctionDefinitionStatement(ScriptLoadingContext lcontext, bool local, Token localToken)
 			: base(lcontext)
 		{
@@ -54,7 +59,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			
 			if (m_Local)
 			{
-				m_FuncSymbol = lcontext.Scope.TryDefineLocal(name.Text);
+				m_FuncDefName = name.Text;
 				m_FriendlyName = string.Format("{0} (local)", name.Text);
 				m_SourceRef = funcKeyword.GetSourceRef(name);
 			}
@@ -63,8 +68,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				string firstName = name.Text;
 
 				m_SourceRef = funcKeyword.GetSourceRef(name);
+				m_FuncLookupSymbol = firstName;
 
-				m_FuncSymbol = lcontext.Scope.Find(firstName);
 				m_FriendlyName = firstName;
 
 				if (lcontext.Lexer.Current.Type != TokenType.Brk_Open_Round)
@@ -109,6 +114,23 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 
+		public void DefineLocals(ScriptLoadingContext lcontext)
+		{
+			if (m_FuncDefName != null)
+			{
+				m_FuncSymbol = lcontext.Scope.TryDefineLocal(m_FuncDefName);
+			}
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			if (m_FuncSymbol == null)
+			{
+				m_FuncSymbol = lcontext.Scope.Find(m_FuncLookupSymbol);
+			}	
+			m_FuncDef.ResolveScope(lcontext);
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			using (bc.EnterSource(m_SourceRef))
@@ -129,7 +151,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				}
 			}
 		}
-
+		
 		private int SetMethod(Execution.VM.ByteCode bc)
 		{
 			int cnt = 0;

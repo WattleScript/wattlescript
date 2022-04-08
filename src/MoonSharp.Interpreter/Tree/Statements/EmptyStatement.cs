@@ -9,6 +9,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		{
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			//No-op
+		}
+
 
 		public override void Compile(Execution.VM.ByteCode bc)
 		{

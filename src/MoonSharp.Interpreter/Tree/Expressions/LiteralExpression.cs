@@ -54,6 +54,11 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			lcontext.Lexer.Next();
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			//No-op
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			bc.Emit_Literal(m_Value);

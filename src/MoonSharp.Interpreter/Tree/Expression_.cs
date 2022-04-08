@@ -22,6 +22,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		public abstract DynValue Eval(ScriptExecutionContext context);
 
+		public abstract void ResolveScope(ScriptLoadingContext lcontext);
+
 		public abstract bool EvalLiteral(out DynValue dv);
 
 		public void CompilePossibleLiteral(ByteCode bc)

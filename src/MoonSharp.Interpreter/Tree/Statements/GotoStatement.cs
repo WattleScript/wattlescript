@@ -26,7 +26,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			SourceRef = GotoToken.GetSourceRef(name);
 
 			Label = name.Text;
+		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
 			lcontext.Scope.RegisterGoto(this);
 		}
 
