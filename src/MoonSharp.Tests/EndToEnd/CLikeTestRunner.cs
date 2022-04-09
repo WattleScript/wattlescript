@@ -16,9 +16,20 @@ public class CLikeTestRunner
 
         return files;
     }
+    
+    [Test, TestCaseSource(nameof(GetTestCases))]
+    public async Task RunThrowErros(string path)
+    {
+        await RunCore(path);
+    }
 
     [Test, TestCaseSource(nameof(GetTestCases))]
-    public async Task Run(string path)
+    public async Task RunReportErrors(string path)
+    {
+        await RunCore(path, true);
+    }
+    
+    public async Task RunCore(string path, bool reportErrors = false)
     {
         string outputPath = path.Replace(".lua", ".txt");
 
@@ -36,14 +47,21 @@ public class CLikeTestRunner
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         
+        if (path.Contains("flaky"))
+        {
+            Assert.Inconclusive($"Test {path} marked as flaky");
+            return;
+        }
+        
         if (path.Contains("SyntaxCLike"))
         {
             script.Options.Syntax = ScriptSyntax.CLike;
         }
 
-        if (path.Contains("flaky"))
+        if (reportErrors)
         {
-            Assert.Inconclusive($"Test {path} marked as flaky");
+            script.Options.ParserErrorMode = ScriptOptions.ParserErrorModes.Report;
+            await script.DoStringAsync(code);
             return;
         }
 

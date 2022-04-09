@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using MoonSharp.Interpreter.Execution;
 
@@ -14,30 +15,85 @@ namespace MoonSharp.Interpreter.Tree.Statements
 	{
 		List<Statement> m_Statements = new List<Statement>();
 
-		public Token EndToken;
-
 		public CompositeStatement(ScriptLoadingContext lcontext, BlockEndType endType)
 			: base(lcontext)
 		{
 			while (true)
 			{
-				ParseAnnotations(lcontext);
-				Token t = lcontext.Lexer.Current;
-				EndToken = lcontext.Lexer.Current;
-				if (t.IsEndOfBlock()) break;
-				if (endType == BlockEndType.CloseCurly && t.Type == TokenType.Brk_Close_Curly) break;
-				bool forceLast;
-				
-				Statement s = Statement.CreateStatement(lcontext, out forceLast);
-				m_Statements.Add(s);
-				EndToken = lcontext.Lexer.Current;
-				if (forceLast) break;
+				try
+				{
+					ParseAnnotations(lcontext);
+					Token t = lcontext.Lexer.Current;
+					if (t.IsEndOfBlock()) break;
+					if (endType == BlockEndType.CloseCurly && t.Type == TokenType.Brk_Close_Curly) break;
+
+					Statement s = CreateStatement(lcontext, out bool forceLast);
+					m_Statements.Add(s);
+					if (forceLast) break;
+				}
+				catch (InterpreterException e)
+				{
+					if (lcontext.Script.Options.ParserErrorMode == ScriptOptions.ParserErrorModes.Report)
+					{
+						Token token = null;
+						if (e is SyntaxErrorException se)
+						{
+							token = se.Token;
+						}
+						
+						lcontext.Script.i_ParserMessages.Add(new Script.ScriptParserMessage(token, e.Message));
+						Synchronize(lcontext);
+						
+						if (lcontext.Lexer.PeekNext().Type == TokenType.Eof)
+						{
+							lcontext.Lexer.Next();
+							break;
+						}
+					}
+					else
+					{
+						throw;
+					}
+				}
 			}
 
 			// eat away all superfluos ';'s
 			while (lcontext.Lexer.Current.Type == TokenType.SemiColon)
 				lcontext.Lexer.Next();
 		}
+		
+		private void Synchronize(ScriptLoadingContext lcontext)
+		{
+			while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
+			{
+				lcontext.Lexer.Next();
+				Token tkn = lcontext.Lexer.Current;
+
+				switch (tkn.Type)
+				{
+					case TokenType.ChunkAnnotation:
+					case TokenType.Local:
+					case TokenType.Until:
+					case TokenType.Break:
+					case TokenType.Continue:
+					case TokenType.While:
+					case TokenType.For:
+					case TokenType.ElseIf:
+					case TokenType.Else:
+					case TokenType.Function:
+					case TokenType.Goto:
+					case TokenType.Directive:
+					case TokenType.Do:
+					case TokenType.If:
+					{
+						goto endSynchronize;
+					}
+				}
+			}
+
+			endSynchronize: ;
+		}
+
 
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
