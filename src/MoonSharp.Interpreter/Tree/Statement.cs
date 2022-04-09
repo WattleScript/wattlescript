@@ -51,26 +51,62 @@ namespace MoonSharp.Interpreter.Tree
 			lcontext.Lexer.Next(); //Skip annotation marker
 			var nameToken = CheckTokenType(lcontext, TokenType.Name); //name
 			DynValue value = DynValue.Nil;
-			//value
-			if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round)
+			
+			DynValue NextPart(bool next)
 			{
-				lcontext.Lexer.Next();
+				DynValue _value = DynValue.Nil;
 				if (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Round)
 				{
+					if (next)
+					{
+						lcontext.Lexer.Next();	
+					}
+					
 					var exprToken = lcontext.Lexer.Current;
 					var expr = Expression.Expr(lcontext);
 					if (expr is TableConstructor tbl)
 					{
-						if(!tbl.TryGetLiteral(out value))
+						if(!tbl.TryGetLiteral(out _value))
 							throw new SyntaxErrorException(exprToken, "annotation value must be literal or prime table");
 					}
-					else if (!expr.EvalLiteral(out value))
+					else if (!expr.EvalLiteral(out _value))
 					{
 						throw new SyntaxErrorException(exprToken, "annotation value must be literal or prime table");
 					}
 				}
-				CheckTokenType(lcontext, TokenType.Brk_Close_Round);
+
+				return _value;
 			}
+			
+			if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round)
+			{
+				value = NextPart(true);
+				
+				if (lcontext.Script.Options.AnnotationPolicy.AnnotationParsingPolicy == AnnotationValueParsingPolicy.StringOrTable || value.Type == DataType.Table)
+				{
+					CheckTokenType(lcontext, TokenType.Brk_Close_Round);	
+					return new Annotation(nameToken.Text, value);
+				}
+
+				DynValue table = DynValue.NewTable(lcontext.Script);
+				table.Table.Append(value);
+
+				while (true)
+				{
+					if (lcontext.Lexer.Current.Type == TokenType.Brk_Close_Round)
+					{
+						break;
+					}
+					
+					CheckTokenType(lcontext, TokenType.Comma);	
+					value = NextPart(false);
+					table.Table.Append(value);
+				}
+
+				CheckTokenType(lcontext, TokenType.Brk_Close_Round);
+				return new Annotation(nameToken.Text, table);
+			}
+			
 			return new Annotation(nameToken.Text, value);
 		}
 

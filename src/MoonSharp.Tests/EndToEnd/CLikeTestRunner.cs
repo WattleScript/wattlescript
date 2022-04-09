@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -35,6 +36,7 @@ public class CLikeTestRunner
         Script script = new Script(CoreModules.Preset_HardSandbox);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
+        script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         
         if (path.Contains("SyntaxCLike"))
         {
@@ -49,7 +51,12 @@ public class CLikeTestRunner
 
         try
         {
-            await script.DoStringAsync(code);
+            DynValue dv = script.LoadString(code);
+            IReadOnlyList<Annotation> annots = dv.Function.Annotations;
+            await script.CallAsync(dv);
+
+            DynValue dv2 = script.Globals.Get("f");
+            
             Assert.AreEqual(output.Trim(), stdOut.ToString().Trim(), $"Test {path} did not pass.");
 
             if (path.Contains("invalid"))
