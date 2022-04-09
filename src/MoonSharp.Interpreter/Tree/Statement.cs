@@ -176,7 +176,7 @@ namespace MoonSharp.Interpreter.Tree
 					else
 						return new AssignmentStatement(lcontext, localToken);
 				case TokenType.Return:
-					forceLast = true;
+					forceLast = (lcontext.Syntax != ScriptSyntax.Lua); //TODO: can we not force this in lua too?
 					return new ReturnStatement(lcontext);
 				case TokenType.Break:
 					return new BreakStatement(lcontext);
