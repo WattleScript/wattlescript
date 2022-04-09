@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using MoonSharp.Interpreter.Interop;
 using MoonSharp.Interpreter.Tree;
 
 namespace MoonSharp.Interpreter
@@ -12,16 +13,40 @@ namespace MoonSharp.Interpreter
 	/// <summary>
 	/// A class representing a value in a Lua/MoonSharp script.
 	/// </summary>
+	[StructLayout(LayoutKind.Explicit)]
 	public struct DynValue
 	{
+		private static readonly object m_NumberTag = new object();
+		[FieldOffset(0)]
 		private double m_Number;
+		[FieldOffset(0)]
+		private ulong m_U64;
+		[FieldOffset(8)]
 		private object m_Object;
-		private DataType m_Type;
+
+		private const ulong QNAN = 0x7ffc000000000000;
+		private const ulong BOOLEAN_MASK = 0x0FFFFFFFFF;
+		private const ulong BOOL_TRUE = QNAN | ((ulong)DataType.Boolean << 40) | BOOLEAN_MASK;
+		private const ulong BOOL_FALSE = QNAN | ((ulong) DataType.Boolean << 40);
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static ulong TYPE(DataType type)
+		{
+			return QNAN | ((ulong) type) << 40;
+		}
 
 		/// <summary>
 		/// Gets the type of the value.
 		/// </summary>
-		public DataType Type { get { return m_Type; } }
+		public DataType Type
+		{
+			get
+			{
+				if (m_Object == m_NumberTag) return DataType.Number;
+				return (DataType) ((m_U64 >> 40) & 0xFF);
+			}
+		}
+
 		/// <summary>
 		/// Gets the function (valid only if the <see cref="Type"/> is <see cref="DataType.Function"/>)
 		/// </summary>
@@ -46,7 +71,7 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Gets the boolean value (valid only if the <see cref="Type"/> is <see cref="DataType.Boolean"/>)
 		/// </summary>
-		public bool Boolean { get { return Number != 0; } }
+		public bool Boolean { get { return (m_U64 & BOOLEAN_MASK) != 0; } }
 		/// <summary>
 		/// Gets the string value (valid only if the <see cref="Type"/> is <see cref="DataType.String"/>)
 		/// </summary>
@@ -77,8 +102,7 @@ namespace MoonSharp.Interpreter
 		{
 			return new DynValue()
 			{
-				m_Number = v ? 1 : 0,
-				m_Type = DataType.Boolean,
+				m_U64 = v ? BOOL_TRUE : BOOL_FALSE
 			};
 		}
 
@@ -90,7 +114,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Number = num,
-				m_Type = DataType.Number,
+				m_Object = m_NumberTag,
 			};
 		}
 
@@ -102,7 +126,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = str,
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -114,7 +138,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = sb.ToString(),
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -126,7 +150,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = string.Format(format, args),
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -141,7 +165,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = coroutine,
-				m_Type = DataType.Thread
+				m_U64 = TYPE(DataType.Thread)
 			};
 		}
 
@@ -153,7 +177,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = function,
-				m_Type = DataType.Function,
+				m_U64 = TYPE(DataType.Function)
 			};
 		}
 
@@ -165,7 +189,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new CallbackFunction(callBack, name),
-				m_Type = DataType.ClrFunction,
+				m_U64 = TYPE(DataType.ClrFunction)
 			};
 		}
 
@@ -178,7 +202,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = function,
-				m_Type = DataType.ClrFunction,
+				m_U64 = TYPE(DataType.ClrFunction)
 			};
 		}
 
@@ -190,7 +214,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = table,
-				m_Type = DataType.Table,
+				m_U64 = TYPE(DataType.Table)
 			};
 		}
 
@@ -239,7 +263,7 @@ namespace MoonSharp.Interpreter
 					Args = args,
 					Function = tailFn,
 				},
-				m_Type = DataType.TailCallRequest,
+				m_U64 = TYPE(DataType.TailCallRequest)
 			};
 		}
 
@@ -257,7 +281,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = tailCallData,
-				m_Type = DataType.TailCallRequest,
+				m_U64 = TYPE(DataType.TailCallRequest)
 			};
 		}
 
@@ -273,7 +297,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new YieldRequest() { ReturnValues = args },
-				m_Type = DataType.YieldRequest,
+				m_U64 = TYPE(DataType.YieldRequest)
 			};
 		}
 
@@ -287,7 +311,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new YieldRequest() { Forced = true },
-				m_Type = DataType.YieldRequest,
+				m_U64 = TYPE(DataType.YieldRequest)
 			};
 		}
 
@@ -296,7 +320,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = task,
-				m_Type = DataType.AwaitRequest
+				m_U64 = TYPE(DataType.AwaitRequest)
 			};
 		}
 
@@ -314,7 +338,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = values,
-				m_Type = DataType.Tuple,
+				m_U64 = TYPE(DataType.Tuple),
 			};
 		}
 
@@ -342,7 +366,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = vals.ToArray(),
-				m_Type = DataType.Tuple,
+				m_U64 = TYPE(DataType.Tuple)
 			};
 		}
 
@@ -355,7 +379,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = userData,
-				m_Type = DataType.UserData,
+				m_U64 = TYPE(DataType.UserData)
 			};
 		}
 
@@ -380,8 +404,8 @@ namespace MoonSharp.Interpreter
 
 		static DynValue()
 		{
-			Nil = new DynValue() {m_Type = DataType.Nil};
-			Void = new DynValue() {m_Type = DataType.Void};
+			Nil = new DynValue() { };
+			Void = new DynValue() { m_U64 = TYPE(DataType.Void) };
 			True = DynValue.NewBoolean(true);
 			False = DynValue.NewBoolean(false);
 		}
