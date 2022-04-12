@@ -119,6 +119,7 @@ namespace MoonSharp.Interpreter
 
 		/// <summary>
 		/// Gets or sets the annotation policy for the script compiler (C-Like mode only)
+		/// <see cref="AnnotationValueParsingPolicy" />
 		/// </summary>
 		public IAnnotationPolicy AnnotationPolicy { get; set; } = AnnotationPolicies.Allow;
 
