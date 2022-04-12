@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Debugging;
 using MoonSharp.Interpreter.Execution;
 
@@ -10,9 +11,7 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 		Expression m_Function;
 		string m_Name;
 		string m_DebugErr;
-
 		internal SourceRef SourceRef { get; private set; }
-
 
 		public FunctionCallExpression(ScriptLoadingContext lcontext, Expression function, Token thisCallName)
 			: base(lcontext)
@@ -66,6 +65,13 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			}
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Function.ResolveScope(lcontext);
+			foreach(var arg in m_Arguments)
+				arg.ResolveScope(lcontext);
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			m_Function.Compile(bc);
@@ -75,13 +81,14 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			if (!string.IsNullOrEmpty(m_Name))
 			{
 				bc.Emit_Copy(0);
-				bc.Emit_Index(DynValue.NewString(m_Name), true);
+				bc.Emit_Index(m_Name, true);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
 
+			
 			for (int i = 0; i < m_Arguments.Count; i++)
-				m_Arguments[i].Compile(bc);
+				m_Arguments[i].CompilePossibleLiteral(bc);
 
 			if (!string.IsNullOrEmpty(m_Name))
 			{
@@ -91,6 +98,15 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			{
 				bc.Emit_Call(argslen, m_DebugErr);
 			}
+			if (bc.NilChainTargets.Count > 0) {
+				bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());
+			}
+		}
+
+		public override bool EvalLiteral(out DynValue dv)
+		{
+			dv = DynValue.Nil;
+			return false;
 		}
 
 		public override DynValue Eval(ScriptExecutionContext context)

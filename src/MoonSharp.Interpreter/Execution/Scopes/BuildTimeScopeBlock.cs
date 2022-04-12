@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
@@ -8,13 +9,9 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 	{
 		internal BuildTimeScopeBlock Parent { get; private set; }
 		internal List<BuildTimeScopeBlock> ChildNodes { get; private set; }
-
 		internal RuntimeScopeBlock ScopeBlock { get; private set; }
-
 		Dictionary<string, SymbolRef> m_DefinedNames = new Dictionary<string, SymbolRef>();
-
-
-
+	
 		internal void Rename(string name)
 		{
 			SymbolRef sref = m_DefinedNames[name];
@@ -37,8 +34,25 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 			return block;
 		}
 
+		private HashSet<string> blockedNames = new HashSet<string>();
+		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		{
+			foreach(var l in locals) {
+				if (!m_DefinedNames.ContainsValue(l))
+					throw new InternalErrorException("Tried to block resolution of local outside of block");
+				blockedNames.Add(l.Name);
+			}
+		}
+
+		internal void UnblockResolution()
+		{
+			blockedNames.Clear();
+		}
+		
+
 		internal SymbolRef Find(string name)
 		{
+			if (blockedNames.Contains(name)) return null;
 			return m_DefinedNames.GetOrDefault(name);
 		}
 

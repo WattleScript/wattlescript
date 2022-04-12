@@ -22,7 +22,7 @@ namespace MoonSharp.Interpreter.CoreLib.IO
 		public static StandardIOFileUserDataBase CreateOutputStream(Stream stream)
 		{
 			var f = new StandardIOFileUserDataBase();
-			f.Initialize(stream, null, new StreamWriter(stream));
+			f.Initialize(stream, null, new StreamWriter(stream) { AutoFlush = true });
 			return f;
 		}
 

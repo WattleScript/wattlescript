@@ -24,7 +24,7 @@ namespace MoonSharp.Hardwire
 		/// <param name="generatorContext">The generator context.</param>
 		/// <param name="members">The CodeTypeMemberCollection which can be used to add newly defined types.</param>
 		/// <returns>Zero or more expressions which can be used by the parent generator to use the generated code.</returns>
-		CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members);
+		CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members);
 	}
 
 }

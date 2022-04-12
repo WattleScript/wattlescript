@@ -1,3 +1,8 @@
+MoonSharp: Librelancer Branch
+* This only contains a subset of the MoonSharp project for .Net Core 3.1
+* See upstream at https://github.com/moonsharp-devs/moonsharp
+
+
 MoonSharp       [![Build Status](https://travis-ci.org/xanathar/moonsharp.svg?branch=master)](https://travis-ci.org/xanathar/moonsharp) [![Build Status](https://img.shields.io/nuget/v/MoonSharp.svg)](https://www.nuget.org/packages/MoonSharp/)
 =========
 http://www.moonsharp.org   

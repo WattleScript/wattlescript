@@ -1,5 +1,4 @@
 ﻿using System;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop;
 
 namespace MoonSharp.Interpreter
@@ -7,7 +6,7 @@ namespace MoonSharp.Interpreter
 	/// <summary>
 	/// Descriptor which acts as a non-containing adapter from IUserDataType to IUserDataDescriptor
 	/// </summary>
-	internal class AutoDescribingUserDataDescriptor : IUserDataDescriptor
+	public class AutoDescribingUserDataDescriptor : IUserDataDescriptor
 	{
 		private string m_FriendlyName;
 		private Type m_Type;
@@ -54,7 +53,7 @@ namespace MoonSharp.Interpreter
 			if (u != null)
 				return u.Index(script, index, isDirectIndexing);
 
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <summary>
@@ -110,7 +109,7 @@ namespace MoonSharp.Interpreter
 			if (u != null)
 				return u.MetaIndex(script, metaname);
 
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -124,7 +123,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public bool IsTypeCompatible(Type type, object obj)
 		{
-			return Framework.Do.IsInstanceOfType(type, obj);
+			return type.IsInstanceOfType(obj);
 		}
 	}
 }

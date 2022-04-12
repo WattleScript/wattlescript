@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using MoonSharp.Interpreter.Loaders;
 
@@ -27,6 +28,12 @@ namespace MoonSharp.Interpreter
 			this.ScriptLoader = defaults.ScriptLoader;
 
 			this.CheckThreadAccess = defaults.CheckThreadAccess;
+		}
+		
+		public enum ParserErrorModes
+		{
+			Throw,
+			Report
 		}
 
 		/// <summary>
@@ -95,6 +102,43 @@ namespace MoonSharp.Interpreter
 		/// you are not calling MoonSharp execution concurrently as it is not supported.
 		/// </summary>
 		public bool CheckThreadAccess { get; set; }
+		
+		/// <summary>
+		/// Gets or sets a value indicating whether or not tasks are automatically awaited.
+		/// When set to true, each call to a CLR function returning Task will automatically await and cast the value
+		/// When set to false, the call returns a task object that can have await() called on it.
+		/// </summary>
+		public bool AutoAwait { get; set; }
+		
+		/// <summary>
+		/// Gets or sets a value indicating the syntax used by the compiler.
+		/// </summary>
+		public ScriptSyntax Syntax { get; set; }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether tables are indexed from zero or one (default)
+		/// When set to 1, tables will be indexed from one
+		/// When set to 0, tables will be indexed from zero
+		/// Other values are not supported
+		/// </summary>
+		public int IndexTablesFrom { get; set; } = 1;
+
+		/// <summary>
+		/// Gets or sets the annotation policy for the script compiler (C-Like mode only)
+		/// <see cref="AnnotationValueParsingPolicy" />
+		/// </summary>
+		public IAnnotationPolicy AnnotationPolicy { get; set; } = AnnotationPolicies.Allow;
+
+		/// <summary>
+		/// List of keywords that will be interpreted as directives by the compiler (C-Like mode only).
+		/// These directions will store the RHS as a string annotation on the chunk.
+		/// </summary>
+		public HashSet<string> Directives { get; set; } = new HashSet<string>();
+
+		/// <summary>
+		/// Specifies how parser reacts to errors while parsing.
+		/// Options are: Throw (paring is aborted after first error), Report (errors are stashed and available in Script.ParserMessages)
+		/// </summary>
+		public ParserErrorModes ParserErrorMode { get; set; } = ParserErrorModes.Throw;
 	}
 }

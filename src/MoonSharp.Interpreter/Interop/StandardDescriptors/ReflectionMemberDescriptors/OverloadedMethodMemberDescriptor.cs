@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.Converters;
 
@@ -325,16 +324,16 @@ namespace MoonSharp.Interpreter.Interop
 				if (i == method.Parameters.Length - 1 && method.VarArgsArrayType != null)
 				{
 					int varargCnt = 0;
-					DynValue firstArg = null;
+					DynValue firstArg = DynValue.Nil;
 					int scoreBeforeVargars = totalScore;
 
 					// update score for varargs
 					while (true)
 					{
 						var arg = args.RawGet(argsCnt, false);
-						if (arg == null) break;
+						if (arg.IsNil()) break;
 
-						if (firstArg == null) firstArg = arg;
+						if (firstArg.IsNil()) firstArg = arg;
 
 						argsCnt += 1;
 
@@ -349,7 +348,7 @@ namespace MoonSharp.Interpreter.Interop
 					{
 						if (firstArg.Type == DataType.UserData && firstArg.UserData.Object != null)
 						{
-							if (Framework.Do.IsAssignableFrom(method.VarArgsArrayType, firstArg.UserData.Object.GetType()))
+							if (method.VarArgsArrayType.IsAssignableFrom(firstArg.UserData.Object.GetType()))
 							{
 								totalScore = scoreBeforeVargars;
 								continue;
@@ -365,7 +364,7 @@ namespace MoonSharp.Interpreter.Interop
 				}
 				else
 				{
-					var arg = args.RawGet(argsCnt, false) ?? DynValue.Void;
+					var arg = args.RawGet(argsCnt, false);
 
 					int score = CalcScoreForSingleArgument(method.Parameters[i], parameterType, arg, method.Parameters[i].HasDefaultValue);
 

@@ -16,19 +16,22 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(m_FunctionCallExpression.SourceRef);
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_FunctionCallExpression.ResolveScope(lcontext);
+		}
+
 
 		public override void Compile(ByteCode bc)
 		{
 			using (bc.EnterSource(m_FunctionCallExpression.SourceRef))
 			{
 				m_FunctionCallExpression.Compile(bc);
-				RemoveBreakpointStop(bc.Emit_Pop());
+				bc.Emit_Pop();
+				bc.SourceRefs[bc.SourceRefs.Count - 1] = null; //Remove breakpoint stop
 			}
 		}
 
-		private void RemoveBreakpointStop(Instruction instruction)
-		{
-			instruction.SourceCodeRef = null;
-		}
+		
 	}
 }

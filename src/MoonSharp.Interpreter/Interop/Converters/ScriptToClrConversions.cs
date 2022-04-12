@@ -1,5 +1,4 @@
 ﻿using System;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Interop.Converters
 {
@@ -111,11 +110,11 @@ namespace MoonSharp.Interpreter.Interop.Converters
 				case DataType.Void:
 					if (isOptional)
 						return defaultValue;
-					else if ((!Framework.Do.IsValueType(desiredType)) || (nullableType != null))
+					else if (!desiredType.IsValueType || (nullableType != null))
 						return null;
 					break;
 				case DataType.Nil:
-					if (Framework.Do.IsValueType(desiredType))
+					if (desiredType.IsValueType)
 					{
 						if (nullableType != null)
 							return null;
@@ -135,7 +134,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 						str = value.Boolean.ToString();
 					break;
 				case DataType.Number:
-					if (Framework.Do.IsEnum(desiredType))
+					if (desiredType.IsEnum)
 					{	// number to enum conv
 						Type underType = Enum.GetUnderlyingType(desiredType);
 						return NumericConversions.DoubleToType(underType, value.Number);
@@ -176,7 +175,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 					}
 					break;
 				case DataType.Table:
-					if (desiredType == typeof(Table) || Framework.Do.IsAssignableFrom(desiredType, typeof(Table)))
+					if (desiredType == typeof(Table) || desiredType.IsAssignableFrom(typeof(Table)))
 						return value.Table;
 					else
 					{
@@ -231,11 +230,11 @@ namespace MoonSharp.Interpreter.Interop.Converters
 				case DataType.Void:
 					if (isOptional)
 						return WEIGHT_VOID_WITH_DEFAULT;
-					else if ((!Framework.Do.IsValueType(desiredType)) || (nullableType != null))
+					else if (desiredType.IsValueType || (nullableType != null))
 						return WEIGHT_VOID_WITHOUT_DEFAULT;
 					break;
 				case DataType.Nil:
-					if (Framework.Do.IsValueType(desiredType))
+					if (desiredType.IsValueType)
 					{
 						if (nullableType != null)
 							return WEIGHT_NIL_TO_NULLABLE;
@@ -255,7 +254,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 						return WEIGHT_BOOL_TO_STRING;
 					break;
 				case DataType.Number:
-					if (Framework.Do.IsEnum(desiredType))
+					if (desiredType.IsEnum)
 					{	// number to enum conv
 						return WEIGHT_NUMBER_TO_ENUM;
 					}
@@ -294,7 +293,7 @@ namespace MoonSharp.Interpreter.Interop.Converters
 					}
 					break;
 				case DataType.Table:
-					if (desiredType == typeof(Table) || Framework.Do.IsAssignableFrom(desiredType, typeof(Table)))
+					if (desiredType == typeof(Table) || desiredType.IsAssignableFrom(typeof(Table)))
 						return WEIGHT_EXACT_MATCH;
 					else if (TableConversions.CanConvertTableToType(value.Table, desiredType))
 						return WEIGHT_TABLE_CONVERSION;

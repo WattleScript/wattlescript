@@ -566,11 +566,7 @@ namespace MoonSharp.Interpreter.Interop.LuaStateInterop
 					#region p - pointer
 					case 'p':   // pointer
 						if (o is IntPtr)
-#if PCL || ENABLE_DOTNET
-							w = ( (IntPtr)o ).ToString();
-#else
 							w = "0x" + ((IntPtr)o).ToString("x");
-#endif
 						defaultParamIx++;
 						break;
 					#endregion

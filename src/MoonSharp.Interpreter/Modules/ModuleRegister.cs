@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.CoreLib;
 using MoonSharp.Interpreter.Platforms;
+using MoonSharp.Interpreter.Interop;
 
 namespace MoonSharp.Interpreter
 {
@@ -86,7 +86,7 @@ namespace MoonSharp.Interpreter
 		{
 			Table table = CreateModuleNamespace(gtable, t);
 
-			foreach (MethodInfo mi in Framework.Do.GetMethods(t).Where(__mi => __mi.IsStatic))
+			foreach (MethodInfo mi in t.GetAllMethods().Where(__mi => __mi.IsStatic))
 			{
 				if (mi.GetCustomAttributes(typeof(MoonSharpModuleMethodAttribute), false).ToArray().Length > 0)
 				{
@@ -95,11 +95,8 @@ namespace MoonSharp.Interpreter
 					if (!CallbackFunction.CheckCallbackSignature(mi, true))
 							throw new ArgumentException(string.Format("Method {0} does not have the right signature.", mi.Name));
 
-#if NETFX_CORE
-					Delegate deleg = mi.CreateDelegate(typeof(Func<ScriptExecutionContext, CallbackArguments, DynValue>));
-#else
+
 					Delegate deleg = Delegate.CreateDelegate(typeof(Func<ScriptExecutionContext, CallbackArguments, DynValue>), mi);
-#endif
 
 					Func<ScriptExecutionContext, CallbackArguments, DynValue> func =
 						(Func<ScriptExecutionContext, CallbackArguments, DynValue>)deleg;
@@ -116,7 +113,7 @@ namespace MoonSharp.Interpreter
 				}
 			}
 
-			foreach (FieldInfo fi in Framework.Do.GetFields(t).Where(_mi => _mi.IsStatic && _mi.GetCustomAttributes(typeof(MoonSharpModuleMethodAttribute), false).ToArray().Length > 0))
+			foreach (FieldInfo fi in t.GetAllFields().Where(_mi => _mi.IsStatic && _mi.GetCustomAttributes(typeof(MoonSharpModuleMethodAttribute), false).ToArray().Length > 0))
 			{
 				MoonSharpModuleMethodAttribute attr = (MoonSharpModuleMethodAttribute)fi.GetCustomAttributes(typeof(MoonSharpModuleMethodAttribute), false).First();
 				string name = (!string.IsNullOrEmpty(attr.Name)) ? attr.Name : fi.Name;
@@ -124,7 +121,7 @@ namespace MoonSharp.Interpreter
 				RegisterScriptField(fi, null, table, t, name);
 			}
 
-			foreach (FieldInfo fi in Framework.Do.GetFields(t).Where(_mi => _mi.IsStatic && _mi.GetCustomAttributes(typeof(MoonSharpModuleConstantAttribute), false).ToArray().Length > 0))
+			foreach (FieldInfo fi in t.GetAllFields().Where(_mi => _mi.IsStatic && _mi.GetCustomAttributes(typeof(MoonSharpModuleConstantAttribute), false).ToArray().Length > 0))
 			{
 				MoonSharpModuleConstantAttribute attr = (MoonSharpModuleConstantAttribute)fi.GetCustomAttributes(typeof(MoonSharpModuleConstantAttribute), false).First();
 				string name = (!string.IsNullOrEmpty(attr.Name)) ? attr.Name : fi.Name;
@@ -170,7 +167,7 @@ namespace MoonSharp.Interpreter
 
 		private static Table CreateModuleNamespace(Table gtable, Type t)
 		{
-			MoonSharpModuleAttribute attr = (MoonSharpModuleAttribute)(Framework.Do.GetCustomAttributes(t, typeof(MoonSharpModuleAttribute), false).First());
+			MoonSharpModuleAttribute attr = (MoonSharpModuleAttribute)(t.GetCustomAttributes(typeof(MoonSharpModuleAttribute), false).First());
 
 			if (string.IsNullOrEmpty(attr.Namespace))
 			{
@@ -195,7 +192,7 @@ namespace MoonSharp.Interpreter
 
 				DynValue package = gtable.RawGet("package");
 
-				if (package == null || package.Type != DataType.Table)
+				if (package.Type != DataType.Table)
 				{
 					gtable.Set("package", package = DynValue.NewTable(gtable.OwnerScript));
 				}
@@ -203,7 +200,7 @@ namespace MoonSharp.Interpreter
 
 				DynValue loaded = package.Table.RawGet("loaded");
 
-				if (loaded == null || loaded.Type != DataType.Table)
+				if (loaded.Type != DataType.Table)
 				{
 					package.Table.Set("loaded", loaded = DynValue.NewTable(gtable.OwnerScript));
 				}

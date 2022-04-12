@@ -35,7 +35,9 @@ namespace MoonSharp.Interpreter.CoreLib
 		[MoonSharpModuleMethod]
 		public static DynValue clock(ScriptExecutionContext executionContext, CallbackArguments args)
 		{
-			return GetUnixTime(DateTime.UtcNow, Time0);
+			var t = GetUnixTime(DateTime.UtcNow, Time0);
+			if (t.IsNil()) return DynValue.NewNumber(0.0);
+			return t;
 		}
 
 		[MoonSharpModuleMethod]
@@ -119,7 +121,6 @@ namespace MoonSharp.Interpreter.CoreLib
 			}
 			else
 			{
-#if !(PCL || ENABLE_DOTNET || NETFX_CORE)
 
 				try
 				{
@@ -131,7 +132,6 @@ namespace MoonSharp.Interpreter.CoreLib
 					// this catches a weird mono bug: https://bugzilla.xamarin.com/show_bug.cgi?id=11817
 					// however the behavior is definitely not correct. damn.
 				}
-#endif
 			}
 
 

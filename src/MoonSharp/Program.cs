@@ -12,8 +12,6 @@ using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Loaders;
 using MoonSharp.Interpreter.REPL;
 using MoonSharp.Interpreter.Serialization;
-using MoonSharp.RemoteDebugger;
-using MoonSharp.RemoteDebugger.Network;
 
 namespace MoonSharp
 {
@@ -75,7 +73,7 @@ namespace MoonSharp
 			{
 				DynValue result = interpreter.Evaluate(s);
 
-				if (result != null && result.Type != DataType.Void)
+				if (result.Type != DataType.Void)
 					Console.WriteLine("{0}", result);
 			}
 			catch (InterpreterException ex)

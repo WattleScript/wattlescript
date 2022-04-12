@@ -6,7 +6,7 @@ using MoonSharp.Interpreter.Tree.Expressions;
 
 namespace MoonSharp.Interpreter.Tree.Statements
 {
-	class ForLoopStatement : Statement
+	class ForLoopStatement : Statement, IBlockStatement
 	{
 		//for' NAME '=' exp ',' exp (',' exp)? 'do' block 'end'
 		RuntimeScopeBlock m_StackFrame;
@@ -14,8 +14,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		SymbolRef m_VarName;
 		Expression m_Start, m_End, m_Step;
 		SourceRef m_RefFor, m_RefEnd;
+		private Token nameToken;
 
-		public ForLoopStatement(ScriptLoadingContext lcontext, Token nameToken, Token forToken)
+		public SourceRef End => m_RefEnd;
+		
+		public ForLoopStatement(ScriptLoadingContext lcontext, Token nameToken, Token forToken, bool paren)
 			: base(lcontext)
 		{
 			//	for Name ‘=’ exp ‘,’ exp [‘,’ exp] do block end | 
@@ -37,16 +40,45 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				m_Step = new LiteralExpression(lcontext, DynValue.NewNumber(1));
 			}
 
-			lcontext.Scope.PushBlock();
-			m_VarName = lcontext.Scope.DefineLocal(nameToken.Text);
-			m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
-			m_InnerBlock = new CompositeStatement(lcontext);
-			m_RefEnd = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
-			m_StackFrame = lcontext.Scope.PopBlock();
+			this.nameToken = nameToken;
+			if (paren) CheckTokenType(lcontext, TokenType.Brk_Close_Round);
+
+			if (lcontext.Syntax == ScriptSyntax.Lua || lcontext.Lexer.Current.Type == TokenType.Do)
+			{
+				m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Do));
+				m_InnerBlock = new CompositeStatement(lcontext, BlockEndType.Normal);
+				m_RefEnd = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
+			}
+			else if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
+			{
+				m_RefFor = forToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Brk_Open_Curly));
+				m_InnerBlock = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+				m_RefEnd = CheckTokenType(lcontext, TokenType.Brk_Close_Curly).GetSourceRef();
+			}
+			else
+			{
+				m_RefFor = forToken.GetSourceRef(lcontext.Lexer.Current);
+				m_InnerBlock = CreateStatement(lcontext, out _);
+				if (m_InnerBlock is IBlockStatement block)
+					m_RefEnd = block.End;
+				else
+					m_RefEnd = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+			}
 
 			lcontext.Source.Refs.Add(m_RefFor);
 			lcontext.Source.Refs.Add(m_RefEnd);
-		}		
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Start.ResolveScope(lcontext);
+			m_End.ResolveScope(lcontext);
+			m_Step.ResolveScope(lcontext);
+			lcontext.Scope.PushBlock();
+			m_VarName = lcontext.Scope.DefineLocal(nameToken.Text);
+			m_InnerBlock.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
+		}
 
 
 		public override void Compile(ByteCode bc)
@@ -60,17 +92,13 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			bc.LoopTracker.Loops.Push(L);
 
-			m_End.Compile(bc);
-			bc.Emit_ToNum(3);
+			m_End.CompilePossibleLiteral(bc);
 			m_Step.Compile(bc);
-			bc.Emit_ToNum(2);
-			m_Start.Compile(bc);
-			bc.Emit_ToNum(1);
+			m_Start.CompilePossibleLiteral(bc);
 
 			int start = bc.GetJumpPointForNextInstruction();
 			var jumpend = bc.Emit_Jump(OpCode.JFor, -1);
 			bc.Emit_Enter(m_StackFrame);
-			//bc.Emit_SymStorN(m_VarName);
 
 			bc.Emit_Store(m_VarName, 0, 0);
 
@@ -80,6 +108,8 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			bc.PushSourceRef(m_RefEnd);
 
 			bc.Emit_Debug("..end");
+
+			int continuePoint = bc.GetJumpPointForNextInstruction();
 			bc.Emit_Leave(m_StackFrame);
 			bc.Emit_Incr(1);
 			bc.Emit_Jump(OpCode.Jump, start);
@@ -88,10 +118,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			int exitpoint = bc.GetJumpPointForNextInstruction();
 
-			foreach (Instruction i in L.BreakJumps)
-				i.NumVal = exitpoint;
-
-			jumpend.NumVal = exitpoint;
+			foreach (int i in L.BreakJumps)
+				bc.SetNumVal(i, exitpoint);
+			foreach (int i in L.ContinueJumps)
+				bc.SetNumVal(i, continuePoint);
+			
+			bc.SetNumVal(jumpend, exitpoint);
 			bc.Emit_Pop(3);
 
 			bc.PopSourceRef();

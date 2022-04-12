@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Loaders
 {
@@ -80,10 +79,10 @@ namespace MoonSharp.Interpreter.Loaders
 				Type resourcesType = Type.GetType("UnityEngine.Resources, UnityEngine");
 				Type textAssetType = Type.GetType("UnityEngine.TextAsset, UnityEngine");
 
-				MethodInfo textAssetNameGet = Framework.Do.GetGetMethod(Framework.Do.GetProperty(textAssetType, "name"));
-				MethodInfo textAssetTextGet = Framework.Do.GetGetMethod(Framework.Do.GetProperty(textAssetType, "text"));
+				MethodInfo textAssetNameGet = textAssetType.GetProperty("name").GetGetMethod(true);
+				MethodInfo textAssetTextGet = textAssetType.GetProperty("text").GetGetMethod(true);
 
-				MethodInfo loadAll = Framework.Do.GetMethod(resourcesType, "LoadAll",
+				MethodInfo loadAll = resourcesType.GetMethod("LoadAll",
 					new Type[] { typeof(string), typeof(Type) });
 
 				Array array = (Array)loadAll.Invoke(null, new object[] { assetsPath, textAssetType });

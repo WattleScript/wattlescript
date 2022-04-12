@@ -18,8 +18,10 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(sref);
 		}
 
-
-
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Expression?.ResolveScope(lcontext);
+		}
 
 		public ReturnStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
@@ -51,7 +53,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			{
 				if (m_Expression != null)
 				{
-					m_Expression.Compile(bc);
+					m_Expression.CompilePossibleLiteral(bc);
 					bc.Emit_Ret(1);
 				}
 				else

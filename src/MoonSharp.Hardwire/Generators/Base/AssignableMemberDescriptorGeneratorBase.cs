@@ -19,7 +19,7 @@ namespace MoonSharp.Hardwire.Generators
 		protected abstract string GetPrefix();
 
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generator, CodeTypeMemberCollection members)
 		{
 			bool isStatic = table.Get("static").Boolean;
 			string memberType = table.Get("type").String;
@@ -43,7 +43,7 @@ namespace MoonSharp.Hardwire.Generators
 				access = access | MemberDescriptorAccess.CanRead;
 
 
-			string className = GetPrefix() + "_" + Guid.NewGuid().ToString("N");
+			string className = GetPrefix() + "_" + IdGen.Create($"{parent ?? null}:assignable:{name}:{memberType}:{isStatic}:{decltype}:{declvtype}:{canWrite}:{canRead}");
 
 			CodeTypeDeclaration classCode = new CodeTypeDeclaration(className);
 

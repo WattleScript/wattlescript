@@ -2,35 +2,51 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
+using MoonSharp.Interpreter.Tree;
 
 namespace MoonSharp.Interpreter
 {
 	/// <summary>
 	/// A class representing a value in a Lua/MoonSharp script.
 	/// </summary>
-	public sealed class DynValue
+	[StructLayout(LayoutKind.Explicit)]
+	public struct DynValue
 	{
-		static int s_RefIDCounter = 0;
-
-		private int m_RefID = ++s_RefIDCounter;
-		private int m_HashCode = -1;
-
-		private bool m_ReadOnly;
+		private static readonly object m_NumberTag = new object();
+		[FieldOffset(0)]
 		private double m_Number;
+		[FieldOffset(0)]
+		private ulong m_U64;
+		[FieldOffset(8)]
 		private object m_Object;
-		private DataType m_Type;
 
-
-		/// <summary>
-		/// Gets a unique reference identifier. This is guaranteed to be unique only for dynvalues created in a single thread as it's not thread-safe.
-		/// </summary>
-		public int ReferenceID { get { return m_RefID; } }
+		private const ulong QNAN = 0x7ffc000000000000;
+		private const ulong BOOLEAN_MASK = 0x0FFFFFFFFF;
+		private const ulong BOOL_TRUE = QNAN | ((ulong)DataType.Boolean << 40) | BOOLEAN_MASK;
+		private const ulong BOOL_FALSE = QNAN | ((ulong) DataType.Boolean << 40);
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static ulong TYPE(DataType type)
+		{
+			return QNAN | ((ulong) type) << 40;
+		}
 
 		/// <summary>
 		/// Gets the type of the value.
 		/// </summary>
-		public DataType Type { get { return m_Type; } }
+		public DataType Type
+		{
+			get
+			{
+				if (m_Object == m_NumberTag) return DataType.Number;
+				return (DataType) ((m_U64 >> 40) & 0xFF);
+			}
+		}
+
 		/// <summary>
 		/// Gets the function (valid only if the <see cref="Type"/> is <see cref="DataType.Function"/>)
 		/// </summary>
@@ -55,7 +71,7 @@ namespace MoonSharp.Interpreter
 		/// <summary>
 		/// Gets the boolean value (valid only if the <see cref="Type"/> is <see cref="DataType.Boolean"/>)
 		/// </summary>
-		public bool Boolean { get { return Number != 0; } }
+		public bool Boolean { get { return (m_U64 & BOOLEAN_MASK) != 0; } }
 		/// <summary>
 		/// Gets the string value (valid only if the <see cref="Type"/> is <see cref="DataType.String"/>)
 		/// </summary>
@@ -76,21 +92,8 @@ namespace MoonSharp.Interpreter
 		/// Gets the tail call data.
 		/// </summary>
 		public UserData UserData { get { return m_Object as UserData; } }
-
-		/// <summary>
-		/// Returns true if this instance is write protected.
-		/// </summary>
-		public bool ReadOnly { get { return m_ReadOnly; } }
-
-
-
-		/// <summary>
-		/// Creates a new writable value initialized to Nil.
-		/// </summary>
-		public static DynValue NewNil()
-		{
-			return new DynValue();
-		}
+		
+		internal Task Task { get { return m_Object as Task; } }
 
 		/// <summary>
 		/// Creates a new writable value initialized to the specified boolean.
@@ -99,8 +102,7 @@ namespace MoonSharp.Interpreter
 		{
 			return new DynValue()
 			{
-				m_Number = v ? 1 : 0,
-				m_Type = DataType.Boolean,
+				m_U64 = v ? BOOL_TRUE : BOOL_FALSE
 			};
 		}
 
@@ -112,8 +114,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Number = num,
-				m_Type = DataType.Number,
-				m_HashCode = -1,
+				m_Object = m_NumberTag,
 			};
 		}
 
@@ -125,7 +126,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = str,
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -137,7 +138,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = sb.ToString(),
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -149,7 +150,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = string.Format(format, args),
-				m_Type = DataType.String,
+				m_U64 = TYPE(DataType.String)
 			};
 		}
 
@@ -164,7 +165,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = coroutine,
-				m_Type = DataType.Thread
+				m_U64 = TYPE(DataType.Thread)
 			};
 		}
 
@@ -176,7 +177,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = function,
-				m_Type = DataType.Function,
+				m_U64 = TYPE(DataType.Function)
 			};
 		}
 
@@ -188,7 +189,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new CallbackFunction(callBack, name),
-				m_Type = DataType.ClrFunction,
+				m_U64 = TYPE(DataType.ClrFunction)
 			};
 		}
 
@@ -201,7 +202,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = function,
-				m_Type = DataType.ClrFunction,
+				m_U64 = TYPE(DataType.ClrFunction)
 			};
 		}
 
@@ -213,7 +214,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = table,
-				m_Type = DataType.Table,
+				m_U64 = TYPE(DataType.Table)
 			};
 		}
 
@@ -262,7 +263,7 @@ namespace MoonSharp.Interpreter
 					Args = args,
 					Function = tailFn,
 				},
-				m_Type = DataType.TailCallRequest,
+				m_U64 = TYPE(DataType.TailCallRequest)
 			};
 		}
 
@@ -280,7 +281,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = tailCallData,
-				m_Type = DataType.TailCallRequest,
+				m_U64 = TYPE(DataType.TailCallRequest)
 			};
 		}
 
@@ -296,7 +297,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new YieldRequest() { ReturnValues = args },
-				m_Type = DataType.YieldRequest,
+				m_U64 = TYPE(DataType.YieldRequest)
 			};
 		}
 
@@ -310,7 +311,16 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = new YieldRequest() { Forced = true },
-				m_Type = DataType.YieldRequest,
+				m_U64 = TYPE(DataType.YieldRequest)
+			};
+		}
+
+		internal static DynValue NewAwaitReq(System.Threading.Tasks.Task task)
+		{
+			return new DynValue()
+			{
+				m_Object = task,
+				m_U64 = TYPE(DataType.AwaitRequest)
 			};
 		}
 
@@ -320,7 +330,7 @@ namespace MoonSharp.Interpreter
 		public static DynValue NewTuple(params DynValue[] values)
 		{
 			if (values.Length == 0)
-				return DynValue.NewNil();
+				return DynValue.Nil;
 
 			if (values.Length == 1)
 				return values[0];
@@ -328,7 +338,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = values,
-				m_Type = DataType.Tuple,
+				m_U64 = TYPE(DataType.Tuple),
 			};
 		}
 
@@ -356,7 +366,7 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = vals.ToArray(),
-				m_Type = DataType.Tuple,
+				m_U64 = TYPE(DataType.Tuple)
 			};
 		}
 
@@ -369,55 +379,8 @@ namespace MoonSharp.Interpreter
 			return new DynValue()
 			{
 				m_Object = userData,
-				m_Type = DataType.UserData,
+				m_U64 = TYPE(DataType.UserData)
 			};
-		}
-
-		/// <summary>
-		/// Returns this value as readonly - eventually cloning it in the process if it isn't readonly to start with.
-		/// </summary>
-		public DynValue AsReadOnly()
-		{
-			if (ReadOnly)
-				return this;
-			else
-			{
-				return Clone(true);
-			}
-		}
-
-		/// <summary>
-		/// Clones this instance.
-		/// </summary>
-		/// <returns></returns>
-		public DynValue Clone()
-		{
-			return Clone(this.ReadOnly);
-		}
-
-		/// <summary>
-		/// Clones this instance, overriding the "readonly" status.
-		/// </summary>
-		/// <param name="readOnly">if set to <c>true</c> the new instance is set as readonly, or writeable otherwise.</param>
-		/// <returns></returns>
-		public DynValue Clone(bool readOnly)
-		{
-			DynValue v = new DynValue();
-			v.m_Object = this.m_Object;
-			v.m_Number = this.m_Number;
-			v.m_HashCode = this.m_HashCode;
-			v.m_Type = this.m_Type;
-			v.m_ReadOnly = readOnly;
-			return v;
-		}
-
-		/// <summary>
-		/// Clones this instance, returning a writable copy.
-		/// </summary>
-		/// <exception cref="System.ArgumentException">Can't clone Symbol values</exception>
-		public DynValue CloneAsWritable()
-		{
-			return Clone(false);
 		}
 
 
@@ -441,10 +404,10 @@ namespace MoonSharp.Interpreter
 
 		static DynValue()
 		{
-			Nil = new DynValue() { m_Type = DataType.Nil }.AsReadOnly();
-			Void = new DynValue() { m_Type = DataType.Void }.AsReadOnly();
-			True = DynValue.NewBoolean(true).AsReadOnly();
-			False = DynValue.NewBoolean(false).AsReadOnly();
+			Nil = new DynValue() { };
+			Void = new DynValue() { m_U64 = TYPE(DataType.Void) };
+			True = DynValue.NewBoolean(true);
+			False = DynValue.NewBoolean(false);
 		}
 
 
@@ -560,6 +523,7 @@ namespace MoonSharp.Interpreter
 			}
 		}
 
+
 		/// <summary>
 		/// Returns a hash code for this instance.
 		/// </summary>
@@ -568,47 +532,20 @@ namespace MoonSharp.Interpreter
 		/// </returns>
 		public override int GetHashCode()
 		{
-			if (m_HashCode != -1)
-				return m_HashCode;
-
 			int baseValue = ((int)(Type)) << 27;
-
 			switch (Type)
 			{
 				case DataType.Void:
 				case DataType.Nil:
-					m_HashCode = 0;
-					break;
+					return 0;
 				case DataType.Boolean:
-					m_HashCode = Boolean ? 1 : 2;
-					break;
+					return Boolean ? 1 : 2;
 				case DataType.Number:
-					m_HashCode = baseValue ^ Number.GetHashCode();
-					break;
-				case DataType.String:
-					m_HashCode = baseValue ^ String.GetHashCode();
-					break;
-				case DataType.Function:
-					m_HashCode = baseValue ^ Function.GetHashCode();
-					break;
-				case DataType.ClrFunction:
-					m_HashCode = baseValue ^ Callback.GetHashCode();
-					break;
-				case DataType.Table:
-					m_HashCode = baseValue ^ Table.GetHashCode();
-					break;
-				case DataType.Tuple:
-				case DataType.TailCallRequest:
-					m_HashCode = baseValue ^ Tuple.GetHashCode();
-					break;
-				case DataType.UserData:
-				case DataType.Thread:
+					return baseValue ^ Number.GetHashCode();
 				default:
-					m_HashCode = 999;
-					break;
+					if (m_Object == null) return 0;
+					else return baseValue ^ m_Object.GetHashCode();
 			}
-
-			return m_HashCode;
 		}
 
 		/// <summary>
@@ -620,10 +557,8 @@ namespace MoonSharp.Interpreter
 		/// </returns>
 		public override bool Equals(object obj)
 		{
-			DynValue other = obj as DynValue;
-
-			if (other == null) return false;
-
+			if (!(obj is DynValue other)) return false;
+			
 			if ((other.Type == DataType.Nil && this.Type == DataType.Void)
 				|| (other.Type == DataType.Void && this.Type == DataType.Nil))
 				return true;
@@ -650,7 +585,12 @@ namespace MoonSharp.Interpreter
 					return Table == other.Table;
 				case DataType.Tuple:
 				case DataType.TailCallRequest:
-					return Tuple == other.Tuple;
+					if (Tuple.Length != other.Tuple.Length)
+						return false;
+					for(int i = 0; i < Tuple.Length; i++)
+						if (!Equals(Tuple[i], other.Tuple[i]))
+							return false;
+					return true;
 				case DataType.Thread:
 					return Coroutine == other.Coroutine;
 				case DataType.UserData:
@@ -673,7 +613,7 @@ namespace MoonSharp.Interpreter
 						return false;
 					}
 				default:
-					return object.ReferenceEquals(this, other);
+					return false;
 			}
 		}
 
@@ -684,7 +624,7 @@ namespace MoonSharp.Interpreter
 		/// <returns>The string representation, or null if not number, not string.</returns>
 		public string CastToString()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Number)
 			{
 				return rv.Number.ToString();
@@ -702,28 +642,242 @@ namespace MoonSharp.Interpreter
 		/// <returns>The string representation, or null if not number, not string or non-convertible-string.</returns>
 		public double? CastToNumber()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Number)
 			{
 				return rv.Number;
 			}
 			else if (rv.Type == DataType.String)
 			{
-				double num;
-				if (double.TryParse(rv.String, NumberStyles.Any, CultureInfo.InvariantCulture, out num))
-					return num;
+				if (ToNumber(rv.String, out double n))
+				{
+					return n;
+				}
 			}
 			return null;
 		}
+		
+		public int? CastToInt()
+		{
+			ref DynValue rv = ref ScalarReference(ref this);
+			switch (rv.Type)
+			{
+				case DataType.Number:
+					return (int)rv.Number;
+				case DataType.String when ToNumber(rv.String, out int n):
+					return n;
+				default:
+					return null;
+			}
+		}
 
+		internal double AssertNumber(int stage)
+		{
+			if (!TryCastToNumber(out var num))
+				throw ScriptRuntimeException.ConvertToNumberFailed(stage);
+			return num;
+		}
+		
+		public bool TryCastToNumber(out double d)
+		{
+			ref DynValue rv = ref ScalarReference(ref this);
+			if (rv.Type == DataType.Number)
+			{
+				d = rv.Number;
+				return true;
+			}
+			else if (rv.Type == DataType.String)
+			{
+				if (ToNumber(rv.String, out d))
+				{
+					return true;
+				}
+			}
+			d = 0.0;
+			return false;
+		}
 
+		public static bool ToNumber(string str, out int num)
+		{
+			//Validate characters
+			num = 0;
+			bool hex = false;
+			for (int i = 0; i < str.Length; i++)
+			{
+				if (char.IsWhiteSpace(str[i]) ||
+				    char.IsDigit(str[i]) ||
+				    (str[i] >= 'A' && str[i] <= 'F') ||
+				    (str[i] >= 'a' && str[i] <= 'f') ||
+				    str[i] == '-' ||
+				    str[i] == 'p' ||
+				    str[i] == 'P' ||
+				    str[i] == '+' ||
+				    str[i] == '.')
+					continue;
+
+				if (str[i] == 'x' || str[i] == 'X')
+				{
+					hex = true;
+					continue;
+				}
+
+				return false;
+			}
+			
+			//hex float
+			if (hex)
+			{
+				if (ParseHexFloat(str, out num))
+					return true;
+			}
+			else
+			{
+				if (int.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out num))
+					return true;
+			}
+			return false;
+		}
+
+		public static bool ToNumber(string str, out double num)
+		{
+			//Validate characters
+			num = 0.0;
+			bool hex = false;
+			for (int i = 0; i < str.Length; i++)
+			{
+				if (char.IsWhiteSpace(str[i]) ||
+				    char.IsDigit(str[i]) ||
+				    (str[i] >= 'A' && str[i] <= 'F') ||
+				    (str[i] >= 'a' && str[i] <= 'f') ||
+				    str[i] == '-' ||
+				    str[i] == 'p' ||
+				    str[i] == 'P' ||
+				    str[i] == '+' ||
+				    str[i] == '.')
+					continue;
+					
+				if (str[i] == 'x' || str[i] == 'X')
+				{
+					hex = true;
+					continue;
+				}
+
+				return false;
+			}
+			
+			//hex float
+			if (hex)
+			{
+				if (ParseHexFloat(str, out num))
+					return true;
+			}
+			else
+			{
+				if (double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out num))
+					return true;
+			}
+			return false;
+		}
+
+		static bool ParseHexFloat(string s, out double result)
+		{
+			bool negate = false;
+			result = 0.0;
+			s = s.Trim();
+			if (s[0] == '+')
+				s = s.Substring(1);
+			if (s[0] == '-') {
+				negate = true;
+				s = s.Substring(1);
+			}
+			if ((s.Length < 3) || s[0] != '0' || char.ToUpperInvariant(s[1]) != 'X')
+				return false;
+
+			s = s.Substring(2);
+			double value = 0.0;
+			int dummy, exp = 0;
+
+			s = LexerUtils.ReadHexProgressive(s, ref value, out dummy);
+
+			if (s.Length > 0 && s[0] == '.')
+			{
+				s = s.Substring(1);
+				s = LexerUtils.ReadHexProgressive(s, ref value, out exp);
+			}
+			
+			exp *= -4;
+
+			if (s.Length > 0 && char.ToUpper(s[0]) == 'P')
+			{
+				if (s.Length == 1)
+					return false;
+				s = s.Substring(s[1] == '+' ? 2 : 1);
+				int exp1 = int.Parse(s, CultureInfo.InvariantCulture);
+				if (exp1 < 0) return false; //can't add negative exponent
+				exp += exp1;
+				s = "";
+			}
+
+			if (s.Length > 0) return false;
+
+			result = value * Math.Pow(2, exp);
+			if (negate) result = -result;
+			return true;
+		}
+		
+		static bool ParseHexFloat(string s, out int result)
+		{
+			bool negate = false;
+			result = 0;
+			s = s.Trim();
+			if (s[0] == '+')
+				s = s.Substring(1);
+			if (s[0] == '-') {
+				negate = true;
+				s = s.Substring(1);
+			}
+			if ((s.Length < 3) || s[0] != '0' || char.ToUpperInvariant(s[1]) != 'X')
+				return false;
+
+			s = s.Substring(2);
+			double value = 0.0;
+			int dummy, exp = 0;
+
+			s = LexerUtils.ReadHexProgressive(s, ref value, out dummy);
+
+			if (s.Length > 0 && s[0] == '.')
+			{
+				s = s.Substring(1);
+				s = LexerUtils.ReadHexProgressive(s, ref value, out exp);
+			}
+			
+			exp *= -4;
+
+			if (s.Length > 0 && char.ToUpper(s[0]) == 'P')
+			{
+				if (s.Length == 1)
+					return false;
+				s = s.Substring(s[1] == '+' ? 2 : 1);
+				int exp1 = int.Parse(s, CultureInfo.InvariantCulture);
+				if (exp1 < 0) return false; //can't add negative exponent
+				exp += exp1;
+				s = "";
+			}
+
+			if (s.Length > 0) return false;
+
+			result = (int)(value * Math.Pow(2, exp));
+			if (negate) result = -result;
+			return true;
+		}
+		
 		/// <summary>
 		/// Casts this DynValue to a bool
 		/// </summary>
 		/// <returns>False if value is false or nil, true otherwise.</returns>
 		public bool CastToBool()
 		{
-			DynValue rv = ToScalar();
+			ref DynValue rv = ref ScalarReference(ref this);
 			if (rv.Type == DataType.Boolean)
 				return rv.Boolean;
 			else return (rv.Type != DataType.Nil && rv.Type != DataType.Void);
@@ -754,20 +908,14 @@ namespace MoonSharp.Interpreter
 			return Tuple[0].ToScalar();
 		}
 
-		/// <summary>
-		/// Performs an assignment, overwriting the value with the specified one.
-		/// </summary>
-		/// <param name="value">The value.</param>
-		/// <exception cref="ScriptRuntimeException">If the value is readonly.</exception>
-		public void Assign(DynValue value)
+		static internal ref DynValue ScalarReference(ref DynValue d)
 		{
-			if (this.ReadOnly)
-				throw new ScriptRuntimeException("Assigning on r-value");
-
-			this.m_Number = value.m_Number;
-			this.m_Object = value.m_Object;
-			this.m_Type = value.Type;
-			this.m_HashCode = -1;
+			if (d.Type != DataType.Tuple)
+				return ref d;
+			if (d.Tuple.Length == 0) {
+				return ref d;
+			}
+			return ref ScalarReference(ref d.Tuple[0]);
 		}
 
 
@@ -827,19 +975,7 @@ namespace MoonSharp.Interpreter
 			return (this.Type == DataType.Nil) || (this.Type == DataType.Void) || (this.Type == DataType.Number && double.IsNaN(this.Number));
 		}
 
-		/// <summary>
-		/// Changes the numeric value of a number DynValue.
-		/// </summary>
-		internal void AssignNumber(double num)
-		{
-			if (this.ReadOnly)
-				throw new InternalErrorException(null, "Writing on r-value");
-
-			if (this.Type != DataType.Number)
-				throw new InternalErrorException("Can't assign number to type {0}", this.Type);
-
-			this.m_Number = num;
-		}
+		
 
 		/// <summary>
 		/// Creates a new DynValue from a CLR object

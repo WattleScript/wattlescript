@@ -16,11 +16,11 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.StandardUserDataDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generator,
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generator,
 			CodeTypeMemberCollection members)
 		{
 			string type = (string)table["$key"];
-			string className = "TYPE_" + Guid.NewGuid().ToString("N");
+			string className = "TYPE_" + IdGen.Create($"TYPE${type}");
 
 			CodeTypeDeclaration classCode = new CodeTypeDeclaration(className);
 
@@ -42,7 +42,7 @@ namespace MoonSharp.Hardwire.Generators
 
 			classCode.Members.Add(ctor);
 
-			generator.DispatchTablePairs(table.Get("members").Table,
+			generator.DispatchTablePairs(type, table.Get("members").Table,
 				classCode.Members, (key, exp) =>
 				{
 					var mname = new CodePrimitiveExpression(key);
@@ -51,7 +51,7 @@ namespace MoonSharp.Hardwire.Generators
 						new CodeThisReferenceExpression(), "AddMember", mname, exp));
 				});
 
-			generator.DispatchTablePairs(table.Get("metamembers").Table,
+			generator.DispatchTablePairs(type, table.Get("metamembers").Table,
 				classCode.Members, (key, exp) =>
 				{
 					var mname = new CodePrimitiveExpression(key);

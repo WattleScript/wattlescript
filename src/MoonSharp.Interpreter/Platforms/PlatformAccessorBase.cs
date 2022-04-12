@@ -44,18 +44,6 @@ namespace MoonSharp.Interpreter.Platforms
 			else
 				suffix = "dotnet";
 
-			if (PlatformAutoDetector.IsPortableFramework)
-				suffix = suffix + ".portable";
-			
-			if (PlatformAutoDetector.IsRunningOnClr4)
-				suffix = suffix + ".clr4";
-			else
-				suffix = suffix + ".clr2";
-
-#if DOTNET_CORE
-			suffix += ".netcore";
-#endif
-
 			if (PlatformAutoDetector.IsRunningOnAOT)
 				suffix = suffix + ".aot";
 

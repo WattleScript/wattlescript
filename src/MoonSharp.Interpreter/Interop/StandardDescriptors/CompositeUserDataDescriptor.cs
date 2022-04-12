@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Interop
 {
@@ -66,10 +65,10 @@ namespace MoonSharp.Interpreter.Interop
 			{
 				DynValue v = dd.Index(script, obj, index, isNameIndex);
 
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <summary>
@@ -122,10 +121,10 @@ namespace MoonSharp.Interpreter.Interop
 			{
 				DynValue v = dd.MetaIndex(script, obj, metaname);
 
-				if (v != null)
+				if (v.IsNotNil())
 					return v;
 			}
-			return null;
+			return DynValue.Nil;
 		}
 
 
@@ -139,7 +138,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// <returns></returns>
 		public bool IsTypeCompatible(Type type, object obj)
 		{
-			return Framework.Do.IsInstanceOfType(type, obj);
+			return type.IsInstanceOfType(obj);
 		}
 	}
 }

@@ -52,7 +52,7 @@ namespace MoonSharp.Interpreter.Debugging
 		{
 			return string.Format("{0}:{1}:{2}:{3}:{4}:{5}",
 				Address, BasePtr, RetAddress, Name ?? "(null)",
-				Value != null ? Value.ToString() : "(null)",
+				Value.ToString(),
 				LValue != null ? LValue.ToString() : "(null)");
 		}
 

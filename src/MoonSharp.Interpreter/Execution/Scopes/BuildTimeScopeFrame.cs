@@ -1,4 +1,6 @@
-﻿using MoonSharp.Interpreter.Tree.Statements;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MoonSharp.Interpreter.Tree.Statements;
 
 namespace MoonSharp.Interpreter.Execution.Scopes
 {
@@ -8,11 +10,10 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 		BuildTimeScopeBlock m_ScopeTreeHead;
 		RuntimeScopeFrame m_ScopeFrame = new RuntimeScopeFrame();
 
-		public bool HasVarArgs { get; private set;}
+		public bool HasVarArgs { get; set;}
 
-		internal BuildTimeScopeFrame(bool hasVarArgs)
+		internal BuildTimeScopeFrame()
 		{
-			HasVarArgs = hasVarArgs;
 			m_ScopeTreeHead = m_ScopeTreeRoot = new BuildTimeScopeBlock(null);
 		}
 
@@ -62,6 +63,13 @@ namespace MoonSharp.Interpreter.Execution.Scopes
 		{
 			return m_ScopeTreeHead.Define(name);
 		}
+
+		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		{
+			m_ScopeTreeHead.BlockResolution(locals);
+		}
+
+		internal void UnblockResolution() => m_ScopeTreeHead.UnblockResolution();
 
 		internal SymbolRef TryDefineLocal(string name)
 		{

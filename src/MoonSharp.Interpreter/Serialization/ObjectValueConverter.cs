@@ -3,21 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.Converters;
+using MoonSharp.Interpreter.Interop;
 
 namespace MoonSharp.Interpreter.Serialization
 {
 	public static class ObjectValueConverter
 	{
-		public static DynValue SerializeObjectToDynValue(Script script, object o, DynValue valueForNulls = null)
+		public static DynValue SerializeObjectToDynValue(Script script, object o, DynValue valueForNulls = default)
 		{
 			if (o == null)
-				return valueForNulls ?? DynValue.Nil;
+				return valueForNulls;
 
 			DynValue v = ClrToScriptConversions.TryObjectToTrivialDynValue(script, o);
 
-			if (v != null)
+			if (v.IsNotNil())
 				return v;
 
 			if (o is Enum)
@@ -38,9 +38,9 @@ namespace MoonSharp.Interpreter.Serialization
 			{
 				Type type = o.GetType();
 
-				foreach (PropertyInfo pi in Framework.Do.GetProperties(type))
+				foreach (PropertyInfo pi in type.GetAllProperties())
 				{
-					var getter = Framework.Do.GetGetMethod(pi);
+					var getter = pi.GetGetMethod(true);
 					var isStatic = getter.IsStatic;
 					var obj = getter.Invoke(isStatic ? null : o, null); // convoluted workaround for --full-aot Mono execution
 

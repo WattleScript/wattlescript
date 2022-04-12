@@ -4,16 +4,30 @@ namespace MoonSharp.Interpreter.Execution.VM
 {
 	sealed partial class Processor
 	{
+		private CallStackItem Nil = new CallStackItem();
+		
 		private void ClearBlockData(Instruction I)
 		{
-			int from = I.NumVal;
-			int to = I.NumVal2;
+			ref var exStack = ref m_ExecutionStack.Peek();
+			int from = exStack.LocalBase + I.NumVal;
+			int to = exStack.LocalBase + I.NumVal2;
 
-			var array = this.m_ExecutionStack.Peek().LocalScope;
-
+			int length = to - from + 1;
+			
 			if (to >= 0 && from >= 0 && to >= from)
 			{
-				Array.Clear(array, from, to - from + 1);
+				if (exStack.OpenClosures != null)
+				{
+					for (int i = exStack.OpenClosures.Count - 1; i >= 0; i--)
+					{
+						if (exStack.OpenClosures[i].Index >= from && exStack.OpenClosures[i].Index <= to) {
+							exStack.OpenClosures[i].Close();
+							exStack.OpenClosures.RemoveAt(i);
+						}
+					}					
+				}
+
+				m_ValueStack.ClearSection(from, length);
 			}
 		}
 
@@ -27,9 +41,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 				case SymbolRefType.Global:
 					return GetGlobalSymbol(GetGenericSymbol(symref.i_Env), symref.i_Name);
 				case SymbolRefType.Local:
-					return GetTopNonClrFunction().LocalScope[symref.i_Index];
+					return m_ValueStack[GetTopNonClrFunction().LocalBase + symref.i_Index];
 				case SymbolRefType.Upvalue:
-					return GetTopNonClrFunction().ClosureScope[symref.i_Index];
+					return GetTopNonClrFunction().ClosureScope[symref.i_Index].Value();
 				default:
 					throw new InternalErrorException("Unexpected {0} LRef at resolution: {1}", symref.i_Type, symref.i_Name);
 			}
@@ -48,7 +62,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 			if (dynValue.Type != DataType.Table)
 				throw new InvalidOperationException(string.Format("_ENV is not a table but a {0}", dynValue.Type));
 
-			dynValue.Table.Set(name, value ?? DynValue.Nil);
+			dynValue.Table.Set(name, value);
 		}
 
 
@@ -61,24 +75,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 					break;
 				case SymbolRefType.Local:
 					{
-						var stackframe = GetTopNonClrFunction();
-
-						DynValue v = stackframe.LocalScope[symref.i_Index];
-						if (v == null)
-							stackframe.LocalScope[symref.i_Index] = v = DynValue.NewNil();
-
-						v.Assign(value);
+						ref var stackframe = ref GetTopNonClrFunction();
+						m_ValueStack[stackframe.BasePointer + symref.i_Index] = value;
 					}
 					break;
 				case SymbolRefType.Upvalue:
 					{
-						var stackframe = GetTopNonClrFunction();
-
-						DynValue v = stackframe.ClosureScope[symref.i_Index];
-						if (v == null)
-							stackframe.ClosureScope[symref.i_Index] = v = DynValue.NewNil();
-
-						v.Assign(value);
+						ref var stackframe = ref GetTopNonClrFunction();
+						if(stackframe.ClosureScope[symref.i_Index] == null)
+							stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
+						
+						stackframe.ClosureScope[symref.i_Index].Value() = value;
 					}
 					break;
 				case SymbolRefType.DefaultEnv:
@@ -90,19 +97,17 @@ namespace MoonSharp.Interpreter.Execution.VM
 			}
 		}
 
-		CallStackItem GetTopNonClrFunction()
+		ref CallStackItem GetTopNonClrFunction()
 		{
-			CallStackItem stackframe = null;
-
 			for (int i = 0; i < m_ExecutionStack.Count; i++)
 			{
-				stackframe = m_ExecutionStack.Peek(i);
-
+				ref CallStackItem stackframe = ref m_ExecutionStack.Peek(i);
+				
 				if (stackframe.ClrFunction == null)
-					break;
+					return ref stackframe;
 			}
 
-			return stackframe;
+			return ref Nil;
 		}
 
 
@@ -110,9 +115,9 @@ namespace MoonSharp.Interpreter.Execution.VM
 		{
 			if (m_ExecutionStack.Count > 0)
 			{
-				CallStackItem stackframe = GetTopNonClrFunction();
+				ref CallStackItem stackframe = ref GetTopNonClrFunction();
 
-				if (stackframe != null)
+				if (!stackframe.IsNil)
 				{
 					if (stackframe.Debug_Symbols != null)
 					{
@@ -120,7 +125,7 @@ namespace MoonSharp.Interpreter.Execution.VM
 						{
 							var l = stackframe.Debug_Symbols[i];
 
-							if (l.i_Name == name && stackframe.LocalScope[i] != null)
+							if (l.i_Name == name /*&& stackframe.LocalScope[i] != null*/) //should a local scope ever not be inited?
 								return l;
 						}
 					}

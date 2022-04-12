@@ -16,7 +16,7 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.DynValueMemberDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members)
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generatorContext, CodeTypeMemberCollection members)
 		{
 			string className = "DVAL_" + Guid.NewGuid().ToString("N");
 			DynValue kval = table.Get("value");

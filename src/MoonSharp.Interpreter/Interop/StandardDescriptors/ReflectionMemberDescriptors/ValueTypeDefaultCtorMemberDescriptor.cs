@@ -1,5 +1,4 @@
 ﻿using System;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.Converters;
 
@@ -66,7 +65,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// <exception cref="System.ArgumentException">valueType is not a value type</exception>
 		public ValueTypeDefaultCtorMemberDescriptor(Type valueType)
 		{
-			if (!Framework.Do.IsValueType(valueType))
+			if (!valueType.IsValueType)
 				throw new ArgumentException("valueType is not a value type");
 
 			this.Name = "__new";

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MoonSharp.Interpreter.Compatibility;
+using System.Runtime;
 
 namespace MoonSharp.Interpreter.Interop
 {
@@ -111,7 +111,7 @@ namespace MoonSharp.Interpreter.Interop
 		{
 			m_Type = type;
 
-			if (Framework.Do.IsValueType(m_Type))
+			if (m_Type.IsValueType)
 				throw new ArgumentException("Type cannot be a value type.");
 
 			foreach(string property in expectedMissingProperties)
@@ -119,7 +119,7 @@ namespace MoonSharp.Interpreter.Interop
 				m_PropertyMap.Add(property, null);
 			}
 
-			foreach (PropertyInfo pi in Framework.Do.GetProperties(m_Type))
+			foreach (PropertyInfo pi in m_Type.GetAllProperties())
 			{
 				foreach (MoonSharpPropertyAttribute attr in pi.GetCustomAttributes(true).OfType<MoonSharpPropertyAttribute>())
 				{
@@ -170,7 +170,7 @@ namespace MoonSharp.Interpreter.Interop
 							pi.PropertyType, null, false);
 					}
 
-					Framework.Do.GetSetMethod(pi).Invoke(obj, new object[] { o });
+					pi.GetSetMethod(true).Invoke(obj, new object[] { o });
 				}
 
 				return true;
@@ -202,7 +202,7 @@ namespace MoonSharp.Interpreter.Interop
 			if (obj == null)
 				throw new ArgumentNullException("Object is null");
 
-			if (!Framework.Do.IsInstanceOfType(m_Type, obj))
+			if (!m_Type.IsInstanceOfType(obj))
 				throw new ArgumentException(string.Format("Invalid type of object : got '{0}', expected {1}", obj.GetType().FullName, m_Type.FullName));
 
 			foreach (var pair in data.Pairs)
@@ -223,10 +223,10 @@ namespace MoonSharp.Interpreter.Interop
 		/// <param name="assigner">The property assigner.</param>
 		public void SetSubassignerForType(Type propertyType, IPropertyTableAssigner assigner)
 		{
-			if (   Framework.Do.IsAbstract(propertyType) 
-				|| Framework.Do.IsGenericType(propertyType) 
-				|| Framework.Do.IsInterface(propertyType) 
-				|| Framework.Do.IsValueType(propertyType))
+			if (  propertyType.IsAbstract
+				|| propertyType.IsGenericType
+				|| propertyType.IsInterface
+				|| propertyType.IsValueType)
 			{
 				throw new ArgumentException("propertyType must be a concrete, reference type");
 			}

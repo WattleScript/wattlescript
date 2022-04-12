@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.CoreLib.IO
 {
@@ -14,7 +13,7 @@ namespace MoonSharp.Interpreter.CoreLib.IO
 		{
 			List<DynValue> readLines = new List<DynValue>();
 
-			DynValue readValue = null;
+			DynValue readValue;
 
 			do
 			{
@@ -191,10 +190,10 @@ namespace MoonSharp.Interpreter.CoreLib.IO
 				return numAsFar.Length == 0;
 
 			if (c == '.')
-				return !Framework.Do.StringContainsChar(numAsFar, '.');
+				return !numAsFar.Contains('.');
 
 			if (c == 'E' || c == 'e')
-				return !(Framework.Do.StringContainsChar(numAsFar, 'E') || Framework.Do.StringContainsChar(numAsFar, 'e'));
+				return !(numAsFar.Contains('E') || numAsFar.Contains('e'));
 
 			return false;
 		}

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 using MoonSharp.Interpreter.Interop.Converters;
 
@@ -180,7 +179,7 @@ namespace MoonSharp.Interpreter.Interop
 					{
 						DynValue arg = args.RawGet(j, false);
 						j += 1;
-						if (arg != null)
+						if (arg.IsNotNil())
 							extraArgs.Add(arg);
 						else
 							break;
@@ -195,7 +194,7 @@ namespace MoonSharp.Interpreter.Interop
 
 						if (arg.Type == DataType.UserData && arg.UserData.Object != null)
 						{
-							if (Framework.Do.IsAssignableFrom(VarArgsArrayType, arg.UserData.Object.GetType()))
+							if (VarArgsArrayType.IsAssignableFrom(arg.UserData.Object.GetType()))
 							{
 								pars[i] = arg.UserData.Object;
 								continue;
@@ -218,7 +217,7 @@ namespace MoonSharp.Interpreter.Interop
 				// else, convert it
 				else
 				{
-					var arg = args.RawGet(j, false) ?? DynValue.Void;
+					var arg = args.RawGet(j, false);
 					pars[i] = ScriptToClrConversions.DynValueToObjectOfType(arg, parameters[i].Type,
 						parameters[i].DefaultValue, parameters[i].HasDefaultValue);
 					j += 1;

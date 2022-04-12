@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using MoonSharp.Interpreter.Execution;
 using MoonSharp.Interpreter.Tree.Expressions;
+using MoonSharp.Interpreter.DataStructs;
+using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree
 {
@@ -10,12 +13,27 @@ namespace MoonSharp.Interpreter.Tree
 			: base(lcontext)
 		{ }
 
+		public bool LexerCarry { get; set; } // currently used to indicate whether ternary parsing in in progress
+		
 		public virtual string GetFriendlyDebugName()
 		{
 			return null;
 		}
 
 		public abstract DynValue Eval(ScriptExecutionContext context);
+
+		public abstract void ResolveScope(ScriptLoadingContext lcontext);
+
+		public abstract bool EvalLiteral(out DynValue dv);
+
+		public void CompilePossibleLiteral(ByteCode bc)
+		{
+			if (EvalLiteral(out var dv))
+			{
+				bc.Emit_Literal(dv);
+			}
+			else Compile(bc);
+		}
 
 		public virtual SymbolRef FindDynamic(ScriptExecutionContext context)
 		{
@@ -36,8 +54,7 @@ namespace MoonSharp.Interpreter.Tree
 
 			return exps;
 		}
-
-
+		
 		internal static List<Expression> ExprList(ScriptLoadingContext lcontext)
 		{
 			List<Expression> exps = new List<Expression>();
@@ -60,10 +77,9 @@ namespace MoonSharp.Interpreter.Tree
 			return SubExpr(lcontext, true);
 		}
 
-		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary)
+		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary, bool binaryChainInProgress = false)
 		{
-			Expression e = null;
-
+			Expression e;
 			Token T = lcontext.Lexer.Current;
 
 			if (T.IsUnaryOperator())
@@ -104,22 +120,44 @@ namespace MoonSharp.Interpreter.Tree
 
 			T = lcontext.Lexer.Current;
 
+			if (T.Type == TokenType.Ternary)
+			{
+				if (!binaryChainInProgress)
+				{
+					return new TernaryExpression(lcontext, e);	
+				}
+
+				e.LexerCarry = true;
+				return e;
+			}
+
 			if (isPrimary && T.IsBinaryOperator())
 			{
 				object chain = BinaryOperatorExpression.BeginOperatorChain();
 
 				BinaryOperatorExpression.AddExpressionToChain(chain, e);
-
+				bool forceReturnTernary = false;
+				
 				while (T.IsBinaryOperator())
 				{
 					BinaryOperatorExpression.AddOperatorToChain(chain, T);
 					lcontext.Lexer.Next();
-					Expression right = SubExpr(lcontext, false);
+					Expression right = SubExpr(lcontext, false, true);
 					BinaryOperatorExpression.AddExpressionToChain(chain, right);
 					T = lcontext.Lexer.Current;
+					
+					if (right.LexerCarry)
+					{
+						forceReturnTernary = true;
+					}
 				}
 
 				e = BinaryOperatorExpression.CommitOperatorChain(chain, lcontext);
+				
+				if (forceReturnTernary)
+				{
+					return new TernaryExpression(lcontext, e);	
+				}
 			}
 
 			return e;
@@ -134,7 +172,7 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Number:
 				case TokenType.Number_Hex:
 				case TokenType.Number_HexFloat:
-				case TokenType.String:
+				case TokenType.String when lcontext.Syntax != ScriptSyntax.CLike:
 				case TokenType.String_Long:
 				case TokenType.Nil:
 				case TokenType.True:
@@ -145,11 +183,32 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Brk_Open_Curly:
 				case TokenType.Brk_Open_Curly_Shared:
 					return new TableConstructor(lcontext, t.Type == TokenType.Brk_Open_Curly_Shared);
+				case TokenType.Brk_Open_Square when lcontext.Syntax != ScriptSyntax.Lua:
+					return new TableConstructor(lcontext, false);
 				case TokenType.Function:
 					lcontext.Lexer.Next();
 					return new FunctionDefinitionExpression(lcontext, false, false);
 				case TokenType.Lambda:
 					return new FunctionDefinitionExpression(lcontext, false, true);
+				case TokenType.Brk_Open_Round:
+				{
+					if (lcontext.Syntax == ScriptSyntax.Lua) return PrimaryExp(lcontext);
+					//Scan to see if this is an arrow lambda
+					lcontext.Lexer.SavePos();
+					lcontext.Lexer.Next(); // skip bracket
+					while (lcontext.Lexer.Current.Type != TokenType.Eof &&
+					       lcontext.Lexer.Current.Type != TokenType.Brk_Close_Round &&
+					       lcontext.Lexer.Current.Type != TokenType.Brk_Open_Round) {
+						lcontext.Lexer.Next();
+					}
+					lcontext.Lexer.Next();
+					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow || lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
+					lcontext.Lexer.RestorePos();
+					if (arrowLambda) 					
+						return new FunctionDefinitionExpression(lcontext, false, true);
+					else
+						return PrimaryExp(lcontext);
+				}
 				default:
 					return PrimaryExp(lcontext);
 			}
@@ -163,50 +222,76 @@ namespace MoonSharp.Interpreter.Tree
 		/// <returns></returns>
 		internal static Expression PrimaryExp(ScriptLoadingContext lcontext)
 		{
+			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow && lcontext.Lexer.Current.Type == TokenType.Name)
+			{
+				return new FunctionDefinitionExpression(lcontext, false, true);
+			}
+
 			Expression e = PrefixExp(lcontext);
 
 			while (true)
 			{
 				Token T = lcontext.Lexer.Current;
 				Token thisCallName = null;
-
+				
 				switch (T.Type)
 				{
 					case TokenType.Dot:
-						{
-							lcontext.Lexer.Next();
-							Token name = CheckTokenType(lcontext, TokenType.Name);
-							e = new IndexExpression(e, name.Text, lcontext);
-						}
+					case TokenType.DotNil:
+					{
+						lcontext.Lexer.Next();
+						Token name = CheckTokenType(lcontext, TokenType.Name);
+						var ne = new IndexExpression(e, name, T.Type == TokenType.DotNil, lcontext);
+						//Break nil checking chain on next nil check
+						if (e is IndexExpression ie && T.Type != TokenType.DotNil) ie.NilChainNext = ne;
+						e = ne;
 						break;
+					}
+					case TokenType.BrkOpenSquareNil:
 					case TokenType.Brk_Open_Square:
 						{
 							Token openBrk = lcontext.Lexer.Current;
 							lcontext.Lexer.Next(); // skip bracket
 							Expression index = Expr(lcontext);
-
 							// support moonsharp multiple indexers for userdata
 							if (lcontext.Lexer.Current.Type == TokenType.Comma)
 							{
 								var explist = ExprListAfterFirstExpr(lcontext, index);
 								index = new ExprListExpression(explist, lcontext);
 							}
-
 							CheckMatch(lcontext, openBrk, TokenType.Brk_Close_Square, "]");
-							e = new IndexExpression(e, index, lcontext);
+							var ne = new IndexExpression(e, index, T.Type == TokenType.BrkOpenSquareNil, lcontext);
+							//Break nil checking chain on next nil check
+							if (e is IndexExpression ie && T.Type != TokenType.BrkOpenSquareNil) ie.NilChainNext = ne;
+							e = ne;
+							break;
 						}
-						break;
-					case TokenType.Colon:
+					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.CLike:
+					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.CLike:
 						lcontext.Lexer.Next();
 						thisCallName = CheckTokenType(lcontext, TokenType.Name);
 						goto case TokenType.Brk_Open_Round;
 					case TokenType.Brk_Open_Round:
 					case TokenType.String:
 					case TokenType.String_Long:
-					case TokenType.Brk_Open_Curly:
 					case TokenType.Brk_Open_Curly_Shared:
-						e = new FunctionCallExpression(lcontext, e, thisCallName);
+					{
+						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
+						if (e is IndexExpression ie) ie.NilChainNext = ne;
+						e = ne;
 						break;
+					}
+					case TokenType.Brk_Open_Curly:
+					{
+						if (e is AdjustmentExpression)
+						{
+							return e;
+						}
+						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
+						if (e is IndexExpression ie) ie.NilChainNext = ne;
+						e = ne;
+						break;
+					}
 					default:
 						return e;
 				}
@@ -220,6 +305,11 @@ namespace MoonSharp.Interpreter.Tree
 			Token T = lcontext.Lexer.Current;
 			switch (T.Type)
 			{
+				case TokenType.String when lcontext.Syntax == ScriptSyntax.CLike:
+				case TokenType.String_EndTemplate:
+					return new LiteralExpression(lcontext, T);
+				case TokenType.String_TemplateFragment:
+					return new TemplatedStringExpression(lcontext, T);
 				case TokenType.Brk_Open_Round:
 					lcontext.Lexer.Next();
 					Expression e = Expr(lcontext);

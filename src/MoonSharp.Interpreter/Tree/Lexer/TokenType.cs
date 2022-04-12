@@ -8,6 +8,7 @@ namespace MoonSharp.Interpreter.Tree
 		Name,
 		And,
 		Break,
+		Continue,
 		Do,
 		Else,
 		ElseIf,
@@ -49,17 +50,52 @@ namespace MoonSharp.Interpreter.Tree
 		Brk_Close_Square,
 		Brk_Open_Square,
 		Op_Len,
+		//Number arithmetic
 		Op_Pwr,
 		Op_Mod,
 		Op_Div,
 		Op_Mul,
 		Op_MinusOrSub,
 		Op_Add,
+		Op_AddEq,
+		Op_SubEq,
+		Op_DivEq,
+		Op_ModEq,
+		Op_MulEq,
+		Op_PwrEq,
+		Op_ConcatEq,
+		Op_Inc,
+		Op_Dec,
+		//Bitwise ops
+		Op_Not,
+		Op_LShift,
+		Op_RShiftArithmetic,
+		Op_RShiftLogical,
+		Op_And,
+		Op_Xor,
+		Op_Or,
+		Op_LShiftEq,
+		Op_RShiftArithmeticEq,
+		Op_RShiftLogicalEq,
+		Op_AndEq,
+		Op_XorEq,
+		Op_OrEq,
+		//Nil operators
+		Op_NilCoalesce,
+		Op_NilCoalesceInverse,
+		Op_NilCoalescingAssignment,
+		Op_NilCoalescingAssignmentInverse,
+		//Nil Accessing
+		DotNil,
+		BrkOpenSquareNil,
+		
+		Ternary,
 		Comment,
 
 		String,
 		String_Long,
-
+		String_TemplateFragment,
+		String_EndTemplate,
 		Number,
 		Number_HexFloat,
 		Number_Hex,
@@ -68,6 +104,11 @@ namespace MoonSharp.Interpreter.Tree
 
 		Brk_Open_Curly_Shared,
 		Op_Dollar,
+		
+		Arrow,
+		ChunkAnnotation,
+		FunctionAnnotation,
+		Directive,
 	}
 
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Interop
 {
@@ -39,7 +38,7 @@ namespace MoonSharp.Interpreter.Interop
 		/// <inheritdoc/>
 		public DynValue Index(Script script, object obj, DynValue index, bool isDirectIndexing)
 		{
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <inheritdoc/>
@@ -57,13 +56,13 @@ namespace MoonSharp.Interpreter.Interop
 		/// <inheritdoc/>
 		public DynValue MetaIndex(Script script, object obj, string metaname)
 		{
-			return null;
+			return DynValue.Nil;
 		}
 
 		/// <inheritdoc/>
 		public bool IsTypeCompatible(Type type, object obj)
 		{
-			return Framework.Do.IsInstanceOfType(type, obj);
+			return type.IsInstanceOfType(obj);
 		}
 
 		/// <inheritdoc/>
@@ -72,7 +71,7 @@ namespace MoonSharp.Interpreter.Interop
 			if (UserData.IsTypeRegistered(type))
 				return null;
 
-			if (Framework.Do.IsGenericTypeDefinition(type))
+			if (type.IsGenericTypeDefinition)
 				return null;
 
 			return UserData.RegisterType(type, AccessMode);

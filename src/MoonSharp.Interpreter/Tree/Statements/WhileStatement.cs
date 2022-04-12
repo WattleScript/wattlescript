@@ -5,13 +5,16 @@ using MoonSharp.Interpreter.Execution.VM;
 
 namespace MoonSharp.Interpreter.Tree.Statements
 {
-	class WhileStatement : Statement
+	class WhileStatement : Statement, IBlockStatement
 	{
 		Expression m_Condition;
 		Statement m_Block;
 		RuntimeScopeBlock m_StackFrame;
 		SourceRef m_Start, m_End;
+		
+		public SourceRef End => m_End;
 
+		
 		public WhileStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
@@ -21,17 +24,37 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			m_Start = whileTk.GetSourceRefUpTo(lcontext.Lexer.Current);
 
-			//m_Start = BuildSourceRef(context.Start, exp.Stop);
-			//m_End = BuildSourceRef(context.Stop, context.END());
+			
+			
+			if (lcontext.Syntax != ScriptSyntax.Lua &&
+			    lcontext.Lexer.Current.Type != TokenType.Do &&
+			    lcontext.Lexer.Current.Type != TokenType.Brk_Open_Curly)
+			{
+				m_Block = CreateStatement(lcontext, out _);
+				if (m_Block is IBlockStatement block)
+					m_End = block.End;
+				else
+					m_End = CheckTokenType(lcontext, TokenType.SemiColon).GetSourceRef();
+			}
+			else
+			{
+				var tk = CheckTokenTypeEx(lcontext, TokenType.Do, TokenType.Brk_Open_Curly);
+				m_Block = new CompositeStatement(lcontext,
+					tk.Type == TokenType.Brk_Open_Curly ? BlockEndType.CloseCurly : BlockEndType.Normal);
+				m_End = CheckTokenTypeEx(lcontext, TokenType.End, TokenType.Brk_Close_Curly).GetSourceRef();
+			}
 
-			lcontext.Scope.PushBlock();
-			CheckTokenType(lcontext, TokenType.Do);
-			m_Block = new CompositeStatement(lcontext);
-			m_End = CheckTokenType(lcontext, TokenType.End).GetSourceRef();
-			m_StackFrame = lcontext.Scope.PopBlock();
 
 			lcontext.Source.Refs.Add(m_Start);
 			lcontext.Source.Refs.Add(m_End);
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			lcontext.Scope.PushBlock();
+			m_Condition.ResolveScope(lcontext);
+			m_Block.ResolveScope(lcontext);
+			m_StackFrame = lcontext.Scope.PopBlock();
 		}
 
 
@@ -60,6 +83,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			bc.Emit_Debug("..end");
 			bc.PushSourceRef(m_End);
 	
+			int continuePoint = bc.GetJumpPointForNextInstruction();
 			bc.Emit_Leave(m_StackFrame);
 			bc.Emit_Jump(OpCode.Jump, start);
 			
@@ -67,10 +91,12 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			int exitpoint = bc.GetJumpPointForNextInstruction();
 
-			foreach (Instruction i in L.BreakJumps)
-				i.NumVal = exitpoint;
-
-			jumpend.NumVal = exitpoint;
+			foreach (int i in L.BreakJumps)
+				bc.SetNumVal(i, exitpoint);
+			foreach (int i in L.ContinueJumps)
+				bc.SetNumVal(i, continuePoint);
+			
+			bc.SetNumVal(jumpend, exitpoint);
 
 			bc.PopSourceRef();
 		}

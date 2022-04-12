@@ -35,57 +35,50 @@ namespace MoonSharp.Interpreter.Tree
 			return string.Format("{0}  - {1} - '{2}'", tokenTypeString, location, this.Text ?? "");
 		}
 
-		public static TokenType? GetReservedTokenType(string reservedWord)
+		public static TokenType? GetReservedTokenType(string reservedWord, bool extended)
 		{
-			switch (reservedWord)
+			if (extended)
 			{
-				case "and":
-					return TokenType.And;
-				case "break":
-					return TokenType.Break;
-				case "do":
-					return TokenType.Do;
-				case "else":
-					return TokenType.Else;
-				case "elseif":
-					return TokenType.ElseIf;
-				case "end":
-					return TokenType.End;
-				case "false":
-					return TokenType.False;
-				case "for":
-					return TokenType.For;
-				case "function":
-					return TokenType.Function;
-				case "goto":
-					return TokenType.Goto;
-				case "if":
-					return TokenType.If;
-				case "in":
-					return TokenType.In;
-				case "local":
-					return TokenType.Local;
-				case "nil":
-					return TokenType.Nil;
-				case "not":
-					return TokenType.Not;
-				case "or":
-					return TokenType.Or;
-				case "repeat":
-					return TokenType.Repeat;
-				case "return":
-					return TokenType.Return;
-				case "then":
-					return TokenType.Then;
-				case "true":
-					return TokenType.True;
-				case "until":
-					return TokenType.Until;
-				case "while":
-					return TokenType.While;
-				default:
-					return null;
+				switch (reservedWord)
+				{
+					case "let":
+					case "var":
+						return TokenType.Local;
+					case "of":
+						return TokenType.In;
+					case "continue":
+						return TokenType.Continue;
+					case "null":
+						return TokenType.Nil;
+				}
 			}
+
+			return reservedWord switch
+			{
+				"and" => TokenType.And,
+				"break" => TokenType.Break,
+				"do" => TokenType.Do,
+				"else" => TokenType.Else,
+				"elseif" => TokenType.ElseIf,
+				"end" => TokenType.End,
+				"false" => TokenType.False,
+				"for" => TokenType.For,
+				"function" => TokenType.Function,
+				"goto" => TokenType.Goto,
+				"if" => TokenType.If,
+				"in" => TokenType.In,
+				"local" => TokenType.Local,
+				"nil" => TokenType.Nil,
+				"not" => TokenType.Not,
+				"or" => TokenType.Or,
+				"repeat" => TokenType.Repeat,
+				"return" => TokenType.Return,
+				"then" => TokenType.Then,
+				"true" => TokenType.True,
+				"until" => TokenType.Until,
+				"while" => TokenType.While,
+				_ => null
+			};
 		}
 
 		public double GetNumberValue()
@@ -118,7 +111,8 @@ namespace MoonSharp.Interpreter.Tree
 
 		public bool IsUnaryOperator()
 		{
-			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len;
+			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len ||
+			       Type == TokenType.Op_Inc || Type == TokenType.Op_Dec || Type == TokenType.Op_Not;
 		}
 
 		public bool IsBinaryOperator()
@@ -140,6 +134,14 @@ namespace MoonSharp.Interpreter.Tree
 				case TokenType.Op_Mul:
 				case TokenType.Op_MinusOrSub:
 				case TokenType.Op_Add:
+				case TokenType.Op_NilCoalesce:
+				case TokenType.Op_NilCoalesceInverse:
+				case TokenType.Op_Or:
+				case TokenType.Op_And: 
+				case TokenType.Op_Xor:
+				case TokenType.Op_LShift:
+				case TokenType.Op_RShiftArithmetic:
+				case TokenType.Op_RShiftLogical:
 					return true;
 				default:
 					return false;

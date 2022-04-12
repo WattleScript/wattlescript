@@ -19,7 +19,11 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 
 				Expression exp;
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					exp = Expression.Expr(lcontext);
+					lcontext.Scope = new BuildTimeScope();
+					exp.ResolveScope(lcontext);
+				}
 
 				return new DynamicExprExpression(exp, lcontext);
 			}
@@ -35,21 +39,27 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 		{
 			return new ScriptLoadingContext(script)
 			{
-				Scope = new BuildTimeScope(),
 				Source = source,
-				Lexer = new Lexer(source.SourceID, source.Code, true)
+				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.Syntax != ScriptSyntax.Lua, script.Options.Syntax == ScriptSyntax.CLike, script.Options.Directives),
+				Syntax = script.Options.Syntax
 			};
 		}
 
 		internal static int LoadChunk(Script script, SourceCode source, ByteCode bytecode)
 		{
 			ScriptLoadingContext lcontext = CreateLoadingContext(script, source);
+	#if !DEBUG_PARSER
 			try
 			{
+	#endif
 				Statement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					stat = new ChunkStatement(lcontext);
+					lcontext.Scope = new BuildTimeScope();
+					stat.ResolveScope(lcontext);
+				}
 
 				int beginIp = -1;
 
@@ -67,6 +77,8 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				//Debug_DumpByteCode(bytecode, source.SourceID);
 
 				return beginIp;
+#if !DEBUG_PARSER
+
 			}
 			catch (SyntaxErrorException ex)
 			{
@@ -74,6 +86,7 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				ex.Rethrow();
 				throw;
 			}
+#endif
 		}
 
 		internal static int LoadFunction(Script script, SourceCode source, ByteCode bytecode, bool usesGlobalEnv)
@@ -85,7 +98,11 @@ namespace MoonSharp.Interpreter.Tree.Fast_Interface
 				FunctionDefinitionExpression fnx;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
+				{
 					fnx = new FunctionDefinitionExpression(lcontext, usesGlobalEnv);
+					lcontext.Scope = new BuildTimeScope();
+					fnx.ResolveScope(lcontext);
+				}
 
 				int beginIp = -1;
 

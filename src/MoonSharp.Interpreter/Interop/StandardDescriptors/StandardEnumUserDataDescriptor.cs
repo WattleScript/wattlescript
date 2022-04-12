@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using MoonSharp.Interpreter.Compatibility;
 using MoonSharp.Interpreter.Interop.BasicDescriptors;
 
 namespace MoonSharp.Interpreter.Interop
@@ -38,7 +37,7 @@ namespace MoonSharp.Interpreter.Interop
 			string[] names = null, object[] values = null, Type underlyingType = null)
 			: base(enumType, friendlyName)
 		{
-			if (!Framework.Do.IsEnum(enumType))
+			if (!enumType.IsEnum)
 				throw new ArgumentException("enumType must be an enum!");
 
 			UnderlyingType = underlyingType ?? Enum.GetUnderlyingType(enumType);
@@ -65,7 +64,7 @@ namespace MoonSharp.Interpreter.Interop
 				base.AddDynValue(name, cvalue);
 			}
 
-			var attrs = Framework.Do.GetCustomAttributes(this.Type, typeof(FlagsAttribute), true);
+			var attrs = this.Type.GetCustomAttributes(typeof(FlagsAttribute), true);
 
 			if (attrs != null && attrs.Length > 0)
 			{
@@ -335,7 +334,7 @@ namespace MoonSharp.Interpreter.Interop
 			if (metaname == "__concat" && IsFlags)
 				return DynValue.NewCallback(Callback_Or);
 
-			return null;
+			return DynValue.Nil;
 		}
 	}
 }

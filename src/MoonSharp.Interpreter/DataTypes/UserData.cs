@@ -48,7 +48,8 @@ namespace MoonSharp.Interpreter
 			RegisterType<AnonWrapper>(InteropAccessMode.HideMembers);
 			RegisterType<EnumerableWrapper>(InteropAccessMode.NoReflectionAllowed);
 			RegisterType<JsonNull>(InteropAccessMode.Reflection);
-
+			RegisterType<TaskWrapper>();
+			
 			DefaultAccessMode = InteropAccessMode.LazyOptimized;
 		}
 
@@ -144,11 +145,7 @@ namespace MoonSharp.Interpreter
 		{
 			if (asm == null)
 			{
-				#if NETFX_CORE || DOTNET_CORE
-					throw new NotSupportedException("Assembly.GetCallingAssembly is not supported on target framework.");
-				#else
-					asm = Assembly.GetCallingAssembly();
-				#endif
+				asm = Assembly.GetCallingAssembly();
 			}
 
 			TypeDescriptorRegistry.RegisterAssembly(asm, includeExtensionTypes);
@@ -230,7 +227,7 @@ namespace MoonSharp.Interpreter
 				if (o is Type)
 					return CreateStatic((Type)o);
 
-				return null;
+				return DynValue.Nil;
 			}
 
 			return Create(o, descr);
@@ -243,7 +240,7 @@ namespace MoonSharp.Interpreter
 		/// <returns></returns>
 		public static DynValue CreateStatic(IUserDataDescriptor descr)
 		{
-			if (descr == null) return null;
+			if (descr == null) return DynValue.Nil;
 
 			return DynValue.NewUserData(new UserData()
 			{

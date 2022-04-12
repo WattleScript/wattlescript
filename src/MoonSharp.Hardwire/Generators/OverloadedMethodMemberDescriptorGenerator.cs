@@ -16,12 +16,12 @@ namespace MoonSharp.Hardwire.Generators
 			get { return "MoonSharp.Interpreter.Interop.OverloadedMethodMemberDescriptor"; }
 		}
 
-		public CodeExpression[] Generate(Table table, HardwireCodeGenerationContext generator,
+		public CodeExpression[] Generate(string parent, Table table, HardwireCodeGenerationContext generator,
 			CodeTypeMemberCollection members)
 		{
 			List<CodeExpression> initializers = new List<CodeExpression>();
 
-			generator.DispatchTablePairs(table.Get("overloads").Table, members, exp =>
+			generator.DispatchTablePairs(parent, table.Get("overloads").Table, members, exp =>
 			{
 				initializers.Add(exp);
 			});

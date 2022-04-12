@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using MoonSharp.Interpreter.Compatibility;
 
 namespace MoonSharp.Interpreter.Interop.Converters
 {
@@ -44,20 +43,20 @@ namespace MoonSharp.Interpreter.Interop.Converters
 		/// <returns></returns>
 		internal static bool CanConvertTableToType(Table table, Type t)
 		{
-			if (Framework.Do.IsAssignableFrom(t, typeof(Dictionary<object, object>)))
+			if (t.IsAssignableFrom(typeof(Dictionary<object, object>)))
 				return true;
-			else if (Framework.Do.IsAssignableFrom(t, typeof(Dictionary<DynValue, DynValue>)))
+			else if (t.IsAssignableFrom(typeof(Dictionary<DynValue, DynValue>)))
 				return true;
-			else if (Framework.Do.IsAssignableFrom(t, typeof(List<object>)))
+			else if (t.IsAssignableFrom(typeof(List<object>)))
 				return true;
-			else if (Framework.Do.IsAssignableFrom(t, typeof(List<DynValue>)))
+			else if (t.IsAssignableFrom(typeof(List<DynValue>)))
 				return true;
-			else if (Framework.Do.IsAssignableFrom(t, typeof(object[])))
+			else if (t.IsAssignableFrom(typeof(object[])))
 				return true;
-			else if (Framework.Do.IsAssignableFrom(t, typeof(DynValue[])))
+			else if (t.IsAssignableFrom(typeof(DynValue[])))
 				return true;
 
-			if (Framework.Do.IsGenericType(t))
+			if (t.IsGenericType)
 			{
 				Type generic = t.GetGenericTypeDefinition();
 
@@ -88,20 +87,20 @@ namespace MoonSharp.Interpreter.Interop.Converters
 		/// </summary>
 		internal static object ConvertTableToType(Table table, Type t)
 		{
-			if (Framework.Do.IsAssignableFrom(t, typeof(Dictionary<object, object>)))
+			if (t.IsAssignableFrom(typeof(Dictionary<object, object>)))
 				return TableToDictionary<object, object>(table, v => v.ToObject(), v => v.ToObject());
-			else if (Framework.Do.IsAssignableFrom(t, typeof(Dictionary<DynValue, DynValue>)))
+			else if (t.IsAssignableFrom(typeof(Dictionary<DynValue, DynValue>)))
 				return TableToDictionary<DynValue, DynValue>(table, v => v, v => v);
-			else if (Framework.Do.IsAssignableFrom(t, typeof(List<object>)))
+			else if (t.IsAssignableFrom(typeof(List<object>)))
 				return TableToList<object>(table, v => v.ToObject());
-			else if (Framework.Do.IsAssignableFrom(t, typeof(List<DynValue>)))
+			else if (t.IsAssignableFrom(typeof(List<DynValue>)))
 				return TableToList<DynValue>(table, v => v);
-			else if (Framework.Do.IsAssignableFrom(t, typeof(object[])))
+			else if (t.IsAssignableFrom(typeof(object[])))
 				return TableToList<object>(table, v => v.ToObject()).ToArray();
-			else if (Framework.Do.IsAssignableFrom(t, typeof(DynValue[])))
+			else if (t.IsAssignableFrom(typeof(DynValue[])))
 				return TableToList<DynValue>(table, v => v).ToArray();
 
-			if (Framework.Do.IsGenericType(t))
+			if (t.IsGenericType)
 			{
 				Type generic = t.GetGenericTypeDefinition();
 
@@ -110,12 +109,12 @@ namespace MoonSharp.Interpreter.Interop.Converters
 					 || (generic == typeof(ICollection<>))
 					 || (generic == typeof(IEnumerable<>)))
 				{
-					return ConvertTableToListOfGenericType(t, Framework.Do.GetGenericArguments(t)[0], table);
+					return ConvertTableToListOfGenericType(t, t.GetGenericArguments()[0], table);
 				}
 				else if ((generic == typeof(Dictionary<,>))
 					|| (generic == typeof(IDictionary<,>)))
 				{
-					return ConvertTableToDictionaryOfGenericType(t, Framework.Do.GetGenericArguments(t)[0], Framework.Do.GetGenericArguments(t)[1], table);
+					return ConvertTableToDictionaryOfGenericType(t, t.GetGenericArguments()[0], t.GetGenericArguments()[1], table);
 				}
 			}
 

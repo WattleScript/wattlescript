@@ -8,6 +8,29 @@ namespace MoonSharp.Interpreter.Tree.Statements
 {
 	class FunctionDefinitionStatement : Statement
 	{
+		internal class FunctionParamRef
+		{
+			public string Name { get; set; }
+			public Expression DefaultValue { get; set; }
+
+			public FunctionParamRef(string name)
+			{
+				Name = name;
+			}
+
+			public FunctionParamRef(string name, Expression defaultValue)
+			{
+				Name = name;
+				DefaultValue = defaultValue;
+			}
+		}
+	
+		internal class FunctionRef
+		{
+			public string Name { get; set; }
+			public List<FunctionParamRef> Params { get; set; }
+		}
+		
 		SymbolRef m_FuncSymbol;
 		SourceRef m_SourceRef;
 
@@ -19,6 +42,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 		List<string> m_TableAccessors;
 		FunctionDefinitionExpression m_FuncDef;
 
+		private string m_FuncDefName;
+		private string m_FuncLookupSymbol;
+		
+		public bool CanHoist => m_MethodName == null || m_Local;
+
 		public FunctionDefinitionStatement(ScriptLoadingContext lcontext, bool local, Token localToken)
 			: base(lcontext)
 		{
@@ -27,22 +55,21 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			funcKeyword = localToken ?? funcKeyword; // for debugger purposes
 			
 			m_Local = local;
-
+			Token name = CheckTokenType(lcontext, TokenType.Name);
+			
 			if (m_Local)
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
-				m_FuncSymbol = lcontext.Scope.TryDefineLocal(name.Text);
+				m_FuncDefName = name.Text;
 				m_FriendlyName = string.Format("{0} (local)", name.Text);
 				m_SourceRef = funcKeyword.GetSourceRef(name);
 			}
 			else
 			{
-				Token name = CheckTokenType(lcontext, TokenType.Name);
 				string firstName = name.Text;
 
 				m_SourceRef = funcKeyword.GetSourceRef(name);
+				m_FuncLookupSymbol = firstName;
 
-				m_FuncSymbol = lcontext.Scope.Find(firstName);
 				m_FriendlyName = firstName;
 
 				if (lcontext.Lexer.Current.Type != TokenType.Brk_Open_Round)
@@ -87,6 +114,23 @@ namespace MoonSharp.Interpreter.Tree.Statements
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 
+		public void DefineLocals(ScriptLoadingContext lcontext)
+		{
+			if (m_FuncDefName != null)
+			{
+				m_FuncSymbol = lcontext.Scope.TryDefineLocal(m_FuncDefName);
+			}
+		}
+
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			if (m_FuncSymbol == null)
+			{
+				m_FuncSymbol = lcontext.Scope.Find(m_FuncLookupSymbol);
+			}	
+			m_FuncDef.ResolveScope(lcontext);
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			using (bc.EnterSource(m_SourceRef))
@@ -107,7 +151,7 @@ namespace MoonSharp.Interpreter.Tree.Statements
 				}
 			}
 		}
-
+		
 		private int SetMethod(Execution.VM.ByteCode bc)
 		{
 			int cnt = 0;
@@ -116,11 +160,11 @@ namespace MoonSharp.Interpreter.Tree.Statements
 
 			foreach (string str in m_TableAccessors)
 			{
-				bc.Emit_Index(DynValue.NewString(str), true);
+				bc.Emit_Index(str, true);
 				cnt += 1;
 			}
 
-			bc.Emit_IndexSet(0, 0, DynValue.NewString(m_MethodName), true);
+			bc.Emit_IndexSet(0, 0, m_MethodName, true);
 
 			return 1 + cnt;
 		}

@@ -1,4 +1,5 @@
 ﻿using System;
+using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Execution;
 
 namespace MoonSharp.Interpreter.Tree.Expressions
@@ -14,10 +15,19 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			m_Exp = exp;
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			m_Exp.ResolveScope(lcontext);
+		}
 
 		public override DynValue Eval(ScriptExecutionContext context)
 		{
 			return m_Exp.Eval(context);
+		}
+
+		public override bool EvalLiteral(out DynValue dv)
+		{
+			throw new InvalidOperationException();
 		}
 
 		public override void Compile(Execution.VM.ByteCode bc)

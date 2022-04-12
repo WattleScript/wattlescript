@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using MoonSharp.Interpreter.DataStructs;
 using MoonSharp.Interpreter.Execution;
 
 namespace MoonSharp.Interpreter.Tree.Expressions
@@ -19,10 +20,16 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 			return expressions.ToArray();
 		}
 
+		public override void ResolveScope(ScriptLoadingContext lcontext)
+		{
+			foreach(var exp in expressions)
+				exp.ResolveScope(lcontext);
+		}
+
 		public override void Compile(Execution.VM.ByteCode bc)
 		{
 			foreach (var exp in expressions)
-				exp.Compile(bc);
+				exp.CompilePossibleLiteral(bc);
 
 			if (expressions.Count > 1)
 				bc.Emit_MkTuple(expressions.Count);
@@ -34,6 +41,12 @@ namespace MoonSharp.Interpreter.Tree.Expressions
 				return expressions[0].Eval(context);
 
 			return DynValue.Void;
+		}
+
+		public override bool EvalLiteral(out DynValue dv)
+		{
+			dv = DynValue.Nil;
+			return false;
 		}
 	}
 }
