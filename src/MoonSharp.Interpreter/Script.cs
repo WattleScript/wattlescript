@@ -12,6 +12,7 @@ using MoonSharp.Interpreter.Execution.VM;
 using MoonSharp.Interpreter.Interop;
 using MoonSharp.Interpreter.IO;
 using MoonSharp.Interpreter.Platforms;
+using MoonSharp.Interpreter.Tree;
 using MoonSharp.Interpreter.Tree.Expressions;
 using MoonSharp.Interpreter.Tree.Fast_Interface;
 
@@ -23,6 +24,32 @@ namespace MoonSharp.Interpreter
 	/// </summary>
 	public class Script : IScriptPrivateResource
 	{
+		public enum ScriptParserMessageType
+		{
+			Error,
+			Warning,
+			Info
+		}
+	
+		public class ScriptParserMessage 
+		{
+			public string Msg { get; set; }
+			private Token Token { get; set; }
+			public ScriptParserMessageType Type { get; set; }
+
+			internal ScriptParserMessage(Token token)
+			{
+				Token = token;
+				Msg = $"unexpected symbol near '{token}'";
+			}
+		
+			internal ScriptParserMessage(Token token, string msg)
+			{
+				Token = token;
+				Msg = msg;
+			}
+		}
+		
 		/// <summary>
 		/// The version of the MoonSharp engine
 		/// </summary>
@@ -39,6 +66,7 @@ namespace MoonSharp.Interpreter
 		Table m_GlobalTable;
 		IDebugger m_Debugger;
 		Table[] m_TypeMetatables = new Table[(int)LuaTypeExtensions.MaxMetaTypes];
+		internal List<ScriptParserMessage> i_ParserMessages { get; set; } = new List<ScriptParserMessage>();
 
 		/// <summary>
 		/// Initializes the <see cref="Script"/> class.
@@ -838,5 +866,7 @@ namespace MoonSharp.Interpreter
 		{
 			get { return this; }
 		}
+
+		public List<ScriptParserMessage> ParserMessages => i_ParserMessages;
 	}
 }

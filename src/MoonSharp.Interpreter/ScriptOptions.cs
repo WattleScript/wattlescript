@@ -29,6 +29,12 @@ namespace MoonSharp.Interpreter
 
 			this.CheckThreadAccess = defaults.CheckThreadAccess;
 		}
+		
+		public enum ParserErrorModes
+		{
+			Throw,
+			Report
+		}
 
 		/// <summary>
 		/// Gets or sets the current script-loader.
@@ -128,5 +134,11 @@ namespace MoonSharp.Interpreter
 		/// These directions will store the RHS as a string annotation on the chunk.
 		/// </summary>
 		public HashSet<string> Directives { get; set; } = new HashSet<string>();
+
+		/// <summary>
+		/// Specifies how parser reacts to errors while parsing.
+		/// Options are: Throw (paring is aborted after first error), Report (errors are stashed and available in Script.ParserMessages)
+		/// </summary>
+		public ParserErrorModes ParserErrorMode { get; set; } = ParserErrorModes.Throw;
 	}
 }
