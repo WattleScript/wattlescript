@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MoonSharp.Interpreter;
-using MoonSharp.Interpreter.Interop;
+using WattleScript.Interpreter;
+using WattleScript.Interpreter.Interop;
 
 namespace Tutorials.Chapters
 {
@@ -13,7 +13,7 @@ namespace Tutorials.Chapters
 	{
 		#region UserData classes
 
-		[MoonSharpUserData]
+		[WattleScriptUserData]
 		class MyClass
 		{
 			public event EventHandler SomethingHappened;
@@ -37,7 +37,7 @@ namespace Tutorials.Chapters
 			}
 		}
 
-		[MoonSharpUserData]
+		[WattleScriptUserData]
 		class MyClassStatic
 		{
 			public static double calcHypotenuse(double a, double b)
@@ -78,19 +78,19 @@ namespace Tutorials.Chapters
 
 			public int Length { get { return 117; } }
 
-			[MoonSharpUserDataMetamethod("__concat")]
+			[WattleScriptUserDataMetamethod("__concat")]
 			public static int Concat(ArithmOperatorsTestClass o, int v)
 			{
 				return o.Value + v;
 			}
 
-			[MoonSharpUserDataMetamethod("__concat")]
+			[WattleScriptUserDataMetamethod("__concat")]
 			public static int Concat(int v, ArithmOperatorsTestClass o)
 			{
 				return o.Value + v;
 			}
 
-			[MoonSharpUserDataMetamethod("__concat")]
+			[WattleScriptUserDataMetamethod("__concat")]
 			public static int Concat(ArithmOperatorsTestClass o1, ArithmOperatorsTestClass o2)
 			{
 				return o1.Value + o2.Value;
@@ -141,14 +141,14 @@ namespace Tutorials.Chapters
 				return (new List<int>() { 1, 2, 3 }).GetEnumerator();
 			}
 
-			[MoonSharpUserDataMetamethod("__call")]
+			[WattleScriptUserDataMetamethod("__call")]
 			public int DefaultMethod()
 			{
 				return -Value;
 			}
 
-			[MoonSharpUserDataMetamethod("__pairs")]
-			[MoonSharpUserDataMetamethod("__ipairs")]
+			[WattleScriptUserDataMetamethod("__pairs")]
+			[WattleScriptUserDataMetamethod("__ipairs")]
 			public System.Collections.IEnumerator Pairs()
 			{
 				return (new List<DynValue>() { 
@@ -171,7 +171,7 @@ namespace Tutorials.Chapters
 				return obj.calcHypotenuse(3, 4);
 			";
 
-			// Automatically register all MoonSharpUserData types
+			// Automatically register all WattleScriptUserData types
 			UserData.RegisterAssembly();
 
 			Script script = new Script();
@@ -214,7 +214,7 @@ namespace Tutorials.Chapters
 				return obj.calcHypotenuse(3, 4);
 			";
 
-			// Automatically register all MoonSharpUserData types
+			// Automatically register all WattleScriptUserData types
 			UserData.RegisterAssembly();
 
 			Script script = new Script();
@@ -233,7 +233,7 @@ namespace Tutorials.Chapters
 				return obj.calcHypotenuse(3, 4);
 			";
 
-			// Automatically register all MoonSharpUserData types
+			// Automatically register all WattleScriptUserData types
 			UserData.RegisterAssembly();
 
 			Script script = new Script();
@@ -254,7 +254,7 @@ namespace Tutorials.Chapters
 				return x, y, z
 			";
 
-			// Automatically register all MoonSharpUserData types
+			// Automatically register all WattleScriptUserData types
 			UserData.RegisterAssembly();
 
 			Script script = new Script();
@@ -422,10 +422,10 @@ namespace Tutorials.Chapters
 			// Visible - it's public
 			public void Method2() { }
 			// Visible - it's private but forced visible by attribute
-			[MoonSharpVisible(true)]
+			[WattleScriptVisible(true)]
 			private void Method3() { }
 			// Not visible - it's public but forced hidden by attribute
-			[MoonSharpVisible(false)]
+			[WattleScriptVisible(false)]
 			public void Method4() { }
 
 			// Not visible - it's private
@@ -433,10 +433,10 @@ namespace Tutorials.Chapters
 			// Visible - it's public
 			public int Field2 = 0;
 			// Visible - it's private but forced visible by attribute
-			[MoonSharpVisible(true)]
+			[WattleScriptVisible(true)]
 			private int Field3 = 0;
 			// Not visible - it's public but forced hidden by attribute
-			[MoonSharpVisible(false)]
+			[WattleScriptVisible(false)]
 			public int Field4 = 0;
 
 			// Not visible at all - it's private
@@ -445,13 +445,13 @@ namespace Tutorials.Chapters
 			public int Property2 { get; set; }
 			// Readonly - it's public, but the setter is private
 			public int Property3 { get; private set; }
-			// Write only! - the MoonSharpVisible makes the getter hidden and the setter visible!
-			public int Property4 { [MoonSharpVisible(false)] get; [MoonSharpVisible(true)] private set; }
-			// Write only! - the MoonSharpVisible makes the whole property hidden but another attribute resets the setter as visible!
-			[MoonSharpVisible(false)]
-			public int Property5 { get; [MoonSharpVisible(true)] private set; }
-			// Not visible at all - the MoonSharpVisible hides everything
-			[MoonSharpVisible(false)]
+			// Write only! - the WattleScriptVisible makes the getter hidden and the setter visible!
+			public int Property4 { [WattleScriptVisible(false)] get; [WattleScriptVisible(true)] private set; }
+			// Write only! - the WattleScriptVisible makes the whole property hidden but another attribute resets the setter as visible!
+			[WattleScriptVisible(false)]
+			public int Property5 { get; [WattleScriptVisible(true)] private set; }
+			// Not visible at all - the WattleScriptVisible hides everything
+			[WattleScriptVisible(false)]
 			public int Property6 { get; set; }
 
 			// Not visible - it's private
@@ -459,14 +459,14 @@ namespace Tutorials.Chapters
 			// Visible - it's public
 			public event EventHandler Event2;
 			// Visible - it's private but forced visible by attribute
-			[MoonSharpVisible(true)]
+			[WattleScriptVisible(true)]
 			private event EventHandler Event3;
 			// Not visible - it's public but forced hidden by attribute
-			[MoonSharpVisible(false)]
+			[WattleScriptVisible(false)]
 			public event EventHandler Event4;
 			// Not visible - visibility modifiers over add and remove are not currently supported!
-			[MoonSharpVisible(false)]
-			public event EventHandler Event5 { [MoonSharpVisible(true)] add { } [MoonSharpVisible(true)] remove { } }
+			[WattleScriptVisible(false)]
+			public event EventHandler Event5 { [WattleScriptVisible(true)] add { } [WattleScriptVisible(true)] remove { } }
 
 
 

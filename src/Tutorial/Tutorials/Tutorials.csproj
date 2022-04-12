@@ -70,17 +70,17 @@
     <EmbeddedResource Include="Scripts\Test.lua" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MoonSharp.Interpreter\_Projects\MoonSharp.Interpreter.net40-client\MoonSharp.Interpreter.net40-client.csproj">
+    <ProjectReference Include="..\..\WattleScript.Interpreter\_Projects\WattleScript.Interpreter.net40-client\WattleScript.Interpreter.net40-client.csproj">
       <Project>{88d2880c-a863-4b16-abef-f67bd1e98bd1}</Project>
-      <Name>MoonSharp.Interpreter.net40-client</Name>
+      <Name>WattleScript.Interpreter.net40-client</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\MoonSharp.RemoteDebugger\_Projects\MoonSharp.RemoteDebugger.net40-client\MoonSharp.RemoteDebugger.net40-client.csproj">
+    <ProjectReference Include="..\..\WattleScript.RemoteDebugger\_Projects\WattleScript.RemoteDebugger.net40-client\WattleScript.RemoteDebugger.net40-client.csproj">
       <Project>{f9d383b9-2639-4738-a897-4d9f8801b8c9}</Project>
-      <Name>MoonSharp.RemoteDebugger.net40-client</Name>
+      <Name>WattleScript.RemoteDebugger.net40-client</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\MoonSharp.VsCodeDebugger\_Projects\MoonSharp.VsCodeDebugger.net40-client\MoonSharp.VsCodeDebugger.net40-client.csproj">
+    <ProjectReference Include="..\..\WattleScript.VsCodeDebugger\_Projects\WattleScript.VsCodeDebugger.net40-client\WattleScript.VsCodeDebugger.net40-client.csproj">
       <Project>{37b5fc4b-dee0-4428-8c53-c005f52af4a5}</Project>
-      <Name>MoonSharp.VsCodeDebugger.net40-client</Name>
+      <Name>WattleScript.VsCodeDebugger.net40-client</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

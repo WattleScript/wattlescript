@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MoonSharp.Interpreter;
+using WattleScript.Interpreter;
 
 namespace Tutorials.Chapters
 {
@@ -11,7 +11,7 @@ namespace Tutorials.Chapters
 	static class Chapter03
 	{
 		[Tutorial]
-		public static double MoonSharpFactorial()
+		public static double WattleScriptFactorial()
 		{
 			string scriptCode = @"    
 		-- defines a factorial function
@@ -35,7 +35,7 @@ namespace Tutorials.Chapters
 		}
 
 		[Tutorial]
-		public static double MoonSharpFactorial2()
+		public static double WattleScriptFactorial2()
 		{
 			string scriptCode = @"    
 		-- defines a factorial function

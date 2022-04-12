@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using MoonSharp.Interpreter;
-using MoonSharp.Interpreter.Loaders;
+using WattleScript.Interpreter;
+using WattleScript.Interpreter.Loaders;
 
 namespace Tutorials.Chapters
 {

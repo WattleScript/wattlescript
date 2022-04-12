@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MoonSharp.Interpreter;
-using MoonSharp.Interpreter.Debugging;
+using WattleScript.Interpreter;
+using WattleScript.Interpreter.Debugging;
 
 namespace Tutorials.Chapters
 {
