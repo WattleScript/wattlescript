@@ -17,8 +17,8 @@ WattleScript is based off the tried and tested [MoonSharp](https://moonsharp.org
 
 ### Features
 
-* [Wattle](about_wattle) scripting language.
-* Lua mode 99% compatible with Lua 5.2, differences documented [here](lua_differences).
+* [Wattle](https://wattlescript.github.io/about_wattle) scripting language.
+* Lua mode 99% compatible with Lua 5.2, differences documented [here](https://wattlescript.github.io/lua_differences).
 * Easily configured sandbox for safe execution of untrusted scripts.
 * Minimal garbage generation at runtime
 * No external dependencies
@@ -31,4 +31,4 @@ WattleScript is based off the tried and tested [MoonSharp](https://moonsharp.org
 
 ### License
 
-WattleScript is licensed under the 3-clause BSD License. See [LICENSE](license) for details.
+WattleScript is licensed under the 3-clause BSD License. See [LICENSE](https://github.com/WattleScript/wattlescript/blob/main/LICENSE) for details.
