@@ -1,6 +1,7 @@
-<img src="https://user-images.githubusercontent.com/10167247/162865891-d4f8742e-b828-4247-ac74-9fa3452b0b88.svg" width="500" height="250" alt="WattleScript">
+<img src="https://user-images.githubusercontent.com/10167247/163087025-6098be0a-0d50-4228-b73a-d8ff661cedd9.svg" width="500" alt="WattleScript">
 
 https://wattlescript.github.io/
+
 
 <hr/>
 
