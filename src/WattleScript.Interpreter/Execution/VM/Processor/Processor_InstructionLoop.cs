@@ -638,8 +638,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecNot(Instruction i)
 		{
-			DynValue v = m_ValueStack.Pop().ToScalar();
-			m_ValueStack.Push(DynValue.NewBoolean(!(v.CastToBool())));
+			m_ValueStack.Set(0, DynValue.NewBoolean(!m_ValueStack.Peek().CastToBool()));
 		}
 
 		private CallStackItem PopToBasePointer()
@@ -955,19 +954,16 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private int JumpBool(Instruction i, bool expectedValueForJump, int instructionPtr)
 		{
-			DynValue op = m_ValueStack.Pop().ToScalar();
+			DynValue op = m_ValueStack.Pop();
 
-			if (op.CastToBool() == expectedValueForJump)
-				return i.NumVal;
-
-			return instructionPtr;
+			return op.CastToBool() == expectedValueForJump ? i.NumVal : instructionPtr;
 		}
 
 		private int ExecShortCircuitingOperator(Instruction i, int instructionPtr)
 		{
 			bool expectedValToShortCircuit = i.OpCode == OpCode.JtOrPop;
 
-			DynValue op = m_ValueStack.Peek().ToScalar();
+			DynValue op = m_ValueStack.Peek();
 
 			if (op.CastToBool() == expectedValToShortCircuit)
 			{
@@ -1114,7 +1110,6 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		bool ToConcatString(ref DynValue v, out string s, ref int metamethodCounter)
 		{
-			var sc = v.ToScalar();
 			if (v.IsNil()) {
 				s = null;
 				return false;
@@ -1321,15 +1316,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
-
-			// first we do a brute force equals over the references
-			if (object.ReferenceEquals(r, l))
-			{
-				m_ValueStack.Push(DynValue.True);
-				return instructionPtr;
-			}
-
-			// then if they are userdatas, attempt meta
+			
+			// if they are userdatas, attempt meta
 			if (l.Type == DataType.UserData || r.Type == DataType.UserData)
 			{
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__eq", instructionPtr);
@@ -1505,13 +1493,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 			var value = GetStoreValue(i);
-			DynValue h = DynValue.Nil;
-
-
+			
 			while (nestedMetaOps > 0)
 			{
 				--nestedMetaOps;
 
+				DynValue h;
 				if (obj.Type == DataType.Table)
 				{
 					if (!isMultiIndex)
@@ -1564,11 +1551,8 @@ namespace WattleScript.Interpreter.Execution.VM
 					m_ValueStack.Push(value);
 					return Internal_ExecCall(false, 3, instructionPtr);
 				}
-				else
-				{
-					obj = h;
-					h = DynValue.Nil;
-				}
+
+				obj = h;
 			}
 			throw ScriptRuntimeException.LoopInNewIndex();
 		}
@@ -1591,13 +1575,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 
-			DynValue h = DynValue.Nil;
-
-
 			while (nestedMetaOps > 0)
 			{
 				--nestedMetaOps;
 
+				DynValue h;
 				if (obj.Type == DataType.Table)
 				{
 					if (!isMultiIndex)
@@ -1651,11 +1633,8 @@ namespace WattleScript.Interpreter.Execution.VM
 					m_ValueStack.Push(idx);
 					return Internal_ExecCall(false, 2, instructionPtr);
 				}
-				else
-				{
-					obj = h;
-					h = DynValue.Nil;
-				}
+
+				obj = h;
 			}
 
 			throw ScriptRuntimeException.LoopInIndex();
