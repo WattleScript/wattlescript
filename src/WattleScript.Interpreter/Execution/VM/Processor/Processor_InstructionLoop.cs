@@ -638,8 +638,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecNot(Instruction i)
 		{
-			DynValue v = m_ValueStack.Pop();
-			m_ValueStack.Push(v.CastToBool() ? DynValue.False : DynValue.True);
+			m_ValueStack.Set(0, DynValue.NewBoolean(!m_ValueStack.Peek().CastToBool()));
 		}
 
 		private CallStackItem PopToBasePointer()
