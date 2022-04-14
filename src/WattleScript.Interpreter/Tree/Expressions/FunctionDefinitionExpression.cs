@@ -171,7 +171,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			// method decls with ':' must push an implicit 'self' param
 			if (pushSelfParam)
-				paramnames.Add(lcontext.Syntax == ScriptSyntax.CLike ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
+				paramnames.Add(lcontext.Syntax == ScriptSyntax.WattleScript ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
 
 			bool parsingDefaultParams = false;
 			while (lcontext.Lexer.Current.Type != closeToken)

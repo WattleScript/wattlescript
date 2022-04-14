@@ -11,7 +11,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         DynValue RunScript(string source)
         {
             var script = new Script();
-            script.Options.Syntax = ScriptSyntax.CLike;
+            script.Options.Syntax = ScriptSyntax.WattleScript;
             return script.DoString(source);
         }
 
@@ -38,7 +38,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 assert.pass(); 
             else 
                 assert.fail();",
-                s => s.Options.Syntax = ScriptSyntax.CLike);
+                s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -56,7 +56,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 assert.areequal('a', v);
                 break;
             }
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -69,7 +69,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 values[x] = x;
             }
             assert.areequal(10, #values);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -114,7 +114,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 if(a == 10) break;
             }
             assert.areequal(10, a, 'empty for');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -126,14 +126,14 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 assert.areequal(3, table[3][1], 'nested list');
                 assert.areequal(5, table[4][1], 'nested list 2');
                 assert.areequal(5, table['g'], 'map field');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
         public void UsingDirective()
         {
             var s = new Script();
-            s.Options.Syntax = ScriptSyntax.CLike;
+            s.Options.Syntax = ScriptSyntax.WattleScript;
             s.Options.Directives.Add("using");
             var chunk = s.LoadString("using a.b.c;");
             var a = chunk.Function.Annotations[0];
@@ -145,7 +145,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         public void ChunkAnnotations()
         {
             var s = new Script();
-            s.Options.Syntax = ScriptSyntax.CLike;
+            s.Options.Syntax = ScriptSyntax.WattleScript;
             var chunk = s.LoadString(@"
             @@number (1.0)
             @@string ('hello')
@@ -186,7 +186,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         public void FunctionAnnotations()
         {
             var s = new Script();
-            s.Options.Syntax = ScriptSyntax.CLike;
+            s.Options.Syntax = ScriptSyntax.WattleScript;
             s.DoString(@"
             @bind ({name: 'hello', value: 10 })
             function myfunc(args)
@@ -237,7 +237,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 a = 5;
             }
             assert.areequal(3, a, 'numeric for');
-", s => s.Options.Syntax = ScriptSyntax.CLike);
+", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -251,7 +251,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(1, tbl[1]());
             assert.areequal(2, tbl[2]());
             assert.areequal(3, tbl[3]());
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -261,7 +261,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             f = (x = () => {print('yes')}) => {
                     x()
             }
-            f();", s => s.Options.Syntax = ScriptSyntax.CLike);
+            f();", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -277,7 +277,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal('hello world', getstring() + ' world');
             assert.areequal('pancakes123', 'pancakes' + 123);
             assert.areequal('t is TABLE', 't is ' +  t);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         
@@ -291,7 +291,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             }
             assert.isfalse(andfunc(true, false), 'true && false')
             assert.istrue(andfunc(true, true), 'true && true')",
-                s => s.Options.Syntax = ScriptSyntax.CLike);
+                s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -303,7 +303,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             }
             assert.istrue(orfunc(true, false), 'true || false')
             assert.isfalse(orfunc(false, false), 'false && false')",
-                s => s.Options.Syntax = ScriptSyntax.CLike);
+                s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -334,7 +334,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             //assert.areequal(4, f, '^=');
             assert.areequal(1, g, '%=');
             assert.areequal('abc', h, '..=');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -350,7 +350,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                     a--;
                 } while (a > 0);
                 assert.areequal(0, a);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -368,7 +368,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(6, tbl[3], '*= (table)');
             assert.areequal(1, tbl[4], '%= (table)');
             assert.areequal('abc', tbl[5], '..= (table)');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -381,7 +381,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             var t = { 1 }
             assert.areequal(2, ++t[1], '++ (table)');
             assert.areequal(1, --t[1], '-- (table)');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -395,7 +395,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(0, a);
             while (true) if (a > 5) break; else a++;
             assert.areequal(6, a);",
-                s => s.Options.Syntax = ScriptSyntax.CLike);
+                s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -413,7 +413,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(2, t[1], 'after ++ (table)');
             assert.areequal(2, t[1]--, '-- (table)');
             assert.areequal(1, t[1], 'after -- (table)');
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -428,7 +428,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(1, getfalse() ? 2 : 1, '? false func');",
                 s =>
             {
-                s.Options.Syntax = ScriptSyntax.CLike;
+                s.Options.Syntax = ScriptSyntax.WattleScript;
                 s.Globals["gettrue"] = (Func<bool>)(() => true);
                 s.Globals["getfalse"] = (Func<bool>) (() => false);
             });
@@ -447,7 +447,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             */
             assert.areequal(4, a);
             assert.areequal(3, b);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -459,7 +459,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             a = 2;
             fin:
             assert.areequal(7, a);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -471,7 +471,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal(2.0, 2.0 ?? 1.0);
             assert.areequal(1.0, tbl[3] ?? 1.0);
             assert.areequal(1.0, tbl[1] ?? 2.0);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -484,7 +484,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 assert.areequal(nil, tbl?.x?.y()?.z);
                 assert.areequal(nil, tbl['hello']?[2]);
                 assert.areequal(2.0, tbl[asdf?['hello'] ?? 'extra']);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -496,7 +496,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             tbl['length'] = 1;
             assert.areequal(2, tbl.length);
             assert.areequal(1, tbl['length']);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -504,7 +504,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         {
             TestScript.Run(@"
                 assert.areequal(5, 'hello'.length);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
@@ -515,20 +515,20 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 TestScript.Run(@"
                     table = {}
                     table.length = 3;
-                ", s => s.Options.Syntax = ScriptSyntax.CLike);
+                ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
             });
         }
 
         [Test]
         public void NestedStringTemplate()
         {
-            TestScript.Run(@"assert.areequal('hello', ``{``hello``}``);", s => s.Options.Syntax = ScriptSyntax.CLike);
+            TestScript.Run(@"assert.areequal('hello', ``{``hello``}``);", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]
         public void EscapeStringTemplate()
         {
-            TestScript.Run(@"assert.areequal('${hello}', ``$\{hello}``);", s => s.Options.Syntax = ScriptSyntax.CLike);
+            TestScript.Run(@"assert.areequal('${hello}', ``$\{hello}``);", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -543,7 +543,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
                 }) //7
             }``);
             assert.areequal('hello world', ``{'hello'} {'world'}``);
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         
@@ -554,7 +554,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function bnot(a) { return ~a };
             assert.areequal(-4096, ~4095);
             assert.areequal(-4096, bnot(4095));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -564,7 +564,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function band(a,b) { return a & b };
             assert.areequal(255, 4095 & 255);
             assert.areequal(255, band(4095, 255));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -574,7 +574,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function bor(a,b) { return a | b };
             assert.areequal(1279, 1024 | 255);
             assert.areequal(1279, bor(1024, 255));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -584,7 +584,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function bxor(a,b) { return a ^ b };
             assert.areequal(3840, 4095 ^ 255);
             assert.areequal(3840, bxor(4095, 255));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -594,7 +594,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function blshift(a,b) { return a << b };
             assert.areequal(64, 16 << 2);
             assert.areequal(64, blshift(16,2));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -604,7 +604,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function brshifta(a,b) { return a >> b };
             assert.areequal(-256, -1024 >> 2);
             assert.areequal(-256, brshifta(-1024, 2));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
         
         [Test]
@@ -614,7 +614,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             function brshiftl(a,b) { return a >>> b };
             assert.areequal(0x3FFFFF00, -1024 >>> 2);
             assert.areequal(0x3FFFFF00, brshiftl(-1024, 2));
-            ", s => s.Options.Syntax = ScriptSyntax.CLike);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
 
@@ -622,7 +622,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         public void Not()
         {
             TestScript.Run(@"assert.istrue(!false); assert.isfalse(!true);",
-                s => s.Options.Syntax = ScriptSyntax.CLike);
+                s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
         [Test]

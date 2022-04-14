@@ -21,7 +21,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		public LabelStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			if (lcontext.Syntax == ScriptSyntax.CLike)
+			if (lcontext.Syntax == ScriptSyntax.WattleScript)
 			{
 				NameToken = CheckTokenType(lcontext, TokenType.Name);
 				CheckTokenType(lcontext, TokenType.Colon);

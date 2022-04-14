@@ -6,20 +6,19 @@ namespace WattleScript.Interpreter.Tree
 {
 	class Lexer
 	{
-		Token m_Current = null;
-		string m_Code;
-		int m_PrevLineTo = 0;
-		int m_PrevColTo = 1;
-		int m_Cursor = 0;
-		int m_Line = 1;
-		int m_Col = 0;
-		int m_SourceId;
-		bool m_AutoSkipComments = false;
-		bool m_Extended = false;
-		private bool m_IncDec;
+		private Token m_Current;
+		private string m_Code;
+		private int m_PrevLineTo;
+		private int m_PrevColTo = 1;
+		private int m_Cursor;
+		private int m_Line = 1;
+		private int m_Col;
+		private int m_SourceId;
+		private bool m_AutoSkipComments;
+		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, bool extended, bool incdec, HashSet<string> directives)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -29,8 +28,7 @@ namespace WattleScript.Interpreter.Tree
 				m_Code = m_Code.Substring(1);
 
 			m_AutoSkipComments = autoSkipComments;
-			m_Extended = extended;
-			m_IncDec = incdec;
+			m_Syntax = syntax;
 			m_Directives = directives;
 		}
 
@@ -242,11 +240,11 @@ namespace WattleScript.Interpreter.Tree
 
 			switch (c)
 			{
-				case '@' when m_IncDec:
+				case '@' when m_Syntax == ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('@', TokenType.FunctionAnnotation, TokenType.ChunkAnnotation,
 						fromLine, fromCol);
 				case '|':
-					if (m_IncDec)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						var next = CursorCharNext();
 						if (next == '=')
@@ -261,7 +259,7 @@ namespace WattleScript.Interpreter.Tree
 						}
 						return CreateToken(TokenType.Op_Or, fromLine, fromCol, "|");
 					}
-					else if (m_Extended) {
+					else if (m_Syntax == ScriptSyntax.WattleScript) {
 						return PotentiallyDoubleCharOperator('|', TokenType.Lambda, TokenType.Or, fromLine, fromCol);
 					}
 					else
@@ -272,18 +270,18 @@ namespace WattleScript.Interpreter.Tree
 				case ';':
 					CursorCharNext();
 					return CreateToken(TokenType.SemiColon, fromLine, fromCol, ";");
-				case '&' when m_Extended:
+				case '&' when m_Syntax == ScriptSyntax.WattleScript:
 				{
 					var next = CursorCharNext();
 					if (next == '&') {
 						CursorCharNext();
 						return CreateToken(TokenType.And, fromLine, fromCol, "&&");
 					}
-					else if (m_IncDec && next == '=') {
+					else if (m_Syntax == ScriptSyntax.WattleScript && next == '=') {
 						CursorCharNext();
 						return CreateToken(TokenType.Op_AndEq, fromLine, fromCol, "&=");
 					}
-					else if (m_IncDec) {
+					else if (m_Syntax == ScriptSyntax.WattleScript) {
 						return CreateToken(TokenType.Op_And, fromLine, fromCol, "&");
 					}
 					else {
@@ -292,7 +290,7 @@ namespace WattleScript.Interpreter.Tree
 				}
 				case '=':
 				{
-					if (m_Extended)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						char next = CursorCharNext();
 						if (next == '=') {
@@ -313,7 +311,7 @@ namespace WattleScript.Interpreter.Tree
 							fromCol);
 					}
 				}
-				case '<' when m_IncDec:
+				case '<' when m_Syntax == ScriptSyntax.WattleScript:
 				{
 					char next = CursorCharNext();
 					if (next == '<')
@@ -327,7 +325,7 @@ namespace WattleScript.Interpreter.Tree
 					}
 					return CreateToken(TokenType.Op_LessThan, fromLine, fromCol, "<");
 				}
-				case '>' when m_IncDec:
+				case '>' when m_Syntax == ScriptSyntax.WattleScript:
 				{
 					char next = CursorCharNext();
 					if (next == '>')
@@ -353,16 +351,16 @@ namespace WattleScript.Interpreter.Tree
 					}
 					return CreateToken(TokenType.Op_GreaterThan, fromLine, fromCol, ">");
 				}
-				case '<' when !m_IncDec:
+				case '<' when m_Syntax != ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_LessThan, TokenType.Op_LessThanEqual, fromLine, fromCol);
-				case '>' when !m_IncDec:
+				case '>' when m_Syntax != ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_GreaterThan, TokenType.Op_GreaterThanEqual, fromLine, fromCol);
-				case '!' when m_Extended:
+				case '!' when m_Syntax == ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('=', TokenType.Not, TokenType.Op_NotEqual, fromLine, fromCol);
-				case '~' when m_IncDec:
+				case '~' when m_Syntax == ScriptSyntax.WattleScript:
 					return CreateSingleCharToken(TokenType.Op_Not, fromLine, fromCol);
-				case '!' when !m_Extended:
-				case '~' when !m_IncDec:
+				case '!' when m_Syntax != ScriptSyntax.WattleScript:
+				case '~' when m_Syntax != ScriptSyntax.WattleScript:
 					if (CursorCharNext() != '=')
 						throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", c);
 					CursorCharNext();
@@ -372,7 +370,7 @@ namespace WattleScript.Interpreter.Tree
 						char next = CursorCharNext();
 						if (next == '.')
 						{
-							if (m_Extended)
+							if (m_Syntax == ScriptSyntax.WattleScript)
 							{
 								next = CursorCharNext();
 								if (next == '.') {
@@ -399,10 +397,10 @@ namespace WattleScript.Interpreter.Tree
 					}
 				case '+':
 				{
-					if (m_Extended)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						char next = CursorCharNext();
-						if (m_IncDec && next == '+')
+						if (m_Syntax == ScriptSyntax.WattleScript && next == '+')
 						{
 							CursorCharNext();
 							return CreateToken(TokenType.Op_Inc, fromLine, fromCol, "++");
@@ -427,7 +425,7 @@ namespace WattleScript.Interpreter.Tree
 						char next = CursorCharNext();
 						if (next == '-')
 						{
-							if (m_IncDec)
+							if (m_Syntax == ScriptSyntax.WattleScript)
 							{
 								CursorCharNext();
 								return CreateToken(TokenType.Op_Dec, fromLine, fromCol, "--");
@@ -436,7 +434,7 @@ namespace WattleScript.Interpreter.Tree
 								return ReadComment(fromLine, fromCol);
 
 						}
-						else if (m_Extended && next == '=')
+						else if (m_Syntax == ScriptSyntax.WattleScript && next == '=')
 						{
 							CursorCharNext();
 							return CreateToken(TokenType.Op_SubEq, fromLine, fromCol, "-=");
@@ -447,7 +445,7 @@ namespace WattleScript.Interpreter.Tree
 						}
 					}
 				case '*':
-					if (m_Extended)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						char next = CursorCharNext();
 						if (next == '=')
@@ -468,7 +466,7 @@ namespace WattleScript.Interpreter.Tree
 						return CreateSingleCharToken(TokenType.Op_Mul, fromLine, fromCol);
 					}
 				case '/':
-					if (m_Extended)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						char next = CursorCharNext();
 						if (next == '/') return ReadComment(fromLine, fromCol);
@@ -488,12 +486,12 @@ namespace WattleScript.Interpreter.Tree
 					}
 					return CreateSingleCharToken(TokenType.Op_Div, fromLine, fromCol);
 				case '%':
-					if (m_Extended)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 						return PotentiallyDoubleCharOperator('=', TokenType.Op_Mod, TokenType.Op_ModEq, fromLine,
 							fromCol);
 					return CreateSingleCharToken(TokenType.Op_Mod, fromLine, fromCol);
 				case '^':
-					if (m_IncDec)
+					if (m_Syntax == ScriptSyntax.WattleScript)
 					{
 						return PotentiallyDoubleCharOperator('=', TokenType.Op_Xor, TokenType.Op_XorEq, fromLine,
 							fromCol);
@@ -509,7 +507,7 @@ namespace WattleScript.Interpreter.Tree
 				case '[':
 					{
 						char next = CursorCharNext();
-						if (next == '=' || next == '[')
+						if (m_Syntax == ScriptSyntax.Lua && (next == '=' || next == '['))
 						{
 							string str = ReadLongString(fromLine, fromCol, null, "string");
 							return CreateToken(TokenType.String_Long, fromLine, fromCol, str);
@@ -537,7 +535,7 @@ namespace WattleScript.Interpreter.Tree
 					return CreateSingleCharToken(TokenType.Brk_Close_Curly, fromLine, fromCol);
 				case ',':
 					return CreateSingleCharToken(TokenType.Comma, fromLine, fromCol);
-				case '?' when m_IncDec:
+				case '?' when m_Syntax == ScriptSyntax.WattleScript:
 				{
 					char next = CursorCharNext();
 
@@ -991,7 +989,7 @@ namespace WattleScript.Interpreter.Tree
 
 		private Token CreateNameToken(string name, int fromLine, int fromCol)
 		{
-			TokenType? reservedType = Token.GetReservedTokenType(name, m_Extended);
+			TokenType? reservedType = Token.GetReservedTokenType(name, m_Syntax);
 
 			if (reservedType.HasValue)
 			{
