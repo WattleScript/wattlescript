@@ -1,0 +1,10 @@
+@{
+    acc = {
+        myTbl: [10]
+    }
+
+    fn = () => {
+        return [[acc]]
+    }
+}
+<div>@fn(((("param"))), [1, 2, acc.myTbl[0]])[0][0].myTbl[0]</div>

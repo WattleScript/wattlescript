@@ -40,7 +40,7 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			return new ScriptLoadingContext(script)
 			{
 				Source = source,
-				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.Syntax != ScriptSyntax.Lua, script.Options.Syntax == ScriptSyntax.CLike, script.Options.Directives),
+				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.Syntax != ScriptSyntax.Lua, script.Options.Syntax, script.Options.Directives),
 				Syntax = script.Options.Syntax
 			};
 		}

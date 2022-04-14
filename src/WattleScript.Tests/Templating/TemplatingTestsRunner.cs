@@ -1,20 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using WattleScript.Templating;
 
-namespace WattleScript.Interpreter.Tests;
+namespace WattleScript.Interpreter.Tests.Templating;
 
-public class CLikeTestRunner
+public class TemplatingTestsRunner
 {
-    private const string ROOT_FOLDER = "EndToEnd/CLike";
+    private const string ROOT_FOLDER = "Templating/Tests";
 
     static string[] GetTestCases()
     {
-        string[] files = Directory.GetFiles(ROOT_FOLDER, "*.lua*", SearchOption.AllDirectories);
-
+        string[] files = Directory.GetFiles(ROOT_FOLDER, "*.wthtml*", SearchOption.AllDirectories);
         return files;
     }
     
@@ -23,16 +23,10 @@ public class CLikeTestRunner
     {
         await RunCore(path);
     }
-
-    [Test, TestCaseSource(nameof(GetTestCases))]
-    public async Task RunReportErrors(string path)
-    {
-        await RunCore(path, true);
-    }
     
     public async Task RunCore(string path, bool reportErrors = false)
     {
-        string outputPath = path.Replace(".lua", ".txt");
+        string outputPath = path.Replace(".wthtml", ".html");
 
         if (!File.Exists(outputPath))
         {
@@ -44,11 +38,28 @@ public class CLikeTestRunner
         string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
 
+        Template tmp = new Template();
+        string transpiled = tmp.Render(code);
+        
         Script script = new Script(CoreModules.Preset_HardSandbox);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
+        script.Options.Syntax = ScriptSyntax.WattleScript;
+
+        void PrintLine(Script script, CallbackArguments args)
+        {
+            stdOut.AppendLine(args[0].CastToString());
+        }
         
+        void Print(Script script, CallbackArguments args)
+        {
+            stdOut.Append(args[0].CastToString());
+        }
+        
+        script.Globals["stdout_line"] = PrintLine;
+        script.Globals["stdout"] = Print;
+
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");
@@ -63,19 +74,16 @@ public class CLikeTestRunner
         if (reportErrors)
         {
             script.Options.ParserErrorMode = ScriptOptions.ParserErrorModes.Report;
-            await script.DoStringAsync(code);
+            await script.DoStringAsync(transpiled);
             return;
         }
 
         try
         {
-            DynValue dv = script.LoadString(code);
-            IReadOnlyList<Annotation> annots = dv.Function.Annotations;
+            DynValue dv = script.LoadString(transpiled);
             await script.CallAsync(dv);
 
-            DynValue dv2 = script.Globals.Get("f");
-            
-            Assert.AreEqual(output.Trim(), stdOut.ToString().Trim(), $"Test {path} did not pass.");
+            Assert.AreEqual(output, stdOut.ToString(), $"Test {path} did not pass.");
 
             if (path.Contains("invalid"))
             {

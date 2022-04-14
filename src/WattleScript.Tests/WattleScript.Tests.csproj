@@ -16,12 +16,16 @@
 
     <ItemGroup>
       <ProjectReference Include="..\WattleScript.Interpreter\WattleScript.Interpreter.csproj" />
+      <ProjectReference Include="..\WattleScript.Templating\WattleScript.Templating.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Include="TestMore\**\*">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         <None Include="EndToEnd\CLike\**\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Include="Templating\Tests\**\*">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

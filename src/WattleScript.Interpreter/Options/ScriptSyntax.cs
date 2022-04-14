@@ -10,13 +10,9 @@ namespace WattleScript.Interpreter
         /// </summary>
         Lua,
         /// <summary>
-        /// Backwards compatible C-like syntax
-        /// </summary>
-        CompatibleCLike,
-        /// <summary>
-        /// C-like syntax including breaking changes
+        /// WattleScript syntax
         /// e.g. ++ and -- operators
         /// </summary>
-        CLike,
+        WattleScript
     }
 }
