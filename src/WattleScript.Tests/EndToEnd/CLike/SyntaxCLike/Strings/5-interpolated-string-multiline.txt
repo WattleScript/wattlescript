@@ -1,0 +1,11 @@
+hello
+greetings
+hi
+ahoj
+100
+{
+}
+`
+"double quotes"
+'single quotes'
+"''"

@@ -156,26 +156,75 @@ namespace WattleScript.Interpreter.Tree
 				{
 					if (val.Length == 0 && !hex && unicode_state == 0)
 					{
-						if (c == 'a') { sb.Append('\a'); escape = false; zmode = false; }
-						else if (c == '\r') { }  // this makes \\r\n -> \\n
-						else if (c == '\n') { sb.Append('\n'); escape = false; }
-						else if (c == 'b') { sb.Append('\b'); escape = false; }
-						else if (c == 'f') { sb.Append('\f'); escape = false; }
-						else if (c == 'n') { sb.Append('\n'); escape = false; }
-						else if (c == 'r') { sb.Append('\r'); escape = false; }
-						else if (c == 't') { sb.Append('\t'); escape = false; }
-						else if (c == 'v') { sb.Append('\v'); escape = false; }
-						else if (c == '\\') { sb.Append('\\'); escape = false; zmode = false; }
-						else if (c == '"') { sb.Append('\"'); escape = false; zmode = false; }
-						else if (c == '\'') { sb.Append('\''); escape = false; zmode = false; }
-						else if (c == '[') { sb.Append('['); escape = false; zmode = false; }
-						else if (c == ']') { sb.Append(']'); escape = false; zmode = false; }
-						else if (c == '{') { sb.Append('{'); escape = false; zmode = false; }
-						else if (c == 'x') { hex = true; }
-						else if (c == 'u') { unicode_state = 1; }
-						else if (c == 'z') { zmode = true; escape = false; }
-						else if (CharIsDigit(c)) { val = val + c; }
-						else throw new SyntaxErrorException(token, "invalid escape sequence near '\\{0}'", c);
+						switch (c)
+						{
+							case 'a':
+								sb.Append('\a'); escape = false; zmode = false;
+								break;
+							case '\r':
+								break; // this makes \\r\n -> \\n
+							case '\n':
+								sb.Append('\n'); escape = false;
+								break;
+							case 'b':
+								sb.Append('\b'); escape = false;
+								break;
+							case 'f':
+								sb.Append('\f'); escape = false;
+								break;
+							case 'n':
+								sb.Append('\n'); escape = false;
+								break;
+							case 'r':
+								sb.Append('\r'); escape = false;
+								break;
+							case 't':
+								sb.Append('\t'); escape = false;
+								break;
+							case 'v':
+								sb.Append('\v'); escape = false;
+								break;
+							case '\\':
+								sb.Append('\\'); escape = false; zmode = false;
+								break;
+							case '"':
+								sb.Append('\"'); escape = false; zmode = false;
+								break;
+							case '\'':
+								sb.Append('\''); escape = false; zmode = false;
+								break;
+							case '[':
+								sb.Append('['); escape = false; zmode = false;
+								break;
+							case ']':
+								sb.Append(']'); escape = false; zmode = false;
+								break;
+							case '{':
+								sb.Append('{'); escape = false; zmode = false;
+								break;
+							case '}':
+								sb.Append('}'); escape = false; zmode = false;
+								break;
+							case '`':
+								sb.Append('`'); escape = false; zmode = false;
+								break;
+							case 'x':
+								hex = true;
+								break;
+							case 'u':
+								unicode_state = 1;
+								break;
+							case 'z':
+								zmode = true; escape = false;
+								break;
+							default:
+							{
+								if (CharIsDigit(c)) { val = val + c; }
+								else throw new SyntaxErrorException(token, "invalid escape sequence near '\\{0}'", c);
+
+								break;
+							}
+						}
 					}
 					else
 					{
