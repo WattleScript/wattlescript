@@ -10,42 +10,6 @@ namespace WattleScript.Interpreter.Execution.VM
 	// Same reason for the "sealed" declaration.
 	sealed partial class Processor
 	{
-		internal Instruction? FindMeta(ref int baseAddress)
-		{
-			Instruction meta = m_RootChunk.Code[baseAddress];
-
-			// skip nops
-			while (meta.OpCode == OpCode.Nop)
-			{
-				baseAddress++;
-				meta = m_RootChunk.Code[baseAddress];
-			}
-
-			if (meta.OpCode != OpCode.Meta)
-				return null;
-
-			return meta;
-		}
-
-		internal Annotation[] FindAnnotations(int baseAddress)
-		{
-			Instruction meta = m_RootChunk.Code[baseAddress];
-
-			// skip nops
-			while (meta.OpCode == OpCode.Nop)
-			{
-				baseAddress++;
-				meta = m_RootChunk.Code[baseAddress];
-			}
-
-			if (meta.OpCode != OpCode.Meta)
-				return null;
-			baseAddress++;
-			if (m_RootChunk.Code[baseAddress].OpCode != OpCode.Annot)
-				return null;
-			return m_RootChunk.Code[baseAddress].Annotations;
-		}
-
 
 		internal void AttachDebugger(IDebugger debugger)
 		{
@@ -61,10 +25,10 @@ namespace WattleScript.Interpreter.Execution.VM
 		}
 
 
-		private void ListenDebugger(Instruction instr, int instructionPtr)
+		private void ListenDebugger(int instructionPtr)
 		{
 			bool isOnDifferentRef = false;
-			var instr_SourceCodeRef = m_RootChunk.SourceRefs[instructionPtr];
+			var instr_SourceCodeRef = m_ExecutionStack.Peek().Function.SourceRefs[instructionPtr];
 			
 			if (instr_SourceCodeRef != null && m_Debug.LastHlRef != null)
 			{
@@ -331,18 +295,18 @@ namespace WattleScript.Interpreter.Execution.VM
 			List<WatchItem> locals = new List<WatchItem>();
 			ref var top = ref m_ExecutionStack.Peek();
 
-			if (!top.IsNil && top.Debug_Symbols != null && top.LocalCount != 0)
+			if (!top.IsNil && top.Function.Locals != null && top.Function.LocalCount != 0)
 			{
-				int len = Math.Min(top.Debug_Symbols.Length, top.LocalCount);
+				int len = Math.Min(top.Function.Locals.Length, top.Function.LocalCount);
 
 				for (int i = 0; i < len; i++)
 				{
 					locals.Add(new WatchItem()
 					{
 						IsError = false,
-						LValue = top.Debug_Symbols[i],
+						LValue = top.Function.Locals[i],
 						Value = m_ValueStack[top.BasePointer + i],
-						Name = top.Debug_Symbols[i].i_Name
+						Name = top.Function.Locals[i].i_Name
 					});
 				}
 			}
@@ -384,9 +348,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				var c = m_ExecutionStack.Peek(i);
 
-				var I = m_RootChunk.Code[c.Debug_EntryPoint];
+				//var I = m_RootChunk.Code[c.Debug_EntryPoint];
 
-				string callname = I.OpCode == OpCode.Meta ? I.String : null;
+				string callname = c.Function?.Name;
 
 				if (c.ClrFunction != null)
 				{
@@ -403,7 +367,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				{
 					wis.Add(new WatchItem()
 					{
-						Address = c.Debug_EntryPoint,
+						Address = -1, //TODO: Make this work
 						BasePtr = c.BasePointer,
 						RetAddress = c.ReturnAddress,
 						Name = callname,

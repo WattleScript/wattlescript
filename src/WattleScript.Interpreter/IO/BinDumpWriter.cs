@@ -42,6 +42,7 @@ namespace WattleScript.Interpreter.IO
 			var bytes = BitConverter.GetBytes(d);
 			stream.Write(bytes, 0, bytes.Length);
 		}
+		
 
 		public void WriteVarUInt32(uint u)
 		{

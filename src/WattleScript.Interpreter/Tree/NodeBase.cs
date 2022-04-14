@@ -14,7 +14,7 @@ namespace WattleScript.Interpreter.Tree
 		}
 
 
-		public abstract void Compile(ByteCode bc);
+		public abstract void Compile(FunctionBuilder bc);
 
 
 		protected static Token UnexpectedTokenType(Token t)

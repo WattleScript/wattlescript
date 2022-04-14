@@ -26,7 +26,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public abstract bool EvalLiteral(out DynValue dv);
 
-		public void CompilePossibleLiteral(ByteCode bc)
+		public void CompilePossibleLiteral(FunctionBuilder bc)
 		{
 			if (EvalLiteral(out var dv))
 			{

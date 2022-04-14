@@ -186,7 +186,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			bc.Emit_NewTable(m_Shared);
 

@@ -6,9 +6,8 @@ namespace WattleScript.Interpreter.Execution.VM
 	internal struct CallStackItem
 	{
 		public bool IsNil => BasePointer == 0;
-		
-		public int Debug_EntryPoint;
-		public SymbolRef[] Debug_Symbols;
+
+		public FunctionProto Function;
 
 		public SourceRef CallingSourceRef;
 
@@ -18,8 +17,6 @@ namespace WattleScript.Interpreter.Execution.VM
 		public DynValue ErrorHandlerBeforeUnwind;
 
 		public int BasePointer;
-		public int LocalBase;
-		public int LocalCount;
 		public int ReturnAddress;
 
 		public List<Upvalue> OpenClosures;

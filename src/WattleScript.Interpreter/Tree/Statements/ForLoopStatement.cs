@@ -81,7 +81,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		}
 
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			bc.PushSourceRef(m_RefFor);
 

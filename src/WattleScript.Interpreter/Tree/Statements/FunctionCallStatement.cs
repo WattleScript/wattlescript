@@ -22,7 +22,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		}
 
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			using (bc.EnterSource(m_FunctionCallExpression.SourceRef))
 			{

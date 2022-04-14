@@ -86,7 +86,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		}
 
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			//for var_1, ···, var_n in explist do block end
 

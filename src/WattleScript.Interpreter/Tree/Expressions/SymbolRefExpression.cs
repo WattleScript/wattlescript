@@ -69,7 +69,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			bc.Emit_Load(m_Ref);
 			if (inc)
@@ -91,7 +91,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public void CompileAssignment(Execution.VM.ByteCode bc, Operator op, int stackofs, int tupleidx)
+		public void CompileAssignment(Execution.VM.FunctionBuilder bc, Operator op, int stackofs, int tupleidx)
 		{
 			if (op != Operator.NotAnOperator)
 			{				

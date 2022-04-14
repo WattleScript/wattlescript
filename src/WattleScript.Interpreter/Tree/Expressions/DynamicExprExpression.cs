@@ -30,7 +30,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			throw new InvalidOperationException();
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			throw new InvalidOperationException();
 		}

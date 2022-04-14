@@ -6,9 +6,11 @@ namespace WattleScript.Interpreter.Execution.VM
 	{
 		private SourceRef GetCurrentSourceRef(int instructionPtr)
 		{
-			if (instructionPtr >= 0 && instructionPtr < m_RootChunk.Code.Count)
+			var code = m_ExecutionStack.Peek().Function?.SourceRefs;
+			if (code == null) return null;
+			if (instructionPtr >= 0 && instructionPtr < code.Length)
 			{
-				return m_RootChunk.SourceRefs[instructionPtr];
+				return code[instructionPtr];
 			}
 			return null;
 		}

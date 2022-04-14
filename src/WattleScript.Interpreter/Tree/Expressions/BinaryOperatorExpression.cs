@@ -367,7 +367,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			m_Exp1.CompilePossibleLiteral(bc);
 

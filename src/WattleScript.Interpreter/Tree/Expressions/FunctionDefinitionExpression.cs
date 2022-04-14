@@ -18,8 +18,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		private Annotation[] m_Annotations;
 		bool m_HasVarArgs = false;
 		
-		int m_ClosureInstruction = -1;
-		private ByteCode m_bc = null;
+		private FunctionBuilder m_bc = null;
 		
 		bool m_UsesGlobalEnv;
 		SymbolRef m_Env;
@@ -99,6 +98,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			resolved = true;
 			lcontext.Scope.PushFunction(this);
 
+			m_ParamNames = DefineArguments(paramnames, lcontext);
+			
 			if (m_UsesGlobalEnv)
 			{
 				m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
@@ -107,8 +108,6 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			{
 				lcontext.Scope.ForceEnvUpValue();
 			}
-			
-			m_ParamNames = DefineArguments(paramnames, lcontext);
 			
 			if(m_HasVarArgs) lcontext.Scope.SetHasVarArgs(); //Moved here
 			
@@ -258,6 +257,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public SymbolRef CreateUpvalue(BuildTimeScope scope, SymbolRef symbol)
 		{
+			if (compile) throw new Exception("Upvalue after resolve");
+			
 			for (int i = 0; i < m_Closure.Count; i++)
 			{
 				if (m_Closure[i].i_Name == symbol.i_Name)
@@ -268,13 +269,6 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			m_Closure.Add(symbol);
 
-			if (m_ClosureInstruction != -1)
-			{
-				var i = m_bc.Code[m_ClosureInstruction];
-				i.SymbolList = m_Closure.ToArray();
-				m_bc.Code[m_ClosureInstruction] = i;
-			}
-
 			return SymbolRef.Upvalue(symbol.i_Name, m_Closure.Count - 1);
 		}
 
@@ -284,30 +278,21 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 		private bool resolved = false;
+		private bool compile = false;
 
-		public int CompileBody(ByteCode bc, string friendlyName)
+		public FunctionProto CompileBody(FunctionBuilder parent, Script script, string friendlyName)
 		{
+			compile = true;
 			if (!resolved) throw new InternalErrorException("Function definition scope not resolved");
-			//LoadingContext.Scope.PopFunction()
 			
-			string funcName = friendlyName ?? ("<" + this.m_Begin.FormatLocation(bc.Script, true) + ">");
+			string funcName = friendlyName ?? ("<" + this.m_Begin.FormatLocation(script, true) + ">");
 
+			var bc = new FunctionBuilder(script);
 			bc.PushSourceRef(m_Begin);
-
-			int I = bc.Emit_Jump(OpCode.Jump, -1);
-
-			int meta = bc.Emit_Meta(funcName, OpCodeMetadataType.FunctionEntrypoint);
-
-			if (m_Annotations.Length != 0)
-			{
-				bc.Emit_Annot(m_Annotations);
-			}
-			
-			bc.Emit_BeginFn(m_StackFrame);
 
 			bc.LoopTracker.Loops.Push(new LoopBoundary());
 
-			int entryPoint = bc.GetJumpPointForLastInstruction();
+			int entryPoint = 0;
 
 			if (m_UsesGlobalEnv)
 			{
@@ -318,7 +303,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			if (m_ParamNames.Length > 0)
 			{
-				bc.Emit_Args(m_ParamNames);
+				bc.Emit_Args(m_ParamNames.Length, m_HasVarArgs);
 
 				for (int i = 0; i < m_ParamNames.Length; i++)
 				{
@@ -345,32 +330,22 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			bc.LoopTracker.Loops.Pop();
 
-			bc.SetNumVal(I, bc.GetJumpPointForNextInstruction());
-			bc.SetNumVal(meta, bc.GetJumpPointForLastInstruction() - meta);
-
 			bc.PopSourceRef();
 
-			return entryPoint;
+			var proto = bc.GetProto(funcName, m_StackFrame);
+			proto.Annotations = m_Annotations;
+			proto.Upvalues = m_Closure.ToArray();
+			
+			if(parent != null) parent.Protos.Add(proto);
+			
+			return proto;
 		}
 
-		public int Compile(ByteCode bc, Func<int> afterDecl, string friendlyName)
+		public void Compile(FunctionBuilder bc, Func<int> afterDecl, string friendlyName)
 		{
-			using (bc.EnterSource(m_Begin))
-			{
-				SymbolRef[] symbs = m_Closure
-					//.Select((s, idx) => s.CloneLocalAndSetFrame(m_ClosureFrames[idx]))
-					.ToArray();
-
-				m_bc = bc;
-				m_ClosureInstruction = bc.Emit_Closure(symbs, bc.GetJumpPointForNextInstruction());
-				int ops = afterDecl();
-
-				var ins = bc.Code[m_ClosureInstruction];
-				ins.NumVal += 2 + ops;
-				bc.Code[m_ClosureInstruction] = ins;
-			}
-
-			return CompileBody(bc, friendlyName);
+			CompileBody(bc, bc.Script, friendlyName);			
+			bc.Emit_Closure(bc.Protos.Count - 1);
+			afterDecl();
 		}
 
 		public override bool EvalLiteral(out DynValue dv)
@@ -380,7 +355,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			Compile(bc, () => 0, null);
 		}

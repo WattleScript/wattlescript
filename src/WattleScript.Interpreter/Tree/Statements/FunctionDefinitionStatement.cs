@@ -131,7 +131,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			m_FuncDef.ResolveScope(lcontext);
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			using (bc.EnterSource(m_SourceRef))
 			{
@@ -152,7 +152,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			}
 		}
 		
-		private int SetMethod(Execution.VM.ByteCode bc)
+		private int SetMethod(Execution.VM.FunctionBuilder bc)
 		{
 			int cnt = 0;
 
@@ -169,7 +169,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			return 1 + cnt;
 		}
 
-		private int SetFunction(Execution.VM.ByteCode bc, int numPop)
+		private int SetFunction(Execution.VM.FunctionBuilder bc, int numPop)
 		{
 			int num = bc.Emit_Store(m_FuncSymbol, 0, 0);
 			bc.Emit_Pop(numPop);

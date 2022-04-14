@@ -14,7 +14,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		internal string LastDefinedVarName { get; private set; }
 
 		private int m_Jump = -1;
-		private ByteCode m_bc;
+		private FunctionBuilder m_bc;
 		int m_LabelAddress = -1;
 
 		public GotoStatement(ScriptLoadingContext lcontext)
@@ -33,7 +33,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			lcontext.Scope.RegisterGoto(this);
 		}
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			m_Jump = bc.Emit_Jump(OpCode.Jump, m_LabelAddress);
 			m_bc = bc;

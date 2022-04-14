@@ -59,7 +59,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			//No-op
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			bc.Emit_Literal(m_Value);
 		}

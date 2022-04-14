@@ -18,7 +18,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
             exp2 = Expr(lcontext);
         }
 
-        public override void Compile(ByteCode bc)
+        public override void Compile(FunctionBuilder bc)
         {
             if (condition.EvalLiteral(out var evaluated))
             {

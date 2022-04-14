@@ -45,14 +45,14 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			};
 		}
 
-		internal static int LoadChunk(Script script, SourceCode source, ByteCode bytecode)
+		internal static FunctionProto LoadChunk(Script script, SourceCode source)
 		{
 			ScriptLoadingContext lcontext = CreateLoadingContext(script, source);
 	#if !DEBUG_PARSER
 			try
 			{
 	#endif
-				Statement stat;
+				ChunkStatement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
 				{
@@ -60,23 +60,9 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 					lcontext.Scope = new BuildTimeScope();
 					stat.ResolveScope(lcontext);
 				}
-
-				int beginIp = -1;
-
-				//var srcref = new SourceRef(source.SourceID);
-
+				
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Compilation))
-				using (bytecode.EnterSource(null))
-				{
-					bytecode.Emit_Nop(string.Format("Begin chunk {0}", source.Name));
-					beginIp = bytecode.GetJumpPointForLastInstruction();
-					stat.Compile(bytecode);
-					bytecode.Emit_Nop(string.Format("End chunk {0}", source.Name));
-				}
-
-				//Debug_DumpByteCode(bytecode, source.SourceID);
-
-				return beginIp;
+					return stat.CompileFunction(script);
 #if !DEBUG_PARSER
 
 			}
@@ -89,7 +75,7 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 #endif
 		}
 
-		internal static int LoadFunction(Script script, SourceCode source, ByteCode bytecode, bool usesGlobalEnv)
+		internal static FunctionProto LoadFunction(Script script, SourceCode source, bool usesGlobalEnv)
 		{
 			ScriptLoadingContext lcontext = CreateLoadingContext(script, source);
 
@@ -103,22 +89,11 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 					lcontext.Scope = new BuildTimeScope();
 					fnx.ResolveScope(lcontext);
 				}
-
-				int beginIp = -1;
-
-				//var srcref = new SourceRef(source.SourceID);
+				
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.Compilation))
-				using (bytecode.EnterSource(null))
-				{
-					bytecode.Emit_Nop(string.Format("Begin function {0}", source.Name));
-					beginIp = fnx.CompileBody(bytecode, source.Name);
-					bytecode.Emit_Nop(string.Format("End function {0}", source.Name));
-				}
+					return fnx.CompileBody(null, script, source.Name);
 
-				//Debug_DumpByteCode(bytecode, source.SourceID);
-
-				return beginIp;
 			}
 			catch (SyntaxErrorException ex)
 			{

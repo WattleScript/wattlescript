@@ -15,6 +15,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushNil,	// Pushes nil to the v-stack
 		PushTrue,	// Pushes true to the v-stack
 		PushFalse,	// Pushes false to the v-stack
+		PushInt, // Pushes an integer to the v-stack
 		PushNumber, // Pushes a number to the v-stack
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
@@ -32,10 +33,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		// Stack-frame ops and calls
 		Clean,		// Cleansup locals setting them as null
 		CloseUp,	// Close a specific upvalue
-
-		Meta,	// Injects function metadata used for reflection things (dumping, debugging)
-		Annot, //Injects annotations
-		BeginFn,	// Adjusts for start of function, taking in parameters and allocating locals
+		
 		Args,		// Takes the arguments passed to a function and sets the appropriate symbols in the local scope
 		Call,		// Calls the function specified on the specified element from the top of the v-stack. If the function is a WattleScript function, it pushes its numeric value on the v-stack, then pushes the current PC onto the x-stack, enters the function closure and jumps to the function first instruction. If the function is a CLR function, it pops the function value from the v-stack, then invokes the function synchronously and finally pushes the result on the v-stack.
 		ThisCall,	// Same as call, but the call is a ':' method invocation

@@ -26,7 +26,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				exp.ResolveScope(lcontext);
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			foreach (var exp in expressions)
 				exp.CompilePossibleLiteral(bc);

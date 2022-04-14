@@ -5,8 +5,8 @@ namespace WattleScript.Interpreter.Execution
 {
 	interface ILoop
 	{
-		void CompileBreak(ByteCode bc);
-		void CompileContinue(ByteCode bc);
+		void CompileBreak(FunctionBuilder bc);
+		void CompileContinue(FunctionBuilder bc);
 		bool IsBoundary();
 	}
 

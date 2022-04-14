@@ -40,7 +40,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
             formatString = builder.ToString();
         }
 
-        public override void Compile(ByteCode bc)
+        public override void Compile(FunctionBuilder bc)
         {
             bc.Emit_Literal(DynValue.NewString(formatString));
             foreach (var exp in arguments) {

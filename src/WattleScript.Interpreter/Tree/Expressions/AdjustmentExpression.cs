@@ -14,10 +14,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			expression = exp;
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			expression.Compile(bc);
-			bc.Emit_Scalar();
+			//TODO: Add more tests, make sure this opt is 100% correct
+			if (expression is FunctionCallExpression)
+			{
+				bc.Emit_Scalar();
+			}
 		}
 
 		public override DynValue Eval(ScriptExecutionContext context)

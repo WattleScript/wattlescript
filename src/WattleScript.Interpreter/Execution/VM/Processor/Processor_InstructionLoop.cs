@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Interop;
@@ -15,6 +16,12 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		internal long AutoYieldCounter = 0;
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		string GetString(int i)
+		{
+			return m_ExecutionStack.Peek().Function.Strings[i];
+		}
+
 		private DynValue Processing_Loop(int instructionPtr, bool canAwait = false)
 		{
 			// This is the main loop of the processor, has a weird control flow and needs to be as fast as possible.
@@ -27,13 +34,18 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			try
 			{
+
 				while (true)
 				{
-					Instruction i = m_RootChunk.Code[instructionPtr];
+					//TODO: Hoist outside of while loop, update any instruction that
+					//can change frame to jump to before loop when changing frame
+					ref var currentFrame = ref m_ExecutionStack.Peek();
+					
+					Instruction i = currentFrame.Function.Code[instructionPtr];
 					int currentPtr = instructionPtr;
 					if (m_Debug.DebuggerAttached != null)
 					{
-						ListenDebugger(i, instructionPtr);
+						ListenDebugger(instructionPtr);
 					}
 
 					++executedInstructions;
@@ -50,8 +62,6 @@ namespace WattleScript.Interpreter.Execution.VM
 					{
 						case OpCode.Nop:
 						case OpCode.Debug:
-						case OpCode.Meta:
-						case OpCode.Annot:
 							break;
 						case OpCode.Pop:
 							m_ValueStack.RemoveLast(i.NumVal);
@@ -74,11 +84,14 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.PushFalse:
 							m_ValueStack.Push(DynValue.False);
 							break;
+						case OpCode.PushInt:
+							m_ValueStack.Push(DynValue.NewNumber(i.NumVal));
+							break;
 						case OpCode.PushNumber:
-							m_ValueStack.Push(DynValue.NewNumber(i.Number));
+							m_ValueStack.Push(DynValue.NewNumber(currentFrame.Function.Numbers[i.NumVal]));
 							break;
 						case OpCode.PushString:
-							m_ValueStack.Push(DynValue.NewString(i.String));
+							m_ValueStack.Push(DynValue.NewString(currentFrame.Function.Strings[i.NumVal]));
 							break;
 						case OpCode.BNot:
 							ExecBNot(i);
@@ -155,7 +168,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							break;
 						case OpCode.Call:
 						case OpCode.ThisCall:
-							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, i.String);
+							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, GetString(i.NumVal2));
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
 							break;
@@ -164,13 +177,12 @@ namespace WattleScript.Interpreter.Execution.VM
 							break;
 						case OpCode.CloseUp:
 						{
-							ref var csi = ref m_ExecutionStack.Peek();
-							if (csi.OpenClosures == null) break;
-							for (int j = csi.OpenClosures.Count - 1; j >= 0; j--) {
-								if (csi.OpenClosures[j].Index == csi.BasePointer + i.NumVal)
+							if (currentFrame.OpenClosures == null) break;
+							for (int j = currentFrame.OpenClosures.Count - 1; j >= 0; j--) {
+								if (currentFrame.OpenClosures[j].Index == currentFrame.BasePointer + i.NumVal)
 								{
-									csi.OpenClosures[j].Close();
-									csi.OpenClosures.RemoveAt(j);
+									currentFrame.OpenClosures[j].Close();
+									currentFrame.OpenClosures.RemoveAt(j);
 								}
 							}
 							break;
@@ -222,9 +234,6 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.Closure:
 							ExecClosure(i);
 							break;
-						case OpCode.BeginFn:
-							ExecBeginFn(i);
-							break;
 						case OpCode.ToBool:
 						{
 							ref var top = ref m_ValueStack.Peek();
@@ -266,20 +275,16 @@ namespace WattleScript.Interpreter.Execution.VM
 							ExecExpTuple(i);
 							break;
 						case OpCode.Local:
-							var scope = m_ExecutionStack.Peek().BasePointer;
-							m_ValueStack.Push(m_ValueStack[scope + i.NumVal]);
+							m_ValueStack.Push(m_ValueStack[currentFrame.BasePointer + i.NumVal]);
 							break;
 						case OpCode.Upvalue:
-						{
-							var cs = m_ExecutionStack.Peek().ClosureScope;
-							m_ValueStack.Push(cs[i.NumVal].Value());
+							m_ValueStack.Push(currentFrame.ClosureScope[i.NumVal].Value());
 							break;
-						}
 						case OpCode.StoreUpv:
 							ExecStoreUpv(i);
 							break;
 						case OpCode.StoreLcl:
-							ExecStoreLcl(i);
+							ExecStoreLcl(i, ref currentFrame);
 							break;
 						case OpCode.TblInitN:
 							ExecTblInitN(i);
@@ -312,7 +317,7 @@ namespace WattleScript.Interpreter.Execution.VM
 								instructionPtr = i.NumVal;
 							break;
 						case OpCode.Invalid:
-							throw new NotImplementedException(string.Format("Invalid opcode : {0}", i.String));
+							throw new NotImplementedException(string.Format("Invalid opcode"));
 						default:
 							throw new NotImplementedException(string.Format("Execution for {0} not implented yet!", i.OpCode));
 					}
@@ -348,10 +353,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				{
 					if (m_Debug.DebuggerAttached.SignalRuntimeException((ScriptRuntimeException)ex))
 					{
-						if (instructionPtr >= 0 && instructionPtr < this.m_RootChunk.Code.Count)
-						{
-							ListenDebugger(m_RootChunk.Code[instructionPtr], instructionPtr);
-						}
+						if(instructionPtr > 0) ListenDebugger(instructionPtr);
 					}
 				}
 
@@ -436,34 +438,23 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			return decoratedMessage;
 		}
+		
 
-
-
-		private void AssignLocal(SymbolRef symref, DynValue value)
+		private void ExecStoreLcl(Instruction i, ref CallStackItem currentFrame)
 		{
-			var stackframe = m_ExecutionStack.Peek();
-			m_ValueStack[stackframe.LocalBase + symref.i_Index] = value;
-		}
-
-		private void ExecStoreLcl(Instruction i)
-		{
-			DynValue value = GetStoreValue(i);
-			SymbolRef symref = i.Symbol;
-
-			AssignLocal(symref, value);
+			m_ValueStack[currentFrame.BasePointer + (int)i.NumVal3] = GetStoreValue(i);;
 		}
 
 		private void ExecStoreUpv(Instruction i)
 		{
 			DynValue value = GetStoreValue(i);
-			SymbolRef symref = i.Symbol;
 
 			var stackframe = m_ExecutionStack.Peek();
 			
-			if(stackframe.ClosureScope[symref.i_Index] == null)
-				stackframe.ClosureScope[symref.i_Index] = Upvalue.NewNil();
+			if(stackframe.ClosureScope[(int)i.NumVal3] == null)
+				stackframe.ClosureScope[(int)i.NumVal3] = Upvalue.NewNil();
 			
-			stackframe.ClosureScope[symref.i_Index].Value() = value;
+			stackframe.ClosureScope[(int)i.NumVal3].Value() = value;
 		}
 
 		private void ExecSwap(Instruction i)
@@ -495,8 +486,9 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecClosure(Instruction i)
 		{
-			Closure c = new Closure(this.m_Script, i.NumVal, i.SymbolList, FindAnnotations(i.NumVal),
-				i.SymbolList.Select(s => this.GetUpvalueSymbol(s)).ToList());
+			var proto = m_ExecutionStack.Peek().Function.Functions[i.NumVal];
+			Closure c = new Closure(this.m_Script, proto, proto.Upvalues,
+				proto.Upvalues.Select(s => this.GetUpvalueSymbol(s)).ToList());
 			m_ValueStack.Push(DynValue.NewClosure(c));
 		}
 
@@ -506,9 +498,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				ref var ex = ref m_ExecutionStack.Peek();
 				for (int i = 0; i < ex.OpenClosures?.Count; i++) {
-					if (ex.OpenClosures[i].Index == ex.LocalBase + s.i_Index) return ex.OpenClosures[i];
+					if (ex.OpenClosures[i].Index == ex.BasePointer + s.i_Index) return ex.OpenClosures[i];
 				}
-				var upval = new Upvalue(m_ValueStack, ex.LocalBase + s.i_Index);
+				var upval = new Upvalue(m_ValueStack, ex.BasePointer + s.i_Index);
 				
 				ex.OpenClosures ??= new List<Upvalue>();
 				ex.OpenClosures.Add(upval);
@@ -650,17 +642,6 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.Push(DynValue.NewBoolean(!(v.CastToBool())));
 		}
 
-		private void ExecBeginFn(Instruction i)
-		{
-			ref CallStackItem cur = ref m_ExecutionStack.Peek();
-
-			cur.Debug_Symbols = i.SymbolList;
-			cur.LocalCount = i.NumVal;
-			cur.LocalBase = m_ValueStack.Reserve(i.NumVal);
-
-			ClearBlockData(i);
-		}
-
 		private CallStackItem PopToBasePointer()
 		{
 			var csi = m_ExecutionStack.Pop();
@@ -707,18 +688,22 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecArgs(Instruction I)
 		{
-			int localCount = m_ExecutionStack.Peek().LocalCount;
+			int localCount = m_ExecutionStack.Peek().Function.LocalCount;
 			int numargs = (int)m_ValueStack.Peek(localCount).Number;
 			// unpacks last tuple arguments to simplify a lot of code down under
 			var argsList = CreateArgsListForFunctionCall(numargs, 1 + localCount);
 
-			for (int i = 0; i < I.SymbolList.Length; i++)
+			var stackframe = m_ExecutionStack.Peek();
+			
+			for (int i = 0; i < I.NumVal; i++)
 			{
-				if (i >= argsList.Count)
-				{
-					this.AssignLocal(I.SymbolList[i], DynValue.Nil);
+				if (i >= argsList.Count) {
+					//Argument locals are stored in reverse order
+					//This is to do with some edge cases in argument naming
+					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = DynValue.Nil;
 				}
-				else if ((i == I.SymbolList.Length - 1) && (I.SymbolList[i].i_Name == WellKnownSymbols.VARARGS))
+				//Make a tuple if the last argument is varargs
+				else if (i == I.NumVal - 1 && I.NumVal2 != 0)
 				{
 					int len = argsList.Count - i;
 					DynValue[] varargs = new DynValue[len];
@@ -727,12 +712,11 @@ namespace WattleScript.Interpreter.Execution.VM
 					{
 						varargs[ii] = argsList[i].ToScalar();
 					}
-
-					this.AssignLocal(I.SymbolList[I.SymbolList.Length - 1], DynValue.NewTuple(Internal_AdjustTuple(varargs)));
+					m_ValueStack[stackframe.BasePointer] = DynValue.NewTuple(Internal_AdjustTuple(varargs));
 				}
 				else
 				{
-					this.AssignLocal(I.SymbolList[i], argsList[i].ToScalar());
+					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = argsList[i].ToScalar();
 				}
 			}
 		}
@@ -750,10 +734,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			if ((m_ExecutionStack.Count > this.m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
 				|| (m_ValueStack.Count > this.m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
 			{
+				var code = m_ExecutionStack.Peek().Function.Code;
 				// and the "will-be" return address is valid (we don't want to crash here)
-				if (instructionPtr >= 0 && instructionPtr < this.m_RootChunk.Code.Count)
+				if (instructionPtr >= 0 && instructionPtr < code.Length)
 				{
-					Instruction I = this.m_RootChunk.Code[instructionPtr];
+					Instruction I = code[instructionPtr];
 
 					// and we are followed *exactly* by a RET 1
 					if (I.OpCode == OpCode.Ret && I.NumVal == 1)
@@ -764,7 +749,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (csi.ClrFunction == null && csi.Continuation == null && csi.ErrorHandler == null
 							&& csi.ErrorHandlerBeforeUnwind.IsNil() && continuation == null && unwindHandler.IsNil() && handler == null)
 						{
-							instructionPtr = PerformTCO(instructionPtr, argsCount);
+							instructionPtr = PerformTCO(argsCount);
 							flags |= CallStackItemFlags.TailCall;
 						}
 					}
@@ -816,17 +801,18 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Push(DynValue.NewNumber(argsCount));
 				m_ExecutionStack.Push(new CallStackItem()
 				{
-					BasePointer = m_ValueStack.Count,
 					ReturnAddress = instructionPtr,
-					Debug_EntryPoint = fn.Function.EntryPointByteCodeLocation,
+					Function = fn.Function.Function,
 					CallingSourceRef = GetCurrentSourceRef(instructionPtr - 1), // See right above in GetCurrentSourceRef(instructionPtr - 1)
 					ClosureScope = fn.Function.ClosureContext,
 					ErrorHandler = handler,
 					Continuation = continuation,
 					ErrorHandlerBeforeUnwind = unwindHandler,
 					Flags = flags,
+					//Reserve stack space for locals
+					BasePointer = m_ValueStack.Reserve(fn.Function.Function.LocalCount)
 				});
-				return fn.Function.EntryPointByteCodeLocation;
+				return 0;
 			}
 
 			// fallback to __call metamethod
@@ -849,7 +835,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			throw ScriptRuntimeException.AttemptToCallNonFunc(fn.Type, debugText);
 		}
 
-		private int PerformTCO(int instructionPtr, int argsCount)
+		private int PerformTCO(int argsCount)
 		{
 			DynValue[] args = new DynValue[argsCount + 1];
 
@@ -923,7 +909,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 
 			if (csi.Continuation != null)
-				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, m_RootChunk.SourceRefs[currentPtr]),
+				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.SourceRefs[currentPtr]),
 					new DynValue[1] { m_ValueStack.Pop() }));
 
 			return retpoint;
@@ -1511,8 +1497,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			bool isMultiIndex = (i.OpCode == OpCode.IndexSetL);
 
 			DynValue originalIdx;
-			if (i.String != null)
-				originalIdx = DynValue.NewString(i.String);
+			string i_str = GetString((int)i.NumVal3);
+			if (i_str != null)
+				originalIdx = DynValue.NewString(i_str);
 			else
 				originalIdx = m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
@@ -1596,8 +1583,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			bool isMultiIndex = (i.OpCode == OpCode.IndexL);
 
 			DynValue originalIdx;
-			if (i.String != null)
-				originalIdx = DynValue.NewString(i.String);
+			string i_str = GetString(i.NumVal);
+			if (i_str != null)
+				originalIdx = DynValue.NewString(i_str);
 			else
 				originalIdx = m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();

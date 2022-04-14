@@ -23,7 +23,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			switch (m_OpText)
 			{

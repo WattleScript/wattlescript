@@ -72,7 +72,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				arg.ResolveScope(lcontext);
 		}
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			m_Function.Compile(bc);
 

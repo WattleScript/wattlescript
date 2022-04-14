@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WattleScript.Interpreter.Execution;
+using WattleScript.Interpreter.Execution.VM;
 
 namespace WattleScript.Interpreter
 {
@@ -28,18 +29,11 @@ namespace WattleScript.Interpreter
 			/// </summary>
 			Closure
 		}
-		
+
 		/// <summary>
 		/// Gets the annotations made on this function.
 		/// </summary>
-		public IReadOnlyList<Annotation> Annotations { get; private set; }
-
-
-		/// <summary>
-		/// Gets the entry point location in bytecode .
-		/// </summary>
-		public int EntryPointByteCodeLocation { get; private set; }
-
+		public IReadOnlyList<Annotation> Annotations => Function.Annotations;
 
 		/// <summary>
 		/// Gets the script owning this function
@@ -56,6 +50,8 @@ namespace WattleScript.Interpreter
 		/// The current closure context
 		/// </summary>
 		internal ClosureContext ClosureContext { get; private set; }
+		
+		internal FunctionProto Function { get; private set; }
 
 
 		/// <summary>
@@ -65,14 +61,12 @@ namespace WattleScript.Interpreter
 		/// <param name="idx">The index.</param>
 		/// <param name="symbols">The symbols.</param>
 		/// <param name="resolvedLocals">The resolved locals.</param>
-		internal Closure(Script script, int idx, SymbolRef[] symbols, Annotation[] annotations, IEnumerable<Upvalue> resolvedLocals)
+		internal Closure(Script script, FunctionProto proto, SymbolRef[] symbols, IEnumerable<Upvalue> resolvedLocals)
 		{
 			OwnerScript = script;
-
-			EntryPointByteCodeLocation = idx;
-
-			Annotations = annotations ?? Array.Empty<Annotation>();
-
+			
+			Function = proto;
+			
 			if (symbols.Length > 0)
 				ClosureContext = new ClosureContext(symbols, resolvedLocals);
 			else

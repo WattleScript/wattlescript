@@ -107,7 +107,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             iteratorFrame = lcontext.Scope.PopBlock();
         }
 
-        public override void Compile(ByteCode bc)
+        public override void Compile(FunctionBuilder bc)
         {
             //TODO: There are scope issues which mean we have to copy
             //the defined local to-from the stack a few times

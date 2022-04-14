@@ -140,7 +140,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		}
 
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			List<int> endJumps = new List<int>();
 

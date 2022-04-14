@@ -9,8 +9,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ClearBlockData(Instruction I)
 		{
 			ref var exStack = ref m_ExecutionStack.Peek();
-			int from = exStack.LocalBase + I.NumVal;
-			int to = exStack.LocalBase + I.NumVal2;
+			int from = exStack.BasePointer + I.NumVal;
+			int to = exStack.BasePointer + I.NumVal2;
 
 			int length = to - from + 1;
 			
@@ -41,7 +41,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				case SymbolRefType.Global:
 					return GetGlobalSymbol(GetGenericSymbol(symref.i_Env), symref.i_Name);
 				case SymbolRefType.Local:
-					return m_ValueStack[GetTopNonClrFunction().LocalBase + symref.i_Index];
+					return m_ValueStack[GetTopNonClrFunction().BasePointer + symref.i_Index];
 				case SymbolRefType.Upvalue:
 					return GetTopNonClrFunction().ClosureScope[symref.i_Index].Value();
 				default:
@@ -119,11 +119,11 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				if (!stackframe.IsNil)
 				{
-					if (stackframe.Debug_Symbols != null)
+					if (stackframe.Function.Locals != null)
 					{
-						for (int i = stackframe.Debug_Symbols.Length - 1; i >= 0; i--)
+						for (int i = stackframe.Function.Locals.Length - 1; i >= 0; i--)
 						{
-							var l = stackframe.Debug_Symbols[i];
+							var l = stackframe.Function.Locals[i];
 
 							if (l.i_Name == name /*&& stackframe.LocalScope[i] != null*/) //should a local scope ever not be inited?
 								return l;

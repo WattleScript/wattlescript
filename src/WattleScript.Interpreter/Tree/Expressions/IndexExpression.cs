@@ -73,7 +73,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_IndexExp?.ResolveScope(lcontext);
 		}
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			m_BaseExp.Compile(bc);
 			if (isLength) {
@@ -126,7 +126,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 		}
 
-		public void CompileAssignment(ByteCode bc, Operator op, int stackofs, int tupleidx)
+		public void CompileAssignment(FunctionBuilder bc, Operator op, int stackofs, int tupleidx)
 		{
 			if (isLength)
 			{ 

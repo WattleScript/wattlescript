@@ -7,14 +7,9 @@ namespace WattleScript.Interpreter.Execution
 	internal enum InstructionFieldUsage
 	{
 		None = 0,
-		Symbol = 0x1,
-		SymbolList = 0x2,
-		String = 0x4,
-		Number = 0x8,
-		NumVal = 0x10,
-		NumVal2 = 0x20,
-		NumValAsCodeAddress = 0x8010,
-		Annotations = 0x10000
+		NumVal = 0x1,
+		NumVal2 = 0x4,
+		NumVal3 = 0x8,
 	}
 
 	internal static class InstructionFieldUsage_Extensions
@@ -48,8 +43,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
 					return InstructionFieldUsage.None;
-				case OpCode.Annot:
-					return InstructionFieldUsage.Annotations;
 				case OpCode.Pop:
 				case OpCode.Copy:
 				case OpCode.TblInitI:
@@ -69,11 +62,12 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.JFor:
 				case OpCode.JtOrPop:
 				case OpCode.JfOrPop:
-					return InstructionFieldUsage.NumValAsCodeAddress;
+					return InstructionFieldUsage.NumVal; //Address
 				case OpCode.Swap:
 				case OpCode.Clean:
 				case OpCode.CopyValue:
 				case OpCode.JLclInit:
+				case OpCode.Args:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:
@@ -81,32 +75,27 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.IndexSet:
 				case OpCode.IndexSetN:
 				case OpCode.IndexSetL:
-					return InstructionFieldUsage.String | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
+					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.StoreLcl:
 				case OpCode.StoreUpv:
-					return InstructionFieldUsage.Symbol | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
+					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Index:
 				case OpCode.IndexL:
 				case OpCode.IndexN:
-					return InstructionFieldUsage.String;
-				case OpCode.Args:
-					return InstructionFieldUsage.SymbolList;
-				case OpCode.BeginFn:
-					return InstructionFieldUsage.SymbolList | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
+					return InstructionFieldUsage.NumVal; //string argument
 				case OpCode.Closure:
-					return InstructionFieldUsage.SymbolList | InstructionFieldUsage.NumValAsCodeAddress;
+					return InstructionFieldUsage.NumVal;
 				case OpCode.Nop:
 				case OpCode.Debug:
 				case OpCode.Invalid:
 				case OpCode.PushString:
-					return InstructionFieldUsage.String;
+				case OpCode.PushInt:
+					return InstructionFieldUsage.NumVal;
 				case OpCode.PushNumber:
-					return InstructionFieldUsage.Number;
+					return InstructionFieldUsage.NumVal;
 				case OpCode.Call:
 				case OpCode.ThisCall:
-					return InstructionFieldUsage.NumVal | InstructionFieldUsage.String;
-				case OpCode.Meta:
-					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2 | InstructionFieldUsage.String;
+					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				default:
 					throw new NotImplementedException(string.Format("InstructionFieldUsage for instruction {0}", op));
 			}

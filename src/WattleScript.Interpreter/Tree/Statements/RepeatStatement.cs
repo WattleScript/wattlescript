@@ -41,7 +41,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			m_StackFrame = lcontext.Scope.PopBlock();
 		}
 
-		public override void Compile(ByteCode bc)
+		public override void Compile(FunctionBuilder bc)
 		{
 			Loop L = new Loop()
 			{

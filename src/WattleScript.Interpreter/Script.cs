@@ -61,7 +61,6 @@ namespace WattleScript.Interpreter
 		public const string LUA_VERSION = "5.2";
 
 		Processor m_MainProcessor = null;
-		ByteCode m_ByteCode;
 		List<SourceCode> m_Sources = new List<SourceCode>();
 		Table m_GlobalTable;
 		IDebugger m_Debugger;
@@ -103,8 +102,7 @@ namespace WattleScript.Interpreter
 			PerformanceStats = new PerformanceStatistics();
 			Registry = new Table(this);
 
-			m_ByteCode = new ByteCode(this);
-			m_MainProcessor = new Processor(this, m_GlobalTable, m_ByteCode);
+			m_MainProcessor = new Processor(this, m_GlobalTable);
 			m_GlobalTable = new Table(this).RegisterCoreModules(coreModules);
 		}
 
@@ -158,19 +156,18 @@ namespace WattleScript.Interpreter
 
 			m_Sources.Add(source);
 
-			int address = Loader_Fast.LoadFunction(this, source, m_ByteCode, globalTable != null || m_GlobalTable != null);
-
+			var func = Loader_Fast.LoadFunction(this, source, globalTable != null || m_GlobalTable != null);
 			SignalSourceCodeChange(source);
 			SignalByteCodeChange();
 
-			return MakeClosure(address, globalTable ?? m_GlobalTable);
+			return MakeClosure(func, globalTable ?? m_GlobalTable);
 		}
 
 		private void SignalByteCodeChange()
 		{
 			if (m_Debugger != null)
 			{
-				m_Debugger.SetByteCode(m_ByteCode.Code.Select(s => s.ToString()).ToArray());
+				//TODO: This is no-op for now
 			}
 		}
 
@@ -210,14 +207,12 @@ namespace WattleScript.Interpreter
 
 			m_Sources.Add(source);
 
-			int address = Loader_Fast.LoadChunk(this,
-				source,
-				m_ByteCode);
+			var func = Loader_Fast.LoadChunk(this, source);
 
 			SignalSourceCodeChange(source);
 			SignalByteCodeChange();
 
-			return MakeClosure(address, globalTable ?? m_GlobalTable);
+			return MakeClosure(func, globalTable ?? m_GlobalTable);
 		}
 
 		/// <summary>
@@ -251,16 +246,12 @@ namespace WattleScript.Interpreter
 
 				m_Sources.Add(source);
 
-				bool hasUpvalues;
-				int address = m_MainProcessor.Undump(stream, m_Sources.Count - 1, globalTable ?? m_GlobalTable, out hasUpvalues);
+				var func = m_MainProcessor.Undump(stream, m_Sources.Count - 1);
 
 				SignalSourceCodeChange(source);
 				SignalByteCodeChange();
 
-				if (hasUpvalues)
-					return MakeClosure(address, globalTable ?? m_GlobalTable);
-				else
-					return MakeClosure(address);
+				return MakeClosure(func, globalTable ?? m_GlobalTable);
 			}
 		}
 
@@ -292,8 +283,7 @@ namespace WattleScript.Interpreter
 			if (upvaluesType == Closure.UpvaluesType.Closure)
 				throw new ArgumentException("function arg has upvalues other than _ENV");
 
-			m_MainProcessor.Dump(stream, function.Function.EntryPointByteCodeLocation, upvaluesType == Closure.UpvaluesType.Environment, writeSourceRefs);
-			
+			m_MainProcessor.Dump(stream, function.Function.Function, writeSourceRefs);
 		}
 
 		/// <summary>
@@ -306,7 +296,7 @@ namespace WattleScript.Interpreter
 
 			if (function.Type != DataType.Function)
 				throw new ArgumentException("function arg is not a function!");
-			return m_MainProcessor.DumpString(function.Function.EntryPointByteCodeLocation);
+			return m_MainProcessor.DumpString(function.Function.Function);
 		}
 
 
@@ -441,25 +431,22 @@ namespace WattleScript.Interpreter
 		/// <param name="address">The address.</param>
 		/// <param name="envTable">The env table to create a 0-upvalue</param>
 		/// <returns></returns>
-		private DynValue MakeClosure(int address, Table envTable = null)
+		private DynValue MakeClosure(FunctionProto proto, Table envTable = null)
 		{
 			this.CheckScriptOwnership(envTable);
 			Closure c;
-			var annotations = m_MainProcessor.FindAnnotations(address);
+			
 			if (envTable == null)
 			{
-				Instruction? meta = m_MainProcessor.FindMeta(ref address);
-
-				// if we find the meta for a new chunk, we use the value in the meta for the _ENV upvalue
-				if ((meta != null) && (meta.Value.NumVal2 == (int)OpCodeMetadataType.ChunkEntrypoint))
+				if (proto.IsChunk)
 				{
-					c = new Closure(this, address,
-						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) }, annotations,
+					c = new Closure(this, proto,
+						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
 						new Upvalue[1]);
 				}
 				else
 				{
-					c = new Closure(this, address, new SymbolRef[0], annotations, new Upvalue[0]);
+					c = new Closure(this, proto, Array.Empty<SymbolRef>(), Array.Empty<Upvalue>());
 				}
 			}
 			else
@@ -471,8 +458,7 @@ namespace WattleScript.Interpreter
 				var vals = new Upvalue[] {
 					Upvalue.Create(DynValue.NewTable(envTable))
 				};
-
-				c = new Closure(this, address, syms, annotations, vals);
+				c = new Closure(this, proto, syms, vals);
 			}
 
 			return DynValue.NewClosure(c);

@@ -10,13 +10,13 @@ namespace WattleScript.Interpreter.Tree
 		public List<int> BreakJumps = new List<int>();
 		public List<int> ContinueJumps = new List<int>();
 
-		public void CompileBreak(ByteCode bc)
+		public void CompileBreak(FunctionBuilder bc)
 		{
 			bc.Emit_Exit(Scope);
 			BreakJumps.Add(bc.Emit_Jump(OpCode.Jump, -1));
 		}
 
-		public void CompileContinue(ByteCode bc)
+		public void CompileContinue(FunctionBuilder bc)
 		{
 			ContinueJumps.Add(bc.Emit_Jump(OpCode.Jump, -1));
 		}
@@ -29,12 +29,12 @@ namespace WattleScript.Interpreter.Tree
 
 	internal class LoopBoundary : ILoop
 	{
-		public void CompileBreak(ByteCode bc)
+		public void CompileBreak(FunctionBuilder bc)
 		{
 			throw new InternalErrorException("CompileBreak called on LoopBoundary");
 		}
 		
-		public void CompileContinue(ByteCode bc)
+		public void CompileContinue(FunctionBuilder bc)
 		{
 			throw new InternalErrorException("CompileBreak called on LoopBoundary");
 		}

@@ -10,10 +10,8 @@ namespace WattleScript.Interpreter.Execution.VM
 {
 	sealed partial class Processor
 	{
-		ByteCode m_RootChunk;
-
-		FastStack<DynValue> m_ValueStack = new FastStack<DynValue>(8192, 131072);
-		FastStack<CallStackItem> m_ExecutionStack = new FastStack<CallStackItem>(512, 131072);
+		FastStack<DynValue> m_ValueStack = new FastStack<DynValue>(1024, 131072);
+		FastStack<CallStackItem> m_ExecutionStack = new FastStack<CallStackItem>(128, 131072);
 		List<Processor> m_CoroutinesStack;
 
 		Table m_GlobalTable;
@@ -24,12 +22,11 @@ namespace WattleScript.Interpreter.Execution.VM
 		int m_SavedInstructionPtr = -1;
 		DebugContext m_Debug;
 
-		public Processor(Script script, Table globalContext, ByteCode byteCode)
+		public Processor(Script script, Table globalContext)
 		{
 			m_CoroutinesStack = new List<Processor>();
 
 			m_Debug = new DebugContext();
-			m_RootChunk = byteCode;
 			m_GlobalTable = globalContext;
 			m_Script = script;
 			m_State = CoroutineState.Main;
@@ -39,7 +36,6 @@ namespace WattleScript.Interpreter.Execution.VM
 		private Processor(Processor parentProcessor)
 		{
 			m_Debug = parentProcessor.m_Debug;
-			m_RootChunk = parentProcessor.m_RootChunk;
 			m_GlobalTable = parentProcessor.m_GlobalTable;
 			m_Script = parentProcessor.m_Script;
 			m_Parent = parentProcessor;
@@ -144,14 +140,16 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ExecutionStack.Push(new CallStackItem()
 			{
 				BasePointer = m_ValueStack.Count,
-				Debug_EntryPoint = function.Function.EntryPointByteCodeLocation,
+				Function = function.Function.Function,
 				ReturnAddress = -1,
 				ClosureScope = function.Function.ClosureContext,
 				CallingSourceRef = SourceRef.GetClrLocation(),
 				Flags = flags
 			});
 
-			return function.Function.EntryPointByteCodeLocation;
+			m_ValueStack.Reserve(function.Function.Function.LocalCount);
+
+			return 0;
 		}
 
 

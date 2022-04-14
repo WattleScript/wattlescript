@@ -27,34 +27,35 @@ namespace WattleScript.Interpreter.Tree.Statements
 		{
 			lcontext.Scope.PushFunction(this);
 			lcontext.Scope.SetHasVarArgs();
-			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
+			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 
 			m_Block.ResolveScope(lcontext);
 			
 			m_StackFrame = lcontext.Scope.PopFunction();
 		}
 
-
-		public override void Compile(Execution.VM.ByteCode bc)
+		public FunctionProto CompileFunction(Script script)
 		{
-			int meta = bc.Emit_Meta("<chunk-root>", OpCodeMetadataType.ChunkEntrypoint);
-			if (annotations.Length != 0) {
-				bc.Emit_Annot(annotations);
-			}
-			bc.Emit_BeginFn(m_StackFrame);
-			bc.Emit_Args(m_VarArgs);
-
+			var bc = new FunctionBuilder(script);
+			bc.Emit_Args(1, true);
 			bc.Emit_Load(SymbolRef.Upvalue(WellKnownSymbols.ENV, 0));
 			bc.Emit_Store(m_Env, 0, 0);
 			bc.Emit_Pop();
-
 			m_Block.Compile(bc);
 			bc.Emit_Ret(0);
+			
+			var proto = bc.GetProto("<chunk-root>", m_StackFrame);
+			proto.Annotations = annotations;
+			proto.Upvalues = new SymbolRef[] {SymbolRef.Upvalue(WellKnownSymbols.ENV, 0)};
+			proto.IsChunk = true;
+			return proto;
+		}
 
-			var ins = bc.Code[meta];
-			ins.NumVal = bc.GetJumpPointForLastInstruction() - meta;
-			bc.Code[meta] = ins;
+
+		public override void Compile(Execution.VM.FunctionBuilder bc)
+		{
+			throw new InvalidOperationException();
 		}
 
 		public SymbolRef CreateUpvalue(BuildTimeScope scope, SymbolRef symbol)

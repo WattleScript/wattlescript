@@ -49,13 +49,13 @@ namespace WattleScript.Interpreter.Tree.Statements
 		}
 
 
-		public override void Compile(Execution.VM.ByteCode bc)
+		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			if(m_Condition != null) CompileLoop(bc);
 			else CompileScopeBlock(bc);
 		}
 
-		void CompileLoop(Execution.VM.ByteCode bc)
+		void CompileLoop(Execution.VM.FunctionBuilder bc)
 		{
 			Loop L = new Loop()
 			{
@@ -91,7 +91,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.PopSourceRef();
 		}
 		
-		void CompileScopeBlock(Execution.VM.ByteCode bc)
+		void CompileScopeBlock(Execution.VM.FunctionBuilder bc)
 		{
 			using(bc.EnterSource(m_Do))
 				bc.Emit_Enter(m_StackFrame);

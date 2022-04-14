@@ -505,7 +505,7 @@ namespace WattleScript.Interpreter
 				case DataType.String:
 					return "\"" + String + "\"";
 				case DataType.Function:
-					return string.Format("(Function {0:X8})", Function.EntryPointByteCodeLocation);
+					return string.Format("(Function {0:X8})", Function.Function.Name ?? "no-name");
 				case DataType.ClrFunction:
 					return string.Format("(Function CLR)", Function);
 				case DataType.Table:
