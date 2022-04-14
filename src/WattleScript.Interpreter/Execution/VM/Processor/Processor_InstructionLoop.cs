@@ -26,15 +26,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			// This is the main loop of the processor, has a weird control flow and needs to be as fast as possible.
 			// This sentence is just a convoluted way to say "don't complain about gotos".
-
 			long executedInstructions = 0;
-			bool canAutoYield = (AutoYieldCounter > 0) && m_CanYield && (this.State != CoroutineState.Main);
+			bool canAutoYield = (AutoYieldCounter > 0) && m_CanYield && (State != CoroutineState.Main);
 
 			repeat_execution:
 
 			try
 			{
-
 				while (true)
 				{
 					//TODO: Hoist outside of while loop, update any instruction that
@@ -94,76 +92,76 @@ namespace WattleScript.Interpreter.Execution.VM
 							m_ValueStack.Push(DynValue.NewString(currentFrame.Function.Strings[i.NumVal]));
 							break;
 						case OpCode.BNot:
-							ExecBNot(i);
+							ExecBNot();
 							break;
 						case OpCode.BAnd:
-							ExecBAnd(i);
+							ExecBAnd();
 							break;
 						case OpCode.BOr:
-							ExecBOr(i);
+							ExecBOr();
 							break;
 						case OpCode.BXor:
-							ExecBXor(i);
+							ExecBXor();
 							break;
 						case OpCode.BLShift:
-							ExecBLShift(i);
+							ExecBlShift();
 							break;
 						case OpCode.BRShiftA:
-							ExecBRShiftA(i);
+							ExecBrShiftA();
 							break;
 						case OpCode.BRShiftL:
-							ExecBRShiftL(i);
+							ExecBrShiftL();
 							break;
 						case OpCode.Add:
-							instructionPtr = ExecAdd(i, instructionPtr);
+							instructionPtr = ExecAdd(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.AddStr:
-							instructionPtr = ExecAddStr(i, instructionPtr);
+							instructionPtr = ExecAddStr(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Concat:
-							instructionPtr = ExecConcat(i, instructionPtr);
+							instructionPtr = ExecConcat(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Neg:
-							instructionPtr = ExecNeg(i, instructionPtr);
+							instructionPtr = ExecNeg(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Sub:
-							instructionPtr = ExecSub(i, instructionPtr);
+							instructionPtr = ExecSub(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Mul:
-							instructionPtr = ExecMul(i, instructionPtr);
+							instructionPtr = ExecMul(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Div:
-							instructionPtr = ExecDiv(i, instructionPtr);
+							instructionPtr = ExecDiv(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Mod:
-							instructionPtr = ExecMod(i, instructionPtr);
+							instructionPtr = ExecMod(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Power:
-							instructionPtr = ExecPower(i, instructionPtr);
+							instructionPtr = ExecPower(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Eq:
-							instructionPtr = ExecEq(i, instructionPtr);
+							instructionPtr = ExecEq(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.LessEq:
-							instructionPtr = ExecLessEq(i, instructionPtr);
+							instructionPtr = ExecLessEq(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Less:
-							instructionPtr = ExecLess(i, instructionPtr);
+							instructionPtr = ExecLess(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Len:
-							instructionPtr = ExecLen(i, instructionPtr);
+							instructionPtr = ExecLen(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Call:
@@ -188,10 +186,10 @@ namespace WattleScript.Interpreter.Execution.VM
 							break;
 						}
 						case OpCode.Not:
-							ExecNot(i);
+							ExecNot();
 							break;
 						case OpCode.CNot:
-							ExecCNot(i);
+							ExecCNot();
 							break;
 						case OpCode.JfOrPop:
 						case OpCode.JtOrPop:
@@ -260,16 +258,13 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.NewTable:
-							if (i.NumVal == 0)
-								m_ValueStack.Push(DynValue.NewTable(this.m_Script));
-							else
-								m_ValueStack.Push(DynValue.NewPrimeTable());
+							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
 							break;
 						case OpCode.IterPrep:
-							ExecIterPrep(i);
+							ExecIterPrep();
 							break;
 						case OpCode.IterUpd:
-							ExecIterUpd(i);
+							ExecIterUpd();
 							break;
 						case OpCode.ExpTuple:
 							ExecExpTuple(i);
@@ -287,7 +282,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							ExecStoreLcl(i, ref currentFrame);
 							break;
 						case OpCode.TblInitN:
-							ExecTblInitN(i);
+							ExecTblInitN();
 							break;
 						case OpCode.TblInitI:
 							ExecTblInitI(i);
@@ -305,11 +300,11 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.NilCoalescing:
-							instructionPtr = ExecNilCoalescingAssignment(i, instructionPtr);
+							instructionPtr = ExecNilCoalescingAssignment( instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.NilCoalescingInverse:
-							instructionPtr = ExecNilCoalescingAssignmentInverse(i, instructionPtr);
+							instructionPtr = ExecNilCoalescingAssignmentInverse(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.JLclInit:
@@ -317,24 +312,23 @@ namespace WattleScript.Interpreter.Execution.VM
 								instructionPtr = i.NumVal;
 							break;
 						case OpCode.Invalid:
-							throw new NotImplementedException(string.Format("Invalid opcode"));
+							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
-							throw new NotImplementedException(string.Format("Execution for {0} not implented yet!", i.OpCode));
+							throw new NotImplementedException($"Execution for {i.OpCode} not implented yet!");
 					}
 				}
 
-			yield_to_calling_coroutine:
+				yield_to_calling_coroutine:
 
 				DynValue yieldRequest = m_ValueStack.Pop().ToScalar();
 
 				if (m_CanYield)
 					return yieldRequest;
-				else if (this.State == CoroutineState.Main)
+				if (State == CoroutineState.Main)
 					throw ScriptRuntimeException.CannotYieldMain();
-				else
-					throw ScriptRuntimeException.CannotYield();
+				throw ScriptRuntimeException.CannotYield();
 				
-			yield_to_await:
+				yield_to_await:
 				DynValue awaitRequest = m_ValueStack.Pop().ToScalar();
 				return awaitRequest;
 
@@ -343,7 +337,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				FillDebugData(ex, instructionPtr);
 
-				if (!(ex is ScriptRuntimeException))
+				if (!(ex is ScriptRuntimeException e))
 				{
 					ex.Rethrow();
 					throw;
@@ -351,7 +345,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				if (m_Debug.DebuggerAttached != null)
 				{
-					if (m_Debug.DebuggerAttached.SignalRuntimeException((ScriptRuntimeException)ex))
+					if (m_Debug.DebuggerAttached.SignalRuntimeException(e))
 					{
 						if(instructionPtr > 0) ListenDebugger(instructionPtr);
 					}
@@ -362,7 +356,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					var c = m_ExecutionStack.Peek(i);
 
 					if (c.ErrorHandlerBeforeUnwind.IsNotNil())
-						ex.DecoratedMessage = PerformMessageDecorationBeforeUnwind(c.ErrorHandlerBeforeUnwind, ex.DecoratedMessage, GetCurrentSourceRef(instructionPtr));
+						e.DecoratedMessage = PerformMessageDecorationBeforeUnwind(c.ErrorHandlerBeforeUnwind, e.DecoratedMessage, GetCurrentSourceRef(instructionPtr));
 				}
 
 
@@ -380,7 +374,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							m_ValueStack.RemoveLast(argscnt + 1);
 						}
 
-						var cbargs = new DynValue[] { DynValue.NewString(ex.DecoratedMessage) };
+						var cbargs = new[] { DynValue.NewString(e.DecoratedMessage) };
 
 						DynValue handled = csi.ErrorHandler.Invoke(new ScriptExecutionContext(this, csi.ErrorHandler, GetCurrentSourceRef(instructionPtr)), cbargs);
 
@@ -388,34 +382,32 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						goto repeat_execution;
 					}
-					else if ((csi.Flags & CallStackItemFlags.EntryPoint) != 0)
+					
+					if ((csi.Flags & CallStackItemFlags.EntryPoint) != 0)
 					{
-						ex.Rethrow();
+						e.Rethrow();
 						throw;
 					}
 				}
 
-				ex.Rethrow();
+				e.Rethrow();
 				throw;
 			}
 
-		return_to_native_code:
+			return_to_native_code:
 			return m_ValueStack.Pop();
-
-
 		}
-
 
 		internal string PerformMessageDecorationBeforeUnwind(DynValue messageHandler, string decoratedMessage, SourceRef sourceRef)
 		{
 			try
 			{
-				DynValue[] args = new DynValue[] { DynValue.NewString(decoratedMessage) };
-				DynValue ret = DynValue.Nil;
+				DynValue[] args = { DynValue.NewString(decoratedMessage) };
+				DynValue ret;
 
 				if (messageHandler.Type == DataType.Function)
 				{
-					ret = this.Call(messageHandler, args);
+					ret = Call(messageHandler, args);
 				}
 				else if (messageHandler.Type == DataType.ClrFunction)
 				{
@@ -439,21 +431,16 @@ namespace WattleScript.Interpreter.Execution.VM
 			return decoratedMessage;
 		}
 		
-
 		private void ExecStoreLcl(Instruction i, ref CallStackItem currentFrame)
 		{
-			m_ValueStack[currentFrame.BasePointer + (int)i.NumVal3] = GetStoreValue(i);;
+			m_ValueStack[currentFrame.BasePointer + (int)i.NumVal3] = GetStoreValue(i);
 		}
 
 		private void ExecStoreUpv(Instruction i)
 		{
 			DynValue value = GetStoreValue(i);
-
 			var stackframe = m_ExecutionStack.Peek();
-			
-			if(stackframe.ClosureScope[(int)i.NumVal3] == null)
-				stackframe.ClosureScope[(int)i.NumVal3] = Upvalue.NewNil();
-			
+			stackframe.ClosureScope[(int) i.NumVal3] ??= Upvalue.NewNil();
 			stackframe.ClosureScope[(int)i.NumVal3].Value() = value;
 		}
 
@@ -465,8 +452,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.Set(i.NumVal, v2);
 			m_ValueStack.Set(i.NumVal2, v1);
 		}
-
-
+		
 		private DynValue GetStoreValue(Instruction i)
 		{
 			int stackofs = i.NumVal;
@@ -478,38 +464,39 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				return (tupleidx < v.Tuple.Length) ? v.Tuple[tupleidx] : DynValue.Nil;
 			}
-			else
-			{
-				return (tupleidx == 0) ? v : DynValue.Nil;
-			}
+
+			return tupleidx == 0 ? v : DynValue.Nil;
 		}
 
 		private void ExecClosure(Instruction i)
 		{
 			var proto = m_ExecutionStack.Peek().Function.Functions[i.NumVal];
-			Closure c = new Closure(this.m_Script, proto, proto.Upvalues,
-				proto.Upvalues.Select(s => this.GetUpvalueSymbol(s)).ToList());
+			Closure c = new Closure(m_Script, proto, proto.Upvalues,
+				proto.Upvalues.Select(GetUpvalueSymbol).ToList());
 			m_ValueStack.Push(DynValue.NewClosure(c));
 		}
 
 		private Upvalue GetUpvalueSymbol(SymbolRef s)
 		{
-			if (s.Type == SymbolRefType.Local)
+			switch (s.Type)
 			{
-				ref var ex = ref m_ExecutionStack.Peek();
-				for (int i = 0; i < ex.OpenClosures?.Count; i++) {
-					if (ex.OpenClosures[i].Index == ex.BasePointer + s.i_Index) return ex.OpenClosures[i];
-				}
-				var upval = new Upvalue(m_ValueStack, ex.BasePointer + s.i_Index);
+				case SymbolRefType.Local:
+				{
+					ref var ex = ref m_ExecutionStack.Peek();
+					for (int i = 0; i < ex.OpenClosures?.Count; i++) {
+						if (ex.OpenClosures[i].Index == ex.BasePointer + s.i_Index) return ex.OpenClosures[i];
+					}
+					var upval = new Upvalue(m_ValueStack, ex.BasePointer + s.i_Index);
 				
-				ex.OpenClosures ??= new List<Upvalue>();
-				ex.OpenClosures.Add(upval);
-				return upval;
+					ex.OpenClosures ??= new List<Upvalue>();
+					ex.OpenClosures.Add(upval);
+					return upval;
+				}
+				case SymbolRefType.Upvalue:
+					return m_ExecutionStack.Peek().ClosureScope[s.i_Index];
+				default:
+					throw new Exception("unsupported symbol type");
 			}
-			else if (s.Type == SymbolRefType.Upvalue)
-				return m_ExecutionStack.Peek().ClosureScope[s.i_Index];
-			else
-				throw new Exception("unsupported symbol type");
 		}
 
 		private void ExecMkTuple(Instruction i)
@@ -517,15 +504,13 @@ namespace WattleScript.Interpreter.Execution.VM
 			Slice<DynValue> slice = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal, false);
 
 			var v = Internal_AdjustTuple(slice);
-
 			m_ValueStack.RemoveLast(i.NumVal);
-
 			m_ValueStack.Push(DynValue.NewTuple(v));
 		}
 
-		private void ExecIterUpd(Instruction i)
+		private void ExecIterUpd()
 		{
-			DynValue v = m_ValueStack.Peek(0);
+			DynValue v = m_ValueStack.Peek();
 			DynValue t = m_ValueStack.Peek(1);
 			t.Tuple[2] = v;
 		}
@@ -546,7 +531,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		}
 
-		private void ExecIterPrep(Instruction i)
+		private void ExecIterPrep()
 		{
 			DynValue v = m_ValueStack.Pop();
 
@@ -562,18 +547,13 @@ namespace WattleScript.Interpreter.Execution.VM
 			// WattleScript additions - given f, s, var
 			// 1) if f is not a function and has a __iterator metamethod, call __iterator to get the triplet
 			// 2) if f is a table with no __call metamethod, use a default table iterator
-
 			if (f.Type != DataType.Function && f.Type != DataType.ClrFunction)
 			{
-				DynValue meta = this.GetMetamethod(f, "__iterator");
+				DynValue meta = GetMetamethod(f, "__iterator");
 
 				if (!meta.IsNil())
 				{
-					if (meta.Type != DataType.Tuple)
-						v = this.GetScript().Call(meta, f, s, var);
-					else
-						v = meta;
-
+					v = meta.Type != DataType.Tuple ? GetScript().Call(meta, f, s, var) : meta;
 					f = v.Tuple.Length >= 1 ? v.Tuple[0] : DynValue.Nil;
 					s = v.Tuple.Length >= 2 ? v.Tuple[1] : DynValue.Nil;
 					var = v.Tuple.Length >= 3 ? v.Tuple[2] : DynValue.Nil;
@@ -581,9 +561,10 @@ namespace WattleScript.Interpreter.Execution.VM
 					m_ValueStack.Push(DynValue.NewTuple(f, s, var));
 					return;
 				}
-				else if (f.Type == DataType.Table)
+				
+				if (f.Type == DataType.Table)
 				{
-					DynValue callmeta = this.GetMetamethod(f, "__call");
+					DynValue callmeta = GetMetamethod(f, "__call");
 
 					if (callmeta.IsNil())
 					{
@@ -595,34 +576,27 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			m_ValueStack.Push(DynValue.NewTuple(f, s, var));
 		}
-
-
+		
 		private int ExecJFor(Instruction i, int instructionPtr)
 		{
-			double val = m_ValueStack.Peek(0).AssertNumber(1);
+			double val = m_ValueStack.Peek().AssertNumber(1);
 			double step = m_ValueStack.Peek(1).AssertNumber(2);
 			double stop = m_ValueStack.Peek(2).AssertNumber(3);
 
 			bool whileCond = (step > 0) ? val <= stop : val >= stop;
 
-			if (!whileCond)
-				return i.NumVal;
-			else
-				return instructionPtr;
+			return !whileCond ? i.NumVal : instructionPtr;
 		}
-
-
 
 		private void ExecIncr(Instruction i)
 		{
-			ref DynValue top = ref m_ValueStack.Peek(0);
+			ref DynValue top = ref m_ValueStack.Peek();
 			DynValue btm = m_ValueStack.Peek(i.NumVal);
 
 			top = DynValue.NewNumber(top.Number + btm.Number);
 		}
-
-
-		private void ExecCNot(Instruction i)
+		
+		private void ExecCNot()
 		{
 			DynValue v = m_ValueStack.Pop().ToScalar();
 			DynValue not = m_ValueStack.Pop().ToScalar();
@@ -630,13 +604,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (not.Type != DataType.Boolean)
 				throw new InternalErrorException("CNOT had non-bool arg");
 
-			if (not.CastToBool())
-				m_ValueStack.Push(DynValue.NewBoolean(!(v.CastToBool())));
-			else
-				m_ValueStack.Push(DynValue.NewBoolean(v.CastToBool()));
+			m_ValueStack.Push(not.CastToBool() ? DynValue.NewBoolean(!v.CastToBool()) : DynValue.NewBoolean(v.CastToBool()));
 		}
 
-		private void ExecNot(Instruction i)
+		private void ExecNot()
 		{
 			m_ValueStack.Set(0, DynValue.NewBoolean(!m_ValueStack.Peek().CastToBool()));
 		}
@@ -649,15 +620,6 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (csi.BasePointer >= 0)
 				m_ValueStack.CropAtCount(csi.BasePointer);
 			return csi;
-		}
-
-		private int PopExecStackAndCheckVStack(int vstackguard)
-		{
-			var xs = m_ExecutionStack.Pop();
-			if (vstackguard != xs.BasePointer)
-				throw new InternalErrorException("StackGuard violation");
-
-			return xs.ReturnAddress;
 		}
 
 		private IList<DynValue> CreateArgsListForFunctionCall(int numargs, int offsFromTop)
@@ -678,20 +640,16 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				return values;
 			}
-			else
-			{
-				return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs, false);
-			}
+
+			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs, false);
 		}
-
-
+		
 		private void ExecArgs(Instruction I)
 		{
 			int localCount = m_ExecutionStack.Peek().Function.LocalCount;
 			int numargs = (int)m_ValueStack.Peek(localCount).Number;
 			// unpacks last tuple arguments to simplify a lot of code down under
 			var argsList = CreateArgsListForFunctionCall(numargs, 1 + localCount);
-
 			var stackframe = m_ExecutionStack.Peek();
 			
 			for (int i = 0; i < I.NumVal; i++)
@@ -719,10 +677,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 			}
 		}
-
-
-
-
+		
 		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
 			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
 		{
@@ -730,8 +685,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
 
 			// if TCO threshold reached
-			if ((m_ExecutionStack.Count > this.m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
-				|| (m_ValueStack.Count > this.m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
+			if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
+				|| (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
 			{
 				var code = m_ExecutionStack.Peek().Function.Code;
 				// and the "will-be" return address is valid (we don't want to crash here)
@@ -748,70 +703,69 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (csi.ClrFunction == null && csi.Continuation == null && csi.ErrorHandler == null
 							&& csi.ErrorHandlerBeforeUnwind.IsNil() && continuation == null && unwindHandler.IsNil() && handler == null)
 						{
-							instructionPtr = PerformTCO(argsCount);
+							instructionPtr = PerformTco(argsCount);
 							flags |= CallStackItemFlags.TailCall;
 						}
 					}
 				}
 			}
-
-
-
-			if (fn.Type == DataType.ClrFunction)
+			
+			switch (fn.Type)
 			{
-				//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
-				IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
-		                // we expand tuples before callbacks
-				// args = DynValue.ExpandArgumentsToList(args);
-
-				// instructionPtr - 1: instructionPtr already points to the next instruction at this moment
-				// but we need the current instruction here
-                		SourceRef sref = GetCurrentSourceRef(instructionPtr - 1);
-
-				m_ExecutionStack.Push(new CallStackItem()
+				case DataType.ClrFunction:
 				{
-					ClrFunction = fn.Callback,
-					ReturnAddress = instructionPtr,
-					CallingSourceRef = sref,
-					BasePointer = -1,
-					ErrorHandler = handler,
-					Continuation = continuation,
-					ErrorHandlerBeforeUnwind = unwindHandler,
-					Flags = flags,
-				});
+					//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
+					IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
+					// we expand tuples before callbacks
+					// args = DynValue.ExpandArgumentsToList(args);
 
-				var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
-				m_ValueStack.RemoveLast(argsCount + 1);
-				if (m_Script.Options.AutoAwait && 
-				    ret.Type == DataType.UserData &&
-				    ret.UserData?.Object is TaskWrapper tw)
-				{
-					ret = tw.@await(
-						new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, null);
+					// instructionPtr - 1: instructionPtr already points to the next instruction at this moment
+					// but we need the current instruction here
+					SourceRef sref = GetCurrentSourceRef(instructionPtr - 1);
+
+					m_ExecutionStack.Push(new CallStackItem()
+					{
+						ClrFunction = fn.Callback,
+						ReturnAddress = instructionPtr,
+						CallingSourceRef = sref,
+						BasePointer = -1,
+						ErrorHandler = handler,
+						Continuation = continuation,
+						ErrorHandlerBeforeUnwind = unwindHandler,
+						Flags = flags,
+					});
+
+					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
+					m_ValueStack.RemoveLast(argsCount + 1);
+					if (m_Script.Options.AutoAwait && 
+					    ret.Type == DataType.UserData &&
+					    ret.UserData?.Object is TaskWrapper tw)
+					{
+						ret = tw.await(
+							new ScriptExecutionContext(this, fn.Callback, sref) {CanAwait = canAwait}, null);
+					}
+					m_ValueStack.Push(ret);
+
+					m_ExecutionStack.Pop();
+
+					return Internal_CheckForTailRequests(canAwait, instructionPtr);
 				}
-				m_ValueStack.Push(ret);
-
-				m_ExecutionStack.Pop();
-
-				return Internal_CheckForTailRequests(canAwait, instructionPtr);
-			}
-			else if (fn.Type == DataType.Function)
-			{
-				m_ValueStack.Push(DynValue.NewNumber(argsCount));
-				m_ExecutionStack.Push(new CallStackItem()
-				{
-					ReturnAddress = instructionPtr,
-					Function = fn.Function.Function,
-					CallingSourceRef = GetCurrentSourceRef(instructionPtr - 1), // See right above in GetCurrentSourceRef(instructionPtr - 1)
-					ClosureScope = fn.Function.ClosureContext,
-					ErrorHandler = handler,
-					Continuation = continuation,
-					ErrorHandlerBeforeUnwind = unwindHandler,
-					Flags = flags,
-					//Reserve stack space for locals
-					BasePointer = m_ValueStack.Reserve(fn.Function.Function.LocalCount)
-				});
-				return 0;
+				case DataType.Function:
+					m_ValueStack.Push(DynValue.NewNumber(argsCount));
+					m_ExecutionStack.Push(new CallStackItem()
+					{
+						ReturnAddress = instructionPtr,
+						Function = fn.Function.Function,
+						CallingSourceRef = GetCurrentSourceRef(instructionPtr - 1), // See right above in GetCurrentSourceRef(instructionPtr - 1)
+						ClosureScope = fn.Function.ClosureContext,
+						ErrorHandler = handler,
+						Continuation = continuation,
+						ErrorHandlerBeforeUnwind = unwindHandler,
+						Flags = flags,
+						//Reserve stack space for locals
+						BasePointer = m_ValueStack.Reserve(fn.Function.Function.LocalCount)
+					});
+					return 0;
 			}
 
 			// fallback to __call metamethod
@@ -834,7 +788,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			throw ScriptRuntimeException.AttemptToCallNonFunc(fn.Type, debugText);
 		}
 
-		private int PerformTCO(int argsCount)
+		private int PerformTco(int argsCount)
 		{
 			DynValue[] args = new DynValue[argsCount + 1];
 
@@ -855,7 +809,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			return retpoint;
 		}
 		
-		private int ExecNilCoalescingAssignment(Instruction i, int instructionPtr)
+		private int ExecNilCoalescingAssignment(int instructionPtr)
 		{
 			ref DynValue lhs = ref m_ValueStack.Peek(1);
 			if (lhs.IsNil()) 
@@ -867,7 +821,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			return instructionPtr;
 		}
 		
-		private int ExecNilCoalescingAssignmentInverse(Instruction i, int instructionPtr)
+		private int ExecNilCoalescingAssignmentInverse(int instructionPtr)
 		{
 			ref DynValue lhs = ref m_ValueStack.Peek(1);
 			if (lhs.IsNotNil()) 
@@ -882,76 +836,74 @@ namespace WattleScript.Interpreter.Execution.VM
 		private int ExecRet(Instruction i, int currentPtr)
 		{
 			CallStackItem csi;
-			int retpoint = 0;
+			int retpoint;
 			
-			if (i.NumVal == 0)
+			switch (i.NumVal)
 			{
-				csi = PopToBasePointer();
-				retpoint = csi.ReturnAddress;
-				var argscnt = (int)(m_ValueStack.Pop().Number);
-				m_ValueStack.RemoveLast(argscnt + 1);
-				m_ValueStack.Push(DynValue.Void);
-			}
-			else if (i.NumVal == 1)
-			{
-				var retval = m_ValueStack.Pop();
-				csi = PopToBasePointer();
-				retpoint = csi.ReturnAddress;
-				var argscnt = (int)(m_ValueStack.Pop().Number);
-				m_ValueStack.RemoveLast(argscnt + 1);
-				m_ValueStack.Push(retval);
-				retpoint = Internal_CheckForTailRequests(false, retpoint);
-			}
-			else
-			{
-				throw new InternalErrorException("RET supports only 0 and 1 ret val scenarios");
+				case 0:
+				{
+					csi = PopToBasePointer();
+					retpoint = csi.ReturnAddress;
+					var argscnt = (int)(m_ValueStack.Pop().Number);
+					m_ValueStack.RemoveLast(argscnt + 1);
+					m_ValueStack.Push(DynValue.Void);
+					break;
+				}
+				case 1:
+				{
+					var retval = m_ValueStack.Pop();
+					csi = PopToBasePointer();
+					retpoint = csi.ReturnAddress;
+					var argscnt = (int)(m_ValueStack.Pop().Number);
+					m_ValueStack.RemoveLast(argscnt + 1);
+					m_ValueStack.Push(retval);
+					retpoint = Internal_CheckForTailRequests(false, retpoint);
+					break;
+				}
+				default:
+					throw new InternalErrorException("RET supports only 0 and 1 ret val scenarios");
 			}
 
 			if (csi.Continuation != null)
 				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.SourceRefs[currentPtr]),
-					new DynValue[1] { m_ValueStack.Pop() }));
+					new[] { m_ValueStack.Pop() }));
 
 			return retpoint;
 		}
-
-
-
+		
 		private int Internal_CheckForTailRequests(bool canAwait, int instructionPtr)
 		{
-			DynValue tail = m_ValueStack.Peek(0);
+			DynValue tail = m_ValueStack.Peek();
 
-			if (tail.Type == DataType.TailCallRequest)
+			switch (tail.Type)
 			{
-				m_ValueStack.Pop(); // discard tail call request
+				case DataType.TailCallRequest:
+				{
+					m_ValueStack.Pop(); // discard tail call request
 
-				TailCallData tcd = tail.TailCallData;
+					TailCallData tcd = tail.TailCallData;
 
-				m_ValueStack.Push(tcd.Function);
+					m_ValueStack.Push(tcd.Function);
 
-				for (int ii = 0; ii < tcd.Args.Length; ii++)
-					m_ValueStack.Push(tcd.Args[ii]);
+					for (int ii = 0; ii < tcd.Args.Length; ii++)
+						m_ValueStack.Push(tcd.Args[ii]);
 
-				return Internal_ExecCall(canAwait, tcd.Args.Length, instructionPtr, tcd.ErrorHandler, tcd.Continuation, false, null, tcd.ErrorHandlerBeforeUnwind);
-			}
-			else if (tail.Type == DataType.YieldRequest)
-			{
-				m_SavedInstructionPtr = instructionPtr;
-				return YIELD_SPECIAL_TRAP;
-			} else if (tail.Type == DataType.AwaitRequest)
-			{
-				if (!canAwait)
+					return Internal_ExecCall(canAwait, tcd.Args.Length, instructionPtr, tcd.ErrorHandler, tcd.Continuation, false, null, tcd.ErrorHandlerBeforeUnwind);
+				}
+				case DataType.YieldRequest:
+					m_SavedInstructionPtr = instructionPtr;
+					return YIELD_SPECIAL_TRAP;
+				case DataType.AwaitRequest when !canAwait:
 					throw new ScriptRuntimeException(
 						"Await Request happened when it shouldn't have. Internal state corruption?");
-				m_SavedInstructionPtr = instructionPtr;
-				return YIELD_SPECIAL_AWAIT;
+				case DataType.AwaitRequest:
+					m_SavedInstructionPtr = instructionPtr;
+					return YIELD_SPECIAL_AWAIT;
+				default:
+					return instructionPtr;
 			}
-
-
-			return instructionPtr;
 		}
-
-
-
+		
 		private int JumpBool(Instruction i, bool expectedValueForJump, int instructionPtr)
 		{
 			DynValue op = m_ValueStack.Pop();
@@ -969,14 +921,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				return i.NumVal;
 			}
-			else
-			{
-				m_ValueStack.Pop();
-				return instructionPtr;
-			}
+
+			m_ValueStack.Pop();
+			return instructionPtr;
 		}
 		
-		private void ExecBNot(Instruction i)
+		private void ExecBNot()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var ln))
 			{
@@ -989,8 +939,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
-		
-		private void ExecBAnd(Instruction i)
+		private void ExecBAnd()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1006,7 +955,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBOr(Instruction i)
+		private void ExecBOr()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1022,7 +971,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBXor(Instruction i)
+		private void ExecBXor()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1038,7 +987,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBLShift(Instruction i)
+		private void ExecBlShift()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1054,7 +1003,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBRShiftA(Instruction i)
+		private void ExecBrShiftA()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1070,7 +1019,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBRShiftL(Instruction i)
+		private void ExecBrShiftL()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1089,7 +1038,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		}
 		
 
-		private int ExecAdd(Instruction i, int instructionPtr)
+		private int ExecAdd(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1098,14 +1047,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__add", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
+
+			return ExecBinaryOp(instructionPtr, "__add");
 		}
 
 		bool ToConcatString(ref DynValue v, out string s, ref int metamethodCounter)
@@ -1114,19 +1057,18 @@ namespace WattleScript.Interpreter.Execution.VM
 				s = null;
 				return false;
 			}
-			if (v.Type == DataType.String) 
+			
+			switch (v.Type)
 			{
-				s = v.String;
-				return true;
-			}
-			else if (v.Type == DataType.Boolean)
-			{
-				s = v.Boolean ? "true" : "false";
-				return true;
-			}
-			else if (v.Type == DataType.Number) {
-				s = v.Number.ToString();
-				return true;
+				case DataType.String:
+					s = v.String;
+					return true;
+				case DataType.Boolean:
+					s = v.Boolean ? "true" : "false";
+					return true;
+				case DataType.Number:
+					s = v.Number.ToString(CultureInfo.InvariantCulture);
+					return true;
 			}
 
 			var m = GetMetamethod(v, "__tostring");
@@ -1139,10 +1081,9 @@ namespace WattleScript.Interpreter.Execution.VM
 				var retval = Call(m, new[] {v});
 				return ToConcatString(ref retval, out s, ref metamethodCounter);
 			}
-			else {
-				s = null;
-				return false;
-			}
+
+			s = null;
+			return false;
 		}
 
 		private void ExecStrFormat(Instruction i)
@@ -1161,10 +1102,20 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 			}
 			m_ValueStack.RemoveLast(i.NumVal);
-			m_ValueStack.Set(0, DynValue.NewString(string.Format(m_ValueStack.Peek(0).String, formatValues)));
+			// ReSharper disable once CoVariantArrayConversion
+			m_ValueStack.Set(0, DynValue.NewString(string.Format(m_ValueStack.Peek().String, formatValues)));
 		}
 		
-		private int ExecAddStr(Instruction i, int instructionPtr)
+		private int ExecBinaryOp(int instructionPtr, string metaMethodName)
+		{
+			var r = m_ValueStack.Pop().ToScalar();
+			var l = m_ValueStack.Pop().ToScalar();
+			int ip = Internal_InvokeBinaryMetaMethod(l, r, metaMethodName, instructionPtr);
+			if (ip >= 0) return ip;
+			throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+		}
+		
+		private int ExecAddStr(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1173,7 +1124,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
 				return instructionPtr;
 			}
-			else if (m_ValueStack.Peek(1).Type == DataType.String ||
+			if (m_ValueStack.Peek(1).Type == DataType.String ||
 			         m_ValueStack.Peek().Type == DataType.String)
 			{
 				int c1 = 0, c2 = 0;
@@ -1187,18 +1138,12 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewString(lhs + rhs));
 				return instructionPtr;
-			} 
-			else 
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__add", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
 			}
+
+			return ExecBinaryOp(instructionPtr, "__add");
 		}
 
-		private int ExecSub(Instruction i, int instructionPtr)
+		private int ExecSub(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1207,18 +1152,12 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(ln - rn));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__sub", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
+			
+			return ExecBinaryOp(instructionPtr, "__sub");
 		}
 
 
-		private int ExecMul(Instruction i, int instructionPtr)
+		private int ExecMul(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1227,17 +1166,11 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(ln * rn));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__mul", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
+			
+			return ExecBinaryOp(instructionPtr, "__mul");
 		}
 
-		private int ExecMod(Instruction i, int instructionPtr)
+		private int ExecMod(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1247,17 +1180,11 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(mod));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__mod", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
+			
+			return ExecBinaryOp(instructionPtr, "__mod");
 		}
 
-		private int ExecDiv(Instruction i, int instructionPtr)
+		private int ExecDiv(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1266,16 +1193,10 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(ln / rn));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__div", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
+			
+			return ExecBinaryOp(instructionPtr, "__div");
 		}
-		private int ExecPower(Instruction i, int instructionPtr)
+		private int ExecPower(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
@@ -1284,35 +1205,26 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Set(0, DynValue.NewNumber(Math.Pow(ln,rn)));
 				return instructionPtr;
 			}
-			else
-			{
-				var r = m_ValueStack.Pop().ToScalar();
-				var l = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__pow", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
-			}
-
+			
+			return ExecBinaryOp(instructionPtr, "__pow");
 		}
 
-		private int ExecNeg(Instruction i, int instructionPtr)
+		private int ExecNeg(int instructionPtr)
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn))
 			{
 				m_ValueStack.Set(0, DynValue.NewNumber(-rn));
 				return instructionPtr;
 			}
-			else
-			{
-				DynValue r = m_ValueStack.Pop().ToScalar();
-				int ip = Internal_InvokeUnaryMetaMethod(r, "__unm", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ArithmeticOnNonNumber(r);
-			}
+
+			DynValue r = m_ValueStack.Pop().ToScalar();
+			int ip = Internal_InvokeUnaryMetaMethod(r, "__unm", instructionPtr);
+			if (ip >= 0) return ip;
+			throw ScriptRuntimeException.ArithmeticOnNonNumber(r);
 		}
 
 
-		private int ExecEq(Instruction i, int instructionPtr)
+		private int ExecEq(int instructionPtr)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
@@ -1347,7 +1259,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			return instructionPtr;
 		}
 
-		private int ExecLess(Instruction i, int instructionPtr)
+		private int ExecLess(int instructionPtr)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
@@ -1358,56 +1270,54 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 			else if (l.Type == DataType.String && r.Type == DataType.String)
 			{
-				m_ValueStack.Push(DynValue.NewBoolean(l.String.CompareTo(r.String) < 0));
+				m_ValueStack.Push(DynValue.NewBoolean(string.Compare(l.String, r.String, StringComparison.Ordinal) < 0));
 			}
 			else
 			{
 				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__lt", instructionPtr);
 				if (ip < 0)
 					throw ScriptRuntimeException.CompareInvalidType(l, r);
-				else
-					return ip;
+				return ip;
 			}
 
 			return instructionPtr;
 		}
-
-
-		private int ExecLessEq(Instruction i, int instructionPtr)
+		
+		private int ExecLessEq(int instructionPtr)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
 
-			if (l.Type == DataType.Number && r.Type == DataType.Number)
+			switch (l.Type)
 			{
-				m_ValueStack.Push(DynValue.False);
-				m_ValueStack.Push(DynValue.NewBoolean(l.Number <= r.Number));
-			}
-			else if (l.Type == DataType.String && r.Type == DataType.String)
-			{
-				m_ValueStack.Push(DynValue.False);
-				m_ValueStack.Push(DynValue.NewBoolean(l.String.CompareTo(r.String) <= 0));
-			}
-			else
-			{
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__le", instructionPtr, DynValue.False);
-				if (ip < 0)
+				case DataType.Number when r.Type == DataType.Number:
+					m_ValueStack.Push(DynValue.False);
+					m_ValueStack.Push(DynValue.NewBoolean(l.Number <= r.Number));
+					break;
+				case DataType.String when r.Type == DataType.String:
+					m_ValueStack.Push(DynValue.False);
+					m_ValueStack.Push(DynValue.NewBoolean(string.Compare(l.String, r.String, StringComparison.Ordinal) <= 0));
+					break;
+				default:
 				{
-					ip = Internal_InvokeBinaryMetaMethod(r, l, "__lt", instructionPtr, DynValue.True);
-
+					int ip = Internal_InvokeBinaryMetaMethod(l, r, "__le", instructionPtr, DynValue.False);
 					if (ip < 0)
-						throw ScriptRuntimeException.CompareInvalidType(l, r);
-					else
+					{
+						ip = Internal_InvokeBinaryMetaMethod(r, l, "__lt", instructionPtr, DynValue.True);
+
+						if (ip < 0)
+							throw ScriptRuntimeException.CompareInvalidType(l, r);
 						return ip;
-				}
-				else
+					}
+				
 					return ip;
+				}
 			}
 
 			return instructionPtr;
 		}
 
-		private int ExecLen(Instruction i, int instructionPtr)
+		private int ExecLen(int instructionPtr)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 
@@ -1418,17 +1328,15 @@ namespace WattleScript.Interpreter.Execution.VM
 				int ip = Internal_InvokeUnaryMetaMethod(r, "__len", instructionPtr);
 				if (ip >= 0)
 					return ip;
-				else if (r.Type == DataType.Table)
+				if (r.Type == DataType.Table)
 					m_ValueStack.Push(DynValue.NewNumber(r.Table.Length));
-
 				else throw ScriptRuntimeException.LenOnInvalidType(r);
 			}
 
 			return instructionPtr;
 		}
-
-
-		private int ExecConcat(Instruction i, int instructionPtr)
+		
+		private int ExecConcat(int instructionPtr)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
@@ -1441,16 +1349,12 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Push(DynValue.NewString(ls + rs));
 				return instructionPtr;
 			}
-			else
-			{
-				int ip = Internal_InvokeBinaryMetaMethod(l, r, "__concat", instructionPtr);
-				if (ip >= 0) return ip;
-				else throw ScriptRuntimeException.ConcatOnNonString(l, r);
-			}
-
+			
+			int ip = Internal_InvokeBinaryMetaMethod(l, r, "__concat", instructionPtr);
+			if (ip >= 0) return ip;
+			throw ScriptRuntimeException.ConcatOnNonString(l, r);
 		}
-
-
+		
 		private void ExecTblInitI(Instruction i)
 		{
 			// stack: tbl - val
@@ -1463,7 +1367,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			tbl.Table.InitNextArrayKeys(val, i.NumVal != 0);
 		}
 
-		private void ExecTblInitN(Instruction i)
+		private void ExecTblInitN()
 		{
 			// stack: tbl - key - val
 			DynValue val = m_ValueStack.Pop();
@@ -1484,12 +1388,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			bool isNameIndex = i.OpCode == OpCode.IndexSetN;
 			bool isMultiIndex = (i.OpCode == OpCode.IndexSetL);
 
-			DynValue originalIdx;
 			string i_str = GetString((int)i.NumVal3);
-			if (i_str != null)
-				originalIdx = DynValue.NewString(i_str);
-			else
-				originalIdx = m_ValueStack.Pop();
+			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 			var value = GetStoreValue(i);
@@ -1499,45 +1399,51 @@ namespace WattleScript.Interpreter.Execution.VM
 				--nestedMetaOps;
 
 				DynValue h;
-				if (obj.Type == DataType.Table)
+				switch (obj.Type)
 				{
-					if (!isMultiIndex)
+					case DataType.Table:
 					{
-						//Don't do check for __newindex if there is no metatable to begin with
-						if (obj.Table.MetaTable == null || !obj.Table.Get(idx).IsNil())
+						if (!isMultiIndex)
 						{
+							//Don't do check for __newindex if there is no metatable to begin with
+							if (obj.Table.MetaTable == null || !obj.Table.Get(idx).IsNil())
+							{
+								obj.Table.Set(idx, value);
+								return instructionPtr;
+							}
+						}
+
+						h = GetMetamethodRaw(obj, "__newindex");
+
+						if (h.IsNil())
+						{
+							if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
+
 							obj.Table.Set(idx, value);
 							return instructionPtr;
 						}
+
+						break;
 					}
-
-					h = GetMetamethodRaw(obj, "__newindex");
-
-					if (h.IsNil())
+					case DataType.UserData:
 					{
-						if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
+						UserData ud = obj.UserData;
 
-						obj.Table.Set(idx, value);
+						if (!ud.Descriptor.SetIndex(GetScript(), ud.Object, originalIdx, value, isNameIndex))
+						{
+							throw ScriptRuntimeException.UserDataMissingField(ud.Descriptor.Name, idx.String);
+						}
+
 						return instructionPtr;
 					}
-				}
-				else if (obj.Type == DataType.UserData)
-				{
-					UserData ud = obj.UserData;
-
-					if (!ud.Descriptor.SetIndex(this.GetScript(), ud.Object, originalIdx, value, isNameIndex))
+					default:
 					{
-						throw ScriptRuntimeException.UserDataMissingField(ud.Descriptor.Name, idx.String);
+						h = GetMetamethodRaw(obj, "__newindex");
+
+						if (h.IsNil())
+							throw ScriptRuntimeException.IndexType(obj);
+						break;
 					}
-
-					return instructionPtr;
-				}
-				else
-				{
-					h = GetMetamethodRaw(obj, "__newindex");
-
-					if (h.IsNil())
-						throw ScriptRuntimeException.IndexType(obj);
 				}
 
 				if (h.Type == DataType.Function || h.Type == DataType.ClrFunction)
@@ -1566,12 +1472,8 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			bool isMultiIndex = (i.OpCode == OpCode.IndexL);
 
-			DynValue originalIdx;
 			string i_str = GetString(i.NumVal);
-			if (i_str != null)
-				originalIdx = DynValue.NewString(i_str);
-			else
-				originalIdx = m_ValueStack.Pop();
+			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 
@@ -1580,49 +1482,55 @@ namespace WattleScript.Interpreter.Execution.VM
 				--nestedMetaOps;
 
 				DynValue h;
-				if (obj.Type == DataType.Table)
+				switch (obj.Type)
 				{
-					if (!isMultiIndex)
+					case DataType.Table:
 					{
-						var v = obj.Table.Get(idx);
-
-						if (!v.IsNil())
+						if (!isMultiIndex)
 						{
-							m_ValueStack.Push(v);
+							var v = obj.Table.Get(idx);
+
+							if (!v.IsNil())
+							{
+								m_ValueStack.Push(v);
+								return instructionPtr;
+							}
+						}
+
+						h = GetMetamethodRaw(obj, "__index");
+
+						if (h.IsNil())
+						{
+							if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
+
+							m_ValueStack.Push(DynValue.Nil);
 							return instructionPtr;
 						}
+
+						break;
 					}
-
-					h = GetMetamethodRaw(obj, "__index");
-
-					if (h.IsNil())
+					case DataType.UserData:
 					{
-						if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
+						UserData ud = obj.UserData;
 
-						m_ValueStack.Push(DynValue.Nil);
+						var v = ud.Descriptor.Index(GetScript(), ud.Object, originalIdx, isNameIndex);
+
+						if (v.IsVoid())
+						{
+							throw ScriptRuntimeException.UserDataMissingField(ud.Descriptor.Name, idx.String);
+						}
+
+						m_ValueStack.Push(v);
 						return instructionPtr;
 					}
-				}
-				else if (obj.Type == DataType.UserData)
-				{
-					UserData ud = obj.UserData;
-
-					var v = ud.Descriptor.Index(this.GetScript(), ud.Object, originalIdx, isNameIndex);
-
-					if (v.IsVoid())
+					default:
 					{
-						throw ScriptRuntimeException.UserDataMissingField(ud.Descriptor.Name, idx.String);
+						h = GetMetamethodRaw(obj, "__index");
+
+						if (h.IsNil())
+							throw ScriptRuntimeException.IndexType(obj);
+						break;
 					}
-
-					m_ValueStack.Push(v);
-					return instructionPtr;
-				}
-				else
-				{
-					h = GetMetamethodRaw(obj, "__index");
-
-					if (h.IsNil())
-						throw ScriptRuntimeException.IndexType(obj);
 				}
 
 				if (h.Type == DataType.Function || h.Type == DataType.ClrFunction)
@@ -1639,10 +1547,5 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			throw ScriptRuntimeException.LoopInIndex();
 		}
-
-
-
-
-
 	}
 }
