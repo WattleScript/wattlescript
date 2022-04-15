@@ -180,11 +180,6 @@ namespace WattleScript.Interpreter.Tree
 					return new LiteralExpression(lcontext, t);
 				case TokenType.VarArgs:
 					return new SymbolRefExpression(t, lcontext);
-				case TokenType.Brk_Open_Curly:
-				case TokenType.Brk_Open_Curly_Shared:
-					return new TableConstructor(lcontext, t.Type == TokenType.Brk_Open_Curly_Shared);
-				case TokenType.Brk_Open_Square when lcontext.Syntax != ScriptSyntax.Lua:
-					return new TableConstructor(lcontext, false);
 				case TokenType.Function:
 					lcontext.Lexer.Next();
 					return new FunctionDefinitionExpression(lcontext, false, false);
@@ -318,6 +313,11 @@ namespace WattleScript.Interpreter.Tree
 					return e;
 				case TokenType.Name:
 					return new SymbolRefExpression(T, lcontext);
+				case TokenType.Brk_Open_Curly:
+				case TokenType.Brk_Open_Curly_Shared:
+					return new TableConstructor(lcontext, T.Type == TokenType.Brk_Open_Curly_Shared);
+				case TokenType.Brk_Open_Square when lcontext.Syntax != ScriptSyntax.Lua:
+					return new TableConstructor(lcontext, false);
 				default:
 					throw new SyntaxErrorException(T, "unexpected symbol near '{0}'", T.Text)
 					{
