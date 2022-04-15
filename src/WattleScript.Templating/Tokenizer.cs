@@ -14,16 +14,166 @@ public class Tokenizer
     private List<string> Messages { get; set; } = new List<string>();
     private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
-
+    private Dictionary<string, Func<bool>?> KeywordsMap;
     private Token LastToken => Tokens[^1];
+    int pos = 0;
+    char c;
+    string currentLexeme = "";
+    int line = 1;
+    
+    public Tokenizer()
+    {
+        KeywordsMap = new Dictionary<string, Func<bool>?>
+        {
+            { "if", ParseKeywordIf }
+        };
+    }
+
+    bool IsAtEnd()
+    {
+        return pos >= Source.Length;
+    }
+    
+    string GetCurrentLexeme()
+    {
+        return currentLexeme;
+    }
+
+    bool IsAlphaNumeric(char ch)
+    {
+        return !IsAtEnd() && (IsDigit(ch) || IsAlpha(ch));
+    }
+
+    bool IsAlpha(char ch)
+    {
+        return !IsAtEnd() && (char.IsLetter(ch) || ch is '_');
+    }
+
+    bool IsDigit(char ch)
+    {
+        return !IsAtEnd() && (ch is >= '0' and <= '9');
+    }
+
+    char Step(int i = 1)
+    {
+        char cc = Source[pos];
+        currentLexeme += cc;
+        pos += i;
+        c = cc;
+        return cc;
+    }
+
+    char Peek(int i = 1)
+    {
+        if (IsAtEnd())
+        {
+            return '\n';
+        }
+
+        int peekedPos = pos + i - 1;
+
+        if (peekedPos < 0)
+        {
+            pos = 0;
+        }
+
+        if (Source.Length <= peekedPos)
+        {
+            return Source[^1];
+        }
+
+        return Source[peekedPos];
+    }
+    
+    bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced)
+    {
+        int inbalance = startsInbalanced ? 1 : 0;
+        while (!IsAtEnd())
+        {
+            Step();
+            if (c == startBr)
+            {
+                inbalance++;
+            }
+            else if (c == endBr)
+            {
+                inbalance--;
+                if (inbalance <= 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool Match(char expected)
+    {
+        if (IsAtEnd())
+        {
+            return false;
+        }
+
+        if (Source[pos] != expected)
+        {
+            return false;
+        }
+
+        Step();
+        return true;
+    }
+
+    bool MatchNextNonWhiteSpaceChar(char ch)
+    {
+        while (!IsAtEnd())
+        {
+            if (Peek() == ' ')
+            {
+                Step();
+            }
+            else if (Peek() == ch)
+            {
+                Step();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+    
+    // if (expr) {}
+    bool ParseKeywordIf()
+    {
+        bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
+        string l = GetCurrentLexeme();
+        
+        if (!openBrkMatched)
+        {
+            return false;
+        }
+        
+        bool endExprMatched = ParseUntilBalancedChar('(', ')', true);
+        l = GetCurrentLexeme();
+
+        if (!endExprMatched)
+        {
+            return false;
+        }
+        
+        //bool openBlockBrkMatched = MatchNextNonWhiteSpaceChar('{');
+        ParseCodeBlock();
+        
+        return false;
+    }
     
     public List<Token> Tokenize(string source, bool includeNewlines = false)
     {
-        int line = 1;
-        int pos = 0;
         bool tokenize = true;
-        char c;
-        string currentLexeme = "";
         bool anyErrors = false;
         Source = source;
 
@@ -40,14 +190,16 @@ public class Tokenizer
             tokenize = false;
         }
         
-
-        bool IsAtEnd()
+        void Error(int line, string message)
         {
-            return pos >= Source.Length;
+            anyErrors = true;
+            Messages.Add($"Error at line {line} - {message}");
         }
         
+        return Tokens;
+    }
     
-        /* In client mode everything is a literal
+            /* In client mode everything is a literal
          * until we encouter @
          * then we lookahead at next char and if it's not another @ (escape)
          * we enter server mode
@@ -144,6 +296,7 @@ public class Tokenizer
                     Step();
                 }   
             }
+            
             void ParseLiteralStartsWithAlpha()
             {
                 bool first = true;
@@ -167,42 +320,35 @@ public class Tokenizer
                     Step();
                 }   
             }
-            void ParseUntilBalancedChar(char startBr, char endBr)
-            {
-                int inbalance = 0;
-                while (!IsAtEnd())
-                {
-                    Step();
-                    if (c == startBr)
-                    {
-                        inbalance++;
-                    }
-                    else if (c == endBr)
-                    {
-                        inbalance--;
-                        if (inbalance <= 0)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
 
             while (!IsAtEnd())
             {
                 ParseLiteralStartsWithAlpha();
+                string firstPart = GetCurrentLexeme();
+                ImplicitExpressionTypes firstPartType = Str2ImplicitExprType(firstPart);
+
+                if (firstPartType is ImplicitExpressionTypes.AllowedKeyword or ImplicitExpressionTypes.BannedKeyword)
+                {
+                    ParseKeyword();
+                    return;
+                }
 
                 char bufC = Peek();
                 if (bufC == '[')
                 {
-                    ParseUntilBalancedChar('[', ']');
+                    ParseUntilBalancedChar('[', ']', false);
                 }
                 else if (bufC == '(')
                 {
-                    ParseUntilBalancedChar('(', ')');
+                    ParseUntilBalancedChar('(', ')', false);
                 }
                 else if (bufC == '.')
                 {
+                    if (!IsAlpha(Peek(2))) // next char after . has to be alpha else the dot itself is client side
+                    {
+                        break;
+                    }
+                    
                     Step();
                     ParseLiteralStartsWithAlpha();
                 }
@@ -213,15 +359,18 @@ public class Tokenizer
                     break;
                 }
             }
+            
+            AddToken(TokenTypes.ImplicitExpr);
+            ParseClient();
+        }
 
+        void ParseKeyword()
+        {
+            string keyword = GetCurrentLexeme();
 
-            string buffer = GetCurrentLexeme();
-            ImplicitExpressionTypes bufferType = Str2ImplicitExprType(buffer);
-
-            if (bufferType == ImplicitExpressionTypes.Literal)
+            if (KeywordsMap.TryGetValue(keyword, out Func<bool>? resolver))
             {
-                AddToken(TokenTypes.ImplicitExpr);
-                ParseClient();
+                resolver?.Invoke();
             }
         }
 
@@ -237,98 +386,62 @@ public class Tokenizer
          */
         void ParseCodeBlock()
         {
-            c = Step();
-            int missingBraces = 1;
+            bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
+            string l = GetCurrentLexeme();
+            AddToken(TokenTypes.BlockExpr);
 
+            ParseUntilHtmlOrClientTransition();
+        }
+
+        bool LastStoredCharNotWhitespaceMatches(params char[] chars)
+        {
+            string str = GetCurrentLexeme();
+            for (int i = str.Length; i > 0; i--)
+            {
+                char cc = str[i - 1];
+                if (cc == ' ')
+                {
+                    continue;
+                }
+
+                return chars.Contains(cc);
+            }
+            
+            return false;
+        }
+
+        /* A point of transition can be
+         * <Alpha where char preceding < is either semicolon or newline
+         */
+        void ParseUntilHtmlOrClientTransition()
+        {
             while (!IsAtEnd())
             {
-                c = Step();
-
-                if (c == '}')
+                if (Peek() == '<')
                 {
-                    missingBraces--;
-                    if (missingBraces <= 0)
+                    if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
                     {
-                        currentLexeme = currentLexeme.Substring(0, currentLexeme.Length - 1);
                         AddToken(TokenTypes.BlockExpr);
-                        ParseClient();
-                        return;
+                        ParseHtmlTag();
                     }
                 }
-                else if (c == '{')
-                {
-                    missingBraces++;
-                }
+
+                string str = GetCurrentLexeme();
+                char chr = Step();
             }
         }
 
-        string GetCurrentLexeme()
+        void ParseHtmlTag()
         {
-            return currentLexeme;
+            char chr = Step();
+            
+            // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha]
+            // If we have something else we can consider it a malformated tag
+            // Razor renders first char = NUM as an error but compiles
+            // If it is some other char, Razor throws
+            
         }
 
-        bool IsAlphaNumeric(char ch)
-        {
-            return !IsAtEnd() && (IsDigit(ch) || IsAlpha(ch));
-        }
-
-        bool IsAlpha(char ch)
-        {
-            return !IsAtEnd() && (char.IsLetter(ch) || ch is '_');
-        }
-
-        bool IsDigit(char ch)
-        {
-            return !IsAtEnd() && (ch is >= '0' and <= '9');
-        }
-
-        char Step(int i = 1)
-        {
-            char cc = Source[pos];
-            currentLexeme += cc;
-            pos += i;
-            c = cc;
-            return cc;
-        }
-
-        char Peek(int i = 1)
-        {
-            if (IsAtEnd())
-            {
-                return '\n';
-            }
-
-            int peekedPos = pos + i - 1;
-
-            if (peekedPos < 0)
-            {
-                pos = 0;
-            }
-
-            if (Source.Length <= peekedPos)
-            {
-                return Source[^1];
-            }
-
-            return Source[peekedPos];
-        }
-
-        bool Match(char expected)
-        {
-            if (IsAtEnd())
-            {
-                return false;
-            }
-
-            if (Source[pos] != expected)
-            {
-                return false;
-            }
-
-            Step();
-            return true;
-        }
-        
         void AddToken(TokenTypes type)
         {
             if (currentLexeme.Length > 0)
@@ -344,12 +457,4 @@ public class Tokenizer
             currentLexeme = "";
         }
 
-        void Error(int line, string message)
-        {
-            anyErrors = true;
-            Messages.Add($"Error at line {line} - {message}");
-        }
-        
-        return Tokens;
-    }
 }
