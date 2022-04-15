@@ -185,7 +185,7 @@ namespace WattleScript.Interpreter.Tree
 			
 			switch (tkn.Type)
 			{
-				case TokenType.DoubleColon when lcontext.Syntax != ScriptSyntax.CLike:
+				case TokenType.DoubleColon when lcontext.Syntax != ScriptSyntax.WattleScript:
 					return new LabelStatement(lcontext);
 				case TokenType.Goto:
 					return new GotoStatement(lcontext);
@@ -223,7 +223,7 @@ namespace WattleScript.Interpreter.Tree
 						//Check for labels in CLike mode
 						lcontext.Lexer.SavePos();
 						Token l = lcontext.Lexer.Current;
-						if (lcontext.Syntax == ScriptSyntax.CLike && l.Type == TokenType.Name)
+						if (lcontext.Syntax == ScriptSyntax.WattleScript && l.Type == TokenType.Name)
 						{
 							lcontext.Lexer.Next();
 							if (lcontext.Lexer.Current.Type == TokenType.Colon) {

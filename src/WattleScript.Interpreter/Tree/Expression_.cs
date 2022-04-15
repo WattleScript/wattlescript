@@ -172,7 +172,7 @@ namespace WattleScript.Interpreter.Tree
 				case TokenType.Number:
 				case TokenType.Number_Hex:
 				case TokenType.Number_HexFloat:
-				case TokenType.String when lcontext.Syntax != ScriptSyntax.CLike:
+				case TokenType.String when lcontext.Syntax != ScriptSyntax.WattleScript:
 				case TokenType.String_Long:
 				case TokenType.Nil:
 				case TokenType.True:
@@ -261,8 +261,8 @@ namespace WattleScript.Interpreter.Tree
 							e = ne;
 							break;
 						}
-					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.CLike:
-					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.CLike:
+					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.WattleScript:
+					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.WattleScript:
 						lcontext.Lexer.Next();
 						thisCallName = CheckTokenType(lcontext, TokenType.Name);
 						goto case TokenType.Brk_Open_Round;
@@ -300,7 +300,7 @@ namespace WattleScript.Interpreter.Tree
 			Token T = lcontext.Lexer.Current;
 			switch (T.Type)
 			{
-				case TokenType.String when lcontext.Syntax == ScriptSyntax.CLike:
+				case TokenType.String when lcontext.Syntax == ScriptSyntax.WattleScript:
 				case TokenType.String_EndTemplate:
 					return new LiteralExpression(lcontext, T);
 				case TokenType.String_TemplateFragment:
