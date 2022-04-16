@@ -11,6 +11,7 @@ namespace WattleScript.Interpreter.Execution.VM
         public SymbolRef[] Upvalues;
         public Annotation[] Annotations;
         public int LocalCount;
+        public bool TakesSelf;
         //Constants
         public FunctionProto[] Functions;
         public string[] Strings;

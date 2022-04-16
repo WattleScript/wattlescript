@@ -454,7 +454,7 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 				}
 			}
 
-			CallbackArguments args = new CallbackArguments(values, false);
+			CallbackArguments args = new CallbackArguments(values, DynValue.Nil, false);
 			ScriptExecutionContext execCtx = script.CreateDynamicExecutionContext();
 
 			DynValue v = mdesc.GetValue(script, obj);

@@ -146,6 +146,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				WriteDynValue(bw, ant.Value, true);
 			}
 			bw.WriteVarUInt32((uint)function.LocalCount);
+			bw.WriteBoolean(function.TakesSelf);
 			//Symbols
 			Dictionary<SymbolRef, int> symbolMap = new Dictionary<SymbolRef, int>();
 			bw.WriteVarUInt32((uint)function.Locals.Length);
@@ -204,6 +205,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				proto.Annotations[i] = new Annotation(br.ReadString(), ReadDynValue(br, true));
 			}
 			proto.LocalCount = (int) br.ReadVarUInt32();
+			proto.TakesSelf = br.ReadBoolean();
 			//Symbols
 			proto.Locals = new SymbolRef[br.ReadVarUInt32()];
 			proto.Upvalues = new SymbolRef[br.ReadVarUInt32()];

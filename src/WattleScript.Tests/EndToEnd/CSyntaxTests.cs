@@ -197,6 +197,31 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             Assert.AreEqual("hello", myfunc.Annotations[0].Value.Table["name"]);
             Assert.AreEqual(10, myfunc.Annotations[0].Value.Table["value"]);
         }
+
+        [Test]
+        public void DotThisCall()
+        {
+            TestScript.Run(@"
+            var tbl = { 
+                str = 'hello',
+                func2 = (x) => {   
+                    assert.areequal(nil, this);
+                    assert.areequal(7, x);
+                }
+            }
+            function tbl:hello(num) {
+                assert.areequal('hello', this?.str)
+                assert.areequal(7, num);
+            }
+            tbl.hello(7);
+            tbl::hello(7);
+            tbl.func2(7);
+
+
+            table.insert(tbl, 1, 'goodbye');
+            assert.areequal('goodbye', tbl[1]);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
         
 
         [Test]

@@ -517,7 +517,7 @@ namespace WattleScript.Interpreter
 			}
 			else if (function.Type == DataType.ClrFunction)
 			{
-				return function.Callback.ClrCallback(this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, false));
+				return function.Callback.ClrCallback(this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false));
 			}
 
 			return m_MainProcessor.Call(function, args);
@@ -550,7 +550,7 @@ namespace WattleScript.Interpreter
 			else if (function.Type == DataType.ClrFunction)
 			{
 				return Task.FromResult(function.Callback.ClrCallback(
-					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, false)));
+					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false)));
 			}
 
 			return m_MainProcessor.CallAsync(function, args);

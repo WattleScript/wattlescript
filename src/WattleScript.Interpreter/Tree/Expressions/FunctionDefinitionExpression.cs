@@ -335,7 +335,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			var proto = bc.GetProto(funcName, m_StackFrame);
 			proto.Annotations = m_Annotations;
 			proto.Upvalues = m_Closure.ToArray();
-			
+			if (m_ParamNames.Length > 0)
+			{
+				proto.TakesSelf = lcontext.Syntax == ScriptSyntax.Lua
+					? m_ParamNames[0].i_Name == "self"
+					: m_ParamNames[0].i_Name == "this";
+			}
 			if(parent != null) parent.Protos.Add(proto);
 			
 			return proto;

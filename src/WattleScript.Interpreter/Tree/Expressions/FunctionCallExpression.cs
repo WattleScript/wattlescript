@@ -1,19 +1,29 @@
 ﻿using System.Collections.Generic;
+using System.Reflection.Emit;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
+using OpCode = WattleScript.Interpreter.Execution.VM.OpCode;
 
 namespace WattleScript.Interpreter.Tree.Expressions
 {
+	enum CallKind
+	{
+		Normal,
+		ThisCall,
+		ImplicitThisCall,
+		ImplicitThisSkipNil
+	}
 	class FunctionCallExpression : Expression
 	{
 		List<Expression> m_Arguments;
 		Expression m_Function;
 		string m_Name;
 		string m_DebugErr;
+		private CallKind m_Kind;
 		internal SourceRef SourceRef { get; private set; }
 
-		public FunctionCallExpression(ScriptLoadingContext lcontext, Expression function, Token thisCallName)
+		public FunctionCallExpression(ScriptLoadingContext lcontext, Expression function, Token thisCallName, CallKind kind)
 			: base(lcontext)
 		{
 			Token callToken = thisCallName ?? lcontext.Lexer.Current;
@@ -21,7 +31,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_Name = thisCallName != null ? thisCallName.Text : null;
 			m_DebugErr = function.GetFriendlyDebugName();
 			m_Function = function;
-
+			m_Kind = kind;
+			
 			switch (lcontext.Lexer.Current.Type)
 			{
 				case TokenType.Brk_Open_Round:
@@ -76,6 +87,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			m_Function.Compile(bc);
 
+			int nilCoalesce = -1;
+			if (m_Kind == CallKind.ImplicitThisSkipNil)
+			{
+				nilCoalesce = bc.Emit_Jump(OpCode.JNilChk, -1);
+			}
+			
 			int argslen = m_Arguments.Count;
 
 			if (!string.IsNullOrEmpty(m_Name))
@@ -85,18 +102,26 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
-
 			
 			for (int i = 0; i < m_Arguments.Count; i++)
 				m_Arguments[i].CompilePossibleLiteral(bc);
 
-			if (!string.IsNullOrEmpty(m_Name))
+			switch (m_Kind)
 			{
-				bc.Emit_ThisCall(argslen, m_DebugErr);
+				case CallKind.Normal:
+					bc.Emit_Call(argslen, m_DebugErr);
+					break;
+				case CallKind.ThisCall:
+					bc.Emit_ThisCall(argslen, m_DebugErr);
+					break;
+				case CallKind.ImplicitThisCall: 
+				case CallKind.ImplicitThisSkipNil:
+					bc.Emit_ThisCall(-argslen, m_DebugErr);
+					break;
 			}
-			else
-			{
-				bc.Emit_Call(argslen, m_DebugErr);
+
+			if (nilCoalesce != -1) {
+				bc.SetNumVal(nilCoalesce, bc.GetJumpPointForNextInstruction());
 			}
 			if (bc.NilChainTargets.Count > 0) {
 				bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());

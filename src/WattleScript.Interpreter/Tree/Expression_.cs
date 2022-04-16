@@ -228,7 +228,7 @@ namespace WattleScript.Interpreter.Tree
 			{
 				Token T = lcontext.Lexer.Current;
 				Token thisCallName = null;
-				
+				CallKind callKind = CallKind.Normal;
 				switch (T.Type)
 				{
 					case TokenType.Dot:
@@ -236,6 +236,22 @@ namespace WattleScript.Interpreter.Tree
 					{
 						lcontext.Lexer.Next();
 						Token name = CheckTokenType(lcontext, TokenType.Name);
+						var type = lcontext.Lexer.Current.Type;
+						if (lcontext.Syntax == ScriptSyntax.WattleScript)
+						{
+							//Implicit thiscall
+							if (type == TokenType.Brk_Open_Round ||
+							    type == TokenType.String ||
+							    type == TokenType.Brk_Open_Curly ||
+							    type == TokenType.Brk_Open_Curly_Shared)
+							{
+								thisCallName = name;
+								callKind = T.Type == TokenType.DotNil
+									? CallKind.ImplicitThisSkipNil
+									: CallKind.ImplicitThisCall;
+								goto case TokenType.Brk_Open_Round;
+							}
+						}
 						var ne = new IndexExpression(e, name, T.Type == TokenType.DotNil, lcontext);
 						//Break nil checking chain on next nil check
 						if (e is IndexExpression ie && T.Type != TokenType.DotNil) ie.NilChainNext = ne;
@@ -265,25 +281,20 @@ namespace WattleScript.Interpreter.Tree
 					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.WattleScript:
 						lcontext.Lexer.Next();
 						thisCallName = CheckTokenType(lcontext, TokenType.Name);
+						callKind = CallKind.ThisCall;
 						goto case TokenType.Brk_Open_Round;
 					case TokenType.Brk_Open_Round:
 					case TokenType.String:
 					case TokenType.String_Long:
 					case TokenType.Brk_Open_Curly_Shared:
-					{
-						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
-						if (e is IndexExpression ie) ie.NilChainNext = ne;
-						e = ne;
-						break;
-					}
 					case TokenType.Brk_Open_Curly:
 					{
-						if (e is AdjustmentExpression)
-						{
+						if (T.Type == TokenType.Brk_Open_Curly && 
+						    e is AdjustmentExpression && thisCallName == null) {
 							return e;
 						}
-						var ne = new FunctionCallExpression(lcontext, e, thisCallName);
-						if (e is IndexExpression ie) ie.NilChainNext = ne;
+						var ne = new FunctionCallExpression(lcontext, e, thisCallName, callKind);
+						if (e is IndexExpression ie && callKind != CallKind.ImplicitThisSkipNil) ie.NilChainNext = ne;
 						e = ne;
 						break;
 					}
