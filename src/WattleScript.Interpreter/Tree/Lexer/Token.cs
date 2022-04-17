@@ -35,9 +35,9 @@ namespace WattleScript.Interpreter.Tree
 			return string.Format("{0}  - {1} - '{2}'", tokenTypeString, location, this.Text ?? "");
 		}
 
-		public static TokenType? GetReservedTokenType(string reservedWord, bool extended)
+		public static TokenType? GetReservedTokenType(string reservedWord, ScriptSyntax syntax)
 		{
-			if (extended)
+			if (syntax == ScriptSyntax.WattleScript)
 			{
 				switch (reservedWord)
 				{
