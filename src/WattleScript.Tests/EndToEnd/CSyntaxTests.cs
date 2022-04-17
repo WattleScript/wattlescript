@@ -222,6 +222,64 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal('goodbye', tbl[1]);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
+
+        [Test]
+        public void ImplicitThis()
+        {
+            TestScript.Run(@"
+            this = 'hello'; //checking global state doesn't interfere
+            var tbl = {}
+            function tbl.implicitnil(arg)
+            {
+                assert.areequal(nil, this);
+                assert.areequal(7, arg);
+            }
+            function tbl.implicitthis(arg)
+            {
+                assert.areequal(tbl, this);
+                assert.areequal(7, arg);
+            }
+            tbl['implicitnil'](7); //regular indexing = don't pass 'this'
+            tbl.implicitthis(7); //dot call will pass implicit 'this' parameter
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public async Task HostThisCall()
+        {
+            UserData.RegisterType<LuaAssertApi>();
+            var sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Globals["assert"] = new LuaAssertApi();
+            
+            var tbl = sc.DoString(@"
+            var tbl = {}
+            tbl.str = 'hello'
+            function tbl.func(arg)
+            {
+                assert.areequal('hello', this?.str);
+                assert.areequal(7, arg);
+            }
+            function tbl.func2(arg1, arg2)
+            {
+                assert.areequal(nil, this);
+                assert.areequal(2, arg1);
+                assert.areequal(3, arg2);
+            }
+            return tbl;
+            ");
+            var function = tbl.Table.Get("func").Function;
+            var function2 = tbl.Table.Get("func2").Function;
+            //sync this call
+            function.ThisCall(tbl, DynValue.NewNumber(7));
+            sc.ThisCall(function, tbl, 7);
+            //async this call
+            await function.ThisCallAsync(tbl, DynValue.NewNumber(7));
+            await sc.ThisCallAsync(function, tbl, DynValue.NewNumber(7));
+            //regular calls
+            function2.Call(2, 3);
+            await function2.CallAsync(2, 3);
+        }
         
 
         [Test]

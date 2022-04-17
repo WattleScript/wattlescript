@@ -29,7 +29,8 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		internal void DumpFuncString(FunctionProto function, StringBuilder builder)
 		{
-			builder.Append(function.IsChunk ? "CHUNK " : "FUNCTION ").AppendLine(function.Name);
+			builder.Append((function.Flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk
+				? "CHUNK " : "FUNCTION ").AppendLine(function.Name);
 			builder.AppendLine("-");
 			if (function.Upvalues.Length > 0)
 			{
@@ -139,14 +140,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		internal void DumpFunction(BinDumpWriter bw, FunctionProto function, bool writeSourceRefs)
 		{
 			bw.WriteString(function.Name);
-			bw.WriteBoolean(function.IsChunk);
+			bw.WriteByte((byte)function.Flags);
 			bw.WriteVarUInt32((uint)function.Annotations.Length);
 			foreach (var ant in function.Annotations) {
 				bw.WriteString(ant.Name);
 				WriteDynValue(bw, ant.Value, true);
 			}
 			bw.WriteVarUInt32((uint)function.LocalCount);
-			bw.WriteBoolean(function.TakesSelf);
 			//Symbols
 			Dictionary<SymbolRef, int> symbolMap = new Dictionary<SymbolRef, int>();
 			bw.WriteVarUInt32((uint)function.Locals.Length);
@@ -199,13 +199,12 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			var proto = new FunctionProto();
 			proto.Name = br.ReadString();
-			proto.IsChunk = br.ReadBoolean();
+			proto.Flags = (FunctionFlags)br.ReadByte();
 			proto.Annotations = new Annotation[br.ReadVarUInt32()];
 			for (int i = 0; i < proto.Annotations.Length; i++) {
 				proto.Annotations[i] = new Annotation(br.ReadString(), ReadDynValue(br, true));
 			}
 			proto.LocalCount = (int) br.ReadVarUInt32();
-			proto.TakesSelf = br.ReadBoolean();
 			//Symbols
 			proto.Locals = new SymbolRef[br.ReadVarUInt32()];
 			proto.Upvalues = new SymbolRef[br.ReadVarUInt32()];

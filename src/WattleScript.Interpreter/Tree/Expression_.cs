@@ -182,9 +182,9 @@ namespace WattleScript.Interpreter.Tree
 					return new SymbolRefExpression(t, lcontext);
 				case TokenType.Function:
 					lcontext.Lexer.Next();
-					return new FunctionDefinitionExpression(lcontext, false, false);
+					return new FunctionDefinitionExpression(lcontext, SelfType.None, false);
 				case TokenType.Lambda:
-					return new FunctionDefinitionExpression(lcontext, false, true);
+					return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
 				case TokenType.Brk_Open_Round:
 				{
 					if (lcontext.Syntax == ScriptSyntax.Lua) return PrimaryExp(lcontext);
@@ -200,7 +200,7 @@ namespace WattleScript.Interpreter.Tree
 					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow || lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
 					lcontext.Lexer.RestorePos();
 					if (arrowLambda) 					
-						return new FunctionDefinitionExpression(lcontext, false, true);
+						return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
 					else
 						return PrimaryExp(lcontext);
 				}
@@ -219,7 +219,7 @@ namespace WattleScript.Interpreter.Tree
 		{
 			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow && lcontext.Lexer.Current.Type == TokenType.Name)
 			{
-				return new FunctionDefinitionExpression(lcontext, false, true);
+				return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
 			}
 
 			Expression e = PrefixExp(lcontext);

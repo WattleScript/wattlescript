@@ -438,7 +438,7 @@ namespace WattleScript.Interpreter
 			
 			if (envTable == null)
 			{
-				if (proto.IsChunk)
+				if ((proto.Flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk)
 				{
 					c = new Closure(this, proto,
 						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },
@@ -481,7 +481,90 @@ namespace WattleScript.Interpreter
 		{
 			return CallAsync(function, new DynValue[0]);
 		}
+		
+		/// <summary>
+		/// Calls the specified function, marking the first parameter as this/self.
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called</param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns>
+		/// The return value(s) of the function call.
+		/// </returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
+		/// <exception cref="System.ArgumentException">Thrown if args.Length is less than 1</exception>
+		public DynValue ThisCall(DynValue function, params DynValue[] args)
+		{
+			this.CheckScriptOwnership(function);
+			this.CheckScriptOwnership(args);
 
+			if (args == null || args.Length < 1)
+				throw new ArgumentException("args");
+			
+			if (function.Type != DataType.Function && function.Type != DataType.ClrFunction)
+			{
+				DynValue metafunction = m_MainProcessor.GetMetamethod(function, "__call");
+
+				if (metafunction.IsNotNil())
+				{
+					DynValue[] metaargs = new DynValue[args.Length + 1];
+					metaargs[0] = function;
+					for (int i = 0; i < args.Length; i++)
+						metaargs[i + 1] = args[i];
+
+					function = metafunction;
+					args = metaargs;
+				}
+				else
+				{
+					throw new ArgumentException("function is not a function and has no __call metamethod.");
+				}
+			}
+			else if (function.Type == DataType.ClrFunction)
+			{
+				return function.Callback.ClrCallback(this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true));
+			}
+
+			return m_MainProcessor.ThisCall(function, args);
+		}
+		
+		public Task<DynValue> ThisCallAsync(DynValue function, params DynValue[] args)
+		{
+			this.CheckScriptOwnership(function);
+			this.CheckScriptOwnership(args);
+
+			if (args == null || args.Length < 1)
+				throw new ArgumentException("args");
+			
+			if (function.Type != DataType.Function && function.Type != DataType.ClrFunction)
+			{
+				DynValue metafunction = m_MainProcessor.GetMetamethod(function, "__call");
+
+				if (metafunction.IsNotNil())
+				{
+					DynValue[] metaargs = new DynValue[args.Length + 1];
+					metaargs[0] = function;
+					for (int i = 0; i < args.Length; i++)
+						metaargs[i + 1] = args[i];
+
+					function = metafunction;
+					args = metaargs;
+				}
+				else
+				{
+					throw new ArgumentException("function is not a function and has no __call metamethod.");
+				}
+			}
+			else if (function.Type == DataType.ClrFunction)
+			{
+				return Task.FromResult(function.Callback.ClrCallback(
+					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true)));
+			}
+
+			return m_MainProcessor.ThisCallAsync(function, args);
+		}
+		
+		
+		
 		/// <summary>
 		/// Calls the specified function.
 		/// </summary>
@@ -609,6 +692,54 @@ namespace WattleScript.Interpreter
 		{
 			return Call(DynValue.FromObject(this, function), args);
 		}
+		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
+		public DynValue ThisCall(object function, params DynValue[] args)
+		{
+			return ThisCall(DynValue.FromObject(this, function), args);
+		}
+		
+		public DynValue ThisCall(object function, params object[] args)
+		{
+			return ThisCall(DynValue.FromObject(this, function), args);
+		}
+		
+		public DynValue ThisCall(DynValue function, params object[] args)
+		{
+			DynValue[] dargs = new DynValue[args.Length];
+
+			for (int i = 0; i < dargs.Length; i++)
+				dargs[i] = DynValue.FromObject(this, args[i]);
+
+			return ThisCall(function, dargs);
+		}
+		
+		public Task<DynValue> ThisCallAsync(object function, params DynValue[] args)
+		{
+			return ThisCallAsync(DynValue.FromObject(this, function), args);
+		}
+		
+		public Task<DynValue> ThisCallAsync(object function, params object[] args)
+		{
+			return ThisCallAsync(DynValue.FromObject(this, function), args);
+		}
+		
+		public Task<DynValue> ThisCallAsync(DynValue function, params object[] args)
+		{
+			DynValue[] dargs = new DynValue[args.Length];
+
+			for (int i = 0; i < dargs.Length; i++)
+				dargs[i] = DynValue.FromObject(this, args[i]);
+
+			return ThisCallAsync(function, dargs);
+		}
+
 
 		public Task<DynValue> CallAsync(DynValue function, params object[] args)
 		{

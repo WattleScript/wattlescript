@@ -661,12 +661,21 @@ namespace WattleScript.Interpreter.Execution.VM
 			var argsList = CreateArgsListForFunctionCall(numargs, 1 + localCount);
 
 			int offset = 0;
+			int startIdx = 0;
 			//Skip implicit this passed on stack
-			if (implicitThis && !stackframe.Function.TakesSelf) {
+			if (implicitThis && (stackframe.Function.Flags & FunctionFlags.TakesSelf) != FunctionFlags.TakesSelf) {
 				offset = 1;
 			}
-			//
-			for (int i = 0; i < I.NumVal; i++)
+			//Only fill implicit this argument if method is thiscall.
+			if ((stackframe.Function.Flags & FunctionFlags.ImplicitThis) == FunctionFlags.ImplicitThis &&
+			    (stackframe.Flags & CallStackItemFlags.MethodCall) != CallStackItemFlags.MethodCall)
+			{
+				m_ValueStack[stackframe.BasePointer + I.NumVal - 1] = DynValue.Nil;
+				startIdx = 1; //Fill from 2nd arg (skip self)
+				offset = -1; //First argument from list
+			}
+			
+			for (int i = startIdx; i < I.NumVal; i++)
 			{
 				int argIdx = i + offset;
 				if (argIdx >= argsList.Count) {
