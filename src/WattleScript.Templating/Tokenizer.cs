@@ -63,6 +63,25 @@ public class Tokenizer
         return cc;
     }
 
+    private int storedPos;
+    void StorePos()
+    {
+        storedPos = pos;
+    }
+
+    void RestorePos()
+    {
+        pos = storedPos;
+        if (pos >= Source.Length)
+        {
+            pos = Source.Length - 1;
+        }
+        
+        storedPos = 0;
+        c = Source[pos];
+        DiscardCurrentLexeme();
+    }
+
     char Peek(int i = 1)
     {
         if (IsAtEnd())
@@ -146,6 +165,28 @@ public class Tokenizer
         return false;
     }
     
+    bool MatchNextNonWhiteSpaceNonNewlineChar(char ch)
+    {
+        while (!IsAtEnd())
+        {
+            if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+            {
+                Step();
+            }
+            else if (Peek() == ch)
+            {
+                Step();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+    
     // if (expr) {}
     bool ParseKeywordIf()
     {
@@ -166,9 +207,109 @@ public class Tokenizer
         }
         
         //bool openBlockBrkMatched = MatchNextNonWhiteSpaceChar('{');
-        ParseCodeBlock();
+        ParseCodeBlock(true);
+
+        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else");
+        if (matchesElse)
+        {
+            ParseKeywordElse();
+        }
         
         return false;
+    }
+
+    // else {}
+    bool ParseKeywordElse()
+    {
+        ParseWhitespaceAndNewlines();
+        //DiscardCurrentLexeme();
+        
+        string elseStr = StepN(4);
+
+        if (elseStr != "else")
+        {
+            return false;
+        }
+        
+        string str = GetCurrentLexeme();
+        
+        ParseCodeBlock(true);
+        
+        return false;
+    }
+
+    string StepN(int steps)
+    {
+        string str = "";
+        while (!IsAtEnd() && steps > 0)
+        {
+            char chr = Step();
+            str += chr;
+            steps--;
+        }
+
+        return str;
+    }
+
+    bool ParseWhitespaceAndNewlines()
+    {
+        while (!IsAtEnd())
+        {
+            if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+            {
+                Step();
+            }
+            else
+            {
+                break;
+            }
+           
+            Step();
+        }
+
+        return true;
+    }
+
+    bool NextLiteralSkipEmptyCharsMatches(string literal)
+    {
+        if (IsAtEnd())
+        {
+            return false;
+        }
+        
+        StorePos();
+
+        bool started = false;
+        while (!IsAtEnd())
+        {
+            if (!started)
+            {
+                if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+                {
+                    Step();
+                }
+                else
+                {
+                    string str = GetCurrentLexeme();
+                    DiscardCurrentLexeme();
+                    started = true;
+                }
+            }
+            else
+            {
+                if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+                {
+                    break;
+                }   
+            }
+
+            Step();
+        }
+
+        bool match = literal == GetCurrentLexeme();
+        RestorePos();
+        
+        return match;
     }
     
     public List<Token> Tokenize(string source, bool includeNewlines = false)
@@ -199,7 +340,7 @@ public class Tokenizer
         return Tokens;
     }
     
-            /* In client mode everything is a literal
+        /* In client mode everything is a literal
          * until we encouter @
          * then we lookahead at next char and if it's not another @ (escape)
          * we enter server mode
@@ -214,7 +355,7 @@ public class Tokenizer
                     {
                         AddToken(TokenTypes.ClientText);
                         ParseTransition();
-                        return;   
+                        continue;
                     }
                 }
                 
@@ -246,7 +387,7 @@ public class Tokenizer
             if (c == '{')
             {
                 DiscardCurrentLexeme();
-                ParseCodeBlock();
+                ParseCodeBlock(false);
             }
             else if (c == '(')
             {
@@ -361,7 +502,6 @@ public class Tokenizer
             }
             
             AddToken(TokenTypes.ImplicitExpr);
-            ParseClient();
         }
 
         void ParseKeyword()
@@ -384,13 +524,32 @@ public class Tokenizer
          * - looking for a } in case we've entered from a code block
          * - looking for a ) when entered from an explicit expression
          */
-        void ParseCodeBlock()
+        void ParseCodeBlock(bool keepClosingBrk)
         {
             bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
             string l = GetCurrentLexeme();
             AddToken(TokenTypes.BlockExpr);
+            
+            while (!IsAtEnd())
+            {
+                ParseUntilHtmlOrClientTransition();
+                StorePos();
+                bool matchedClosingBrk = MatchNextNonWhiteSpaceNonNewlineChar('}');
 
-            ParseUntilHtmlOrClientTransition();
+                if (matchedClosingBrk)
+                {
+                    break;
+                }
+                
+                RestorePos();
+            }
+            
+            l = GetCurrentLexeme();
+            if (!keepClosingBrk)
+            {
+                currentLexeme = currentLexeme.Substring(0, currentLexeme.Length - 1);
+            }
+            AddToken(TokenTypes.BlockExpr);
         }
 
         bool LastStoredCharNotWhitespaceMatches(params char[] chars)
@@ -415,6 +574,8 @@ public class Tokenizer
          */
         void ParseUntilHtmlOrClientTransition()
         {
+            int missingBrks = 1;
+            
             while (!IsAtEnd())
             {
                 if (Peek() == '<')
@@ -423,6 +584,19 @@ public class Tokenizer
                     {
                         AddToken(TokenTypes.BlockExpr);
                         ParseHtmlTag();
+                        return;
+                    }
+                }
+                else if (Peek() == '{')
+                {
+                    missingBrks++;
+                }
+                else if (Peek() == '}')
+                {
+                    missingBrks--;
+                    if (missingBrks <= 0)
+                    {
+                        break;
                     }
                 }
 
@@ -433,13 +607,80 @@ public class Tokenizer
 
         void ParseHtmlTag()
         {
-            char chr = Step();
+            char chr = Step(); // has to be <
             
             // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha]
             // If we have something else we can consider it a malformated tag
             // Razor renders first char = NUM as an error but compiles
             // If it is some other char, Razor throws
+            ParseUntilBalancedChar('<', '>', true);
+            string s = GetCurrentLexeme();
+
+            if (!CurrentLexemeIsSelfClosingHtmlTag())
+            {
+                ParseHtmlOrPlaintextUntilClosingTag();
+                ParseHtmlClosingTag();
+            }
             
+            s = GetCurrentLexeme();
+            AddToken(TokenTypes.ClientText);
+        }
+
+        void ParseHtmlClosingTag()
+        {
+            ParseUntilBalancedChar('<', '>', false);
+            string str = GetCurrentLexeme();
+        }
+
+        void ParseHtmlOrPlaintextUntilClosingTag()
+        {
+            int missingBrks = 1;
+            
+            string s = GetCurrentLexeme();
+            while (!IsAtEnd())
+            {
+                if (Peek() == '@')
+                {
+                    if (Peek(2) != '@')
+                    {
+                        AddToken(TokenTypes.ClientText);
+                        ParseTransition();
+                        continue;
+                    }
+                }
+                else if (Peek() == '<')
+                {
+                    if (IsAlpha(Peek(2))) // we enter new tag
+                    {
+                        ParseHtmlTag();
+                    }
+                    else if (Peek(2) == '/' && IsAlpha(Peek(3)))
+                    {
+                        missingBrks--;
+                    }
+                   
+                    if (missingBrks <= 0)
+                    {
+                        break;
+                    }
+                }
+                else if (Peek() == '>')
+                {
+                    if (IsAlpha(Peek(2)))
+                    {
+                        missingBrks++;   
+                    }
+                }
+
+                Step();
+            }
+
+            s = GetCurrentLexeme();
+        }
+
+        bool CurrentLexemeIsSelfClosingHtmlTag()
+        {
+            return GetCurrentLexeme().EndsWith("/>");
         }
 
         void AddToken(TokenTypes type)
