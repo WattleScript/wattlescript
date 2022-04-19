@@ -129,6 +129,29 @@ public class Tokenizer
         }
 
         int inbalance = startsInbalanced ? 1 : 0;
+        
+        void HandleStringSequence(char chr)
+        {
+            string str = GetCurrentLexeme();
+            if (LastStoredCharMatches(2, '\\')) // check that string symbol is not escaped
+            {
+                return;
+            }
+                 
+            if (!InSpecialSequence())
+            {
+                inString = true;
+                stringChar = chr;
+            }
+            else
+            {
+                if (stringChar == chr)
+                {
+                    inString = false;   
+                }
+            }
+        }
+
         while (!IsAtEnd())
         {
             Step();
@@ -136,33 +159,11 @@ public class Tokenizer
             {
                 if (c == '\'')
                 {
-                    if (!InSpecialSequence())
-                    {
-                        inString = true;
-                        stringChar = '\'';
-                    }
-                    else
-                    {
-                        if (stringChar == '\'')
-                        {
-                            inString = false;   
-                        }
-                    }
+                    HandleStringSequence('\'');
                 }
                 else if (c == '"')
                 {
-                    if (!InSpecialSequence())
-                    {
-                        inString = true;
-                        stringChar = '"';
-                    }
-                    else
-                    {
-                        if (stringChar == '"')
-                        {
-                            inString = false;   
-                        }
-                    }
+                    HandleStringSequence('"');
                 }
             }
 
@@ -762,6 +763,28 @@ public class Tokenizer
             AddToken(TokenTypes.BlockExpr);
         }
 
+        bool LastStoredCharMatches(params char[] chars)
+        {
+            if (GetCurrentLexeme().Length < 1)
+            {
+                return false;
+            }
+            
+            char chr = currentLexeme[..^1][0];
+            return chars.Contains(chr);
+        }
+        
+        bool LastStoredCharMatches(int n = 1, params char[] chars)
+        {
+            if (GetCurrentLexeme().Length < n)
+            {
+                return false;
+            }
+            
+            char chr = currentLexeme.Substring(currentLexeme.Length - 1 - n, 1)[0];
+            return chars.Contains(chr);
+        }
+        
         bool LastStoredCharNotWhitespaceMatches(params char[] chars)
         {
             string str = GetCurrentLexeme();
@@ -784,29 +807,96 @@ public class Tokenizer
          */
         void ParseUntilHtmlOrClientTransition()
         {
+            bool inString = false;
+            char stringChar = ' ';
+            bool inMultilineComment = false;
             int missingBrks = 1;
+            
+            bool InSpecialSequence()
+            {
+                return inString || inMultilineComment;
+            }
+
+            void HandleStringSequence(char chr)
+            {
+                string str = GetCurrentLexeme();
+                if (LastStoredCharMatches(2, '\\')) // check that string symbol is not escaped
+                {
+                    return;
+                }
+                 
+                if (!InSpecialSequence())
+                {
+                    inString = true;
+                    stringChar = chr;
+                }
+                else
+                {
+                    if (stringChar == chr)
+                    {
+                        inString = false;   
+                    }
+                }
+            }
             
             while (!IsAtEnd())
             {
-                if (Peek() == '<')
+                if (!inMultilineComment)
                 {
-                    if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
+                    if (c == '\'')
                     {
-                        AddToken(TokenTypes.BlockExpr);
-                        ParseHtmlTag();
+                        HandleStringSequence('\'');
+                    }
+                    else if (c == '"')
+                    {
+                        HandleStringSequence('"');
+                    }
+                    else if (c == '`')
+                    {
+                        HandleStringSequence('`');
                     }
                 }
-                else if (Peek() == '{')
+                
+                if (!inString)
                 {
-                    missingBrks++;
-                }
-                else if (Peek() == '}')
-                {
-                    missingBrks--;
-                    if (missingBrks <= 0)
+                    if (c == '/' && Peek() == '*')
                     {
-                        break;
+                        if (!inMultilineComment)
+                        {
+                            inMultilineComment = true;   
+                        }
                     }
+                    else if (c == '*' && Peek() == '/')
+                    {
+                        if (inMultilineComment)
+                        {
+                            inMultilineComment = false;
+                        }
+                    }
+                }
+
+                if (!InSpecialSequence())
+                {
+                    if (Peek() == '<')
+                    {
+                        if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
+                        {
+                            AddToken(TokenTypes.BlockExpr);
+                            ParseHtmlTag();
+                        }
+                    }
+                    else if (Peek() == '{')
+                    {
+                        missingBrks++;
+                    }
+                    else if (Peek() == '}')
+                    {
+                        missingBrks--;
+                        if (missingBrks <= 0)
+                        {
+                            break;
+                        }
+                    }   
                 }
 
                 string str2 = GetCurrentLexeme();
