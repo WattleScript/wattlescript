@@ -1,0 +1,6 @@
+@{
+    a = 10
+    <text>
+    Value of a is @a
+    </text>
+}

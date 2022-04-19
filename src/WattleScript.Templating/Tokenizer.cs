@@ -979,12 +979,10 @@ public class Tokenizer
             throw new Exception(message);
         }
 
-        bool ParseHtmlTag()
+        string ParseHtmlTagNameInBuffer()
         {
-            char chr = Step(); // has to be <
-            
-            // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha]
-            if (!(Peek() == '_' || Peek() == '!' || IsAlpha(Peek())))
+            // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha, ?]
+            if (!(Peek() == '_' || Peek() == '!' || Peek() == '?' || Peek() == '/' || IsAlpha(Peek())))
             {
                 Throw("First char after < in an opening HTML tag must be _, ! or alpha");
             }
@@ -993,7 +991,7 @@ public class Tokenizer
             ClearBuffer();
             SetStepMode(StepModes.Buffer);
             
-            while (!IsAtEnd() && IsAlphaNumeric(Peek()))
+            while (!IsAtEnd() && (IsAlphaNumeric(Peek()) || Peek() == '/' || Peek() == '!' || Peek() == '?'))
             {
                 Step();
             }
@@ -1004,34 +1002,21 @@ public class Tokenizer
             }
 
             string tagName = GetBuffer();
-            /*char nextMeaningful = GetNextCharNotWhitespace();
-
-            if (nextMeaningful == '>') // self closing without / or end of start tag
-            {
-                if (IsSelfClosing(tagName))
-                {
-                    
-                }
-            }
-            else if (nextMeaningful == '/') // self closing with /
-            {
-                
-            }
-            else if (IsAlpha(nextMeaningful)) // start of an attribute
-            {
-                
-            }
-            else
-            {
-                return Throw("Unexpected char");
-            }*/
             
             AddBufferToCurrentLexeme();
             ClearBuffer();
             SetStepMode(StepModes.CurrentLexeme);
             
+            return tagName;
+        }
+
+        bool ParseHtmlTag()
+        {
+            char chr = Step(); // has to be <
+            string tagName = ParseHtmlTagNameInBuffer();
+
             ParseUntilBalancedChar('<', '>', true, true, true);
-            string s = GetCurrentLexeme();
+            string tagText = GetCurrentLexeme();
 
             bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
             bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
@@ -1039,20 +1024,42 @@ public class Tokenizer
             
             if (parseContent)
             {
+                if (tagText == "<text>") // "<text>" has a special meaning only when exactly matched. Any modification like "<text >" will be rendered as a normal tag
+                {
+                    DiscardCurrentLexeme();
+                }
+                
                 ParseHtmlOrPlaintextUntilClosingTag(tagName);
-                ParseHtmlClosingTag();
+                ParseHtmlClosingTag(tagName);
             }
             
-            s = GetCurrentLexeme();
+            string s = GetCurrentLexeme();
             AddToken(TokenTypes.ClientText);
 
             return true;
         }
 
-        void ParseHtmlClosingTag()
+        // parser has to be positioned at opening < of the closing tag
+        void ParseHtmlClosingTag(string openingTagName)
         {
-            ParseUntilBalancedChar('<', '>', false, true, true);
+            char chr = Step(); // has to be <
+            
             string str = GetCurrentLexeme();
+            string closingTagName = ParseHtmlTagNameInBuffer();
+
+            ParseUntilBalancedChar('<', '>', true, true, true);
+            str = GetCurrentLexeme();
+
+            if ($"/{openingTagName}" != closingTagName)
+            {
+                // [todo] end tag does not match opening tag
+                // we will be graceful but a warning can be emmited
+            }
+            
+            if (openingTagName == "text" && closingTagName == "/text" && str.Trim() == "</text>")
+            {
+                DiscardCurrentLexeme();
+            }
         }
 
         void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName)
