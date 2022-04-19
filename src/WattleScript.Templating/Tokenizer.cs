@@ -30,7 +30,8 @@ public class Tokenizer
         {
             { "if", ParseKeywordIf },
             { "for", ParseKeywordFor },
-            { "while", ParseKeywordWhile }
+            { "while", ParseKeywordWhile },
+            { "do", ParseKeywordDo }
         };
     }
 
@@ -300,6 +301,28 @@ public class Tokenizer
     {
         return ParseGenericBrkKeywordWithBlock("while");
     }
+    
+    // do {} while ()
+    // parser has to be positioned after "do", either at opening { or at a whitespace preceding it
+    bool ParseKeywordDo()
+    {
+        bool doParsed = ParseGenericKeywordWithBlock("do");
+        bool matchesWhile = NextLiteralSkipEmptyCharsMatches("while");
+        
+        if (matchesWhile)
+        {
+            ParseWhitespaceAndNewlines();
+            string whileStr = StepN(5);
+            bool whileParsed = ParseGenericBrkKeywordWithoutBlock("while");
+
+            if (whileParsed)
+            {
+                AddToken(TokenTypes.BlockExpr);
+            }
+        }
+        
+        return true;
+    }
 
     // keyword () {}
     bool ParseGenericBrkKeywordWithBlock(string keyword)
@@ -321,8 +344,37 @@ public class Tokenizer
         }
         
         ParseCodeBlock(true);
-
         return true;
+    }
+    
+    // keyword {}
+    bool ParseGenericKeywordWithBlock(string keyword)
+    {
+        bool openBrkMatched = MatchNextNonWhiteSpaceChar('{');
+        string l = GetCurrentLexeme();
+
+        if (!openBrkMatched)
+        {
+            Throw($"Expected {{ after {keyword}");
+        }
+        
+        ParseCodeBlock(true);
+        return true;
+    }
+
+    // keyword ()
+    bool ParseGenericBrkKeywordWithoutBlock(string keyword)
+    {
+        bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
+        string l = GetCurrentLexeme();
+
+        if (!openBrkMatched)
+        {
+            Throw($"Expected ( after {keyword}");
+        }
+        
+        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
+        return endExprMatched;
     }
 
     // else {}
