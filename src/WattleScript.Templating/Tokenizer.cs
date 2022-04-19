@@ -289,7 +289,7 @@ public class Tokenizer
         //bool openBlockBrkMatched = MatchNextNonWhiteSpaceChar('{');
         ParseCodeBlock(true);
 
-        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else");
+        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else") || NextLiteralSkipEmptyCharsMatches("elseif"); // else handles "else if" but we have to check for "elseif" manually
         if (matchesElse)
         {
             ParseKeywordElseOrElseIf();
