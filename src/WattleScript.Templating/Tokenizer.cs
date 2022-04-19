@@ -267,6 +267,7 @@ public class Tokenizer
     }
     
     // if (expr) {}
+    // parser has to be positioned after if, either at opening ( or at whitespace before it
     bool ParseKeywordIf()
     {
         bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
@@ -291,12 +292,46 @@ public class Tokenizer
         bool matchesElse = NextLiteralSkipEmptyCharsMatches("else");
         if (matchesElse)
         {
-            ParseKeywordElse();
+            ParseKeywordElseOrElseIf();
         }
         
         return false;
     }
 
+    // else {}
+    // or possibly else if () {}
+    bool ParseKeywordElseOrElseIf()
+    {
+        StorePos();
+        ParseWhitespaceAndNewlines();
+        string elseStr = StepN(4);
+        ParseWhitespaceAndNewlines();
+        string elseIfStr = StepN(2);
+        RestorePos();
+
+        if (elseStr == "else" && elseIfStr == "if")
+        {
+            ParseKeywordElseIf();
+        }
+        else if (elseStr == "else")
+        {
+            ParseKeywordElse();
+        }
+        
+        return true;
+    }
+
+    // else if () {}
+    bool ParseKeywordElseIf()
+    {
+        ParseWhitespaceAndNewlines();
+        string elseStr = StepN(4); // eat else
+        ParseWhitespaceAndNewlines();
+        string elseIfStr = StepN(2); // ear if
+
+        return ParseKeywordIf();
+    }
+    
     // else {}
     bool ParseKeywordElse()
     {
@@ -337,13 +372,10 @@ public class Tokenizer
             if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
             {
                 Step();
+                continue;
             }
-            else
-            {
-                break;
-            }
-           
-            Step();
+
+            break;
         }
 
         return true;
