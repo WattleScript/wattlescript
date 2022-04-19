@@ -742,6 +742,7 @@ public class Tokenizer
             while (!IsAtEnd())
             {
                 ParseUntilHtmlOrClientTransition();
+                string str = GetCurrentLexeme();
                 StorePos();
                 bool matchedClosingBrk = MatchNextNonWhiteSpaceNonNewlineChar('}');
 
@@ -793,7 +794,6 @@ public class Tokenizer
                     {
                         AddToken(TokenTypes.BlockExpr);
                         ParseHtmlTag();
-                        return;
                     }
                 }
                 else if (Peek() == '{')
@@ -809,9 +809,11 @@ public class Tokenizer
                     }
                 }
 
-                string str = GetCurrentLexeme();
+                string str2 = GetCurrentLexeme();
                 char chr = Step();
             }
+            
+            string str = GetCurrentLexeme();
         }
 
         void ClearBuffer()
