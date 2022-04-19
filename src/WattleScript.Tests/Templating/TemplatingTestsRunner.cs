@@ -38,14 +38,15 @@ public class TemplatingTestsRunner
         string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
 
-        Template tmp = new Template();
-        string transpiled = tmp.Render(code, true);
-        
         Script script = new Script(CoreModules.Preset_HardSandbox);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Options.Syntax = ScriptSyntax.WattleScript;
+        script.Options.Directives.Add("using");
+        
+        Template tmp = new Template();
+        string transpiled = tmp.Render(script, code, true);
 
         void PrintLine(Script script, CallbackArguments args)
         {

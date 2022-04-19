@@ -1,10 +1,11 @@
 ﻿using System.Text;
+using WattleScript.Interpreter;
 
 namespace WattleScript.Templating;
 
 public class Template
 {
-    public string EncodeJsString(string s)
+    string EncodeJsString(string s)
     {
         StringBuilder sb = new StringBuilder();
         sb.Append("\"");
@@ -51,7 +52,7 @@ public class Template
         return sb.ToString();
     }
 
-    public List<Token> Optimise(List<Token>? tokens)
+    List<Token> Optimise(List<Token>? tokens)
     {
         if (tokens == null) // if we have no tokens or only one we can't merge
         {
@@ -90,9 +91,9 @@ public class Template
         return tokens;
     }
     
-    public string Render(string code, bool optimise)
+    public string Render(Script script, string code, bool optimise)
     {
-        Tokenizer tk = new Tokenizer();
+        Tokenizer tk = new Tokenizer(script);
         List<Token> tokens = tk.Tokenize(code);
 
         StringBuilder sb = new StringBuilder();
@@ -105,32 +106,30 @@ public class Template
         
         foreach (Token tkn in tokens)
         {
-            if (tkn.Type == TokenTypes.ClientText)
+            switch (tkn.Type)
             {
-                string lexeme = tkn.Lexeme;
-                if (firstClientPending)
+                case TokenTypes.ClientText:
                 {
-                    lexeme = lexeme.TrimStart();
-                    firstClientPending = false;
-                }
+                    string lexeme = tkn.Lexeme;
+                    if (firstClientPending)
+                    {
+                        lexeme = lexeme.TrimStart();
+                        firstClientPending = false;
+                    }
                 
-                sb.AppendLine($"stdout({EncodeJsString(lexeme)})");
-            }
-            else if (tkn.Type == TokenTypes.BlockExpr)
-            {
-                sb.AppendLine(tkn.Lexeme);
-            }
-            else if (tkn.Type == TokenTypes.ImplicitExpr)
-            {
-                sb.AppendLine($"stdout({tkn.Lexeme})");
-            }
-            else if (tkn.Type == TokenTypes.ExplicitExpr)
-            {
-                sb.AppendLine($"stdout({tkn.Lexeme})");
-            }
-            else if (tkn.Type == TokenTypes.ServerComment)
-            {
-                sb.AppendLine($"/*{tkn.Lexeme}*/");
+                    sb.AppendLine($"stdout({EncodeJsString(lexeme)})");
+                    break;
+                }
+                case TokenTypes.BlockExpr:
+                    sb.AppendLine(tkn.Lexeme);
+                    break;
+                case TokenTypes.ImplicitExpr:
+                case TokenTypes.ExplicitExpr:
+                    sb.AppendLine($"stdout({tkn.Lexeme})");
+                    break;
+                case TokenTypes.ServerComment:
+                    sb.AppendLine($"/*{tkn.Lexeme}*/");
+                    break;
             }
         }
 

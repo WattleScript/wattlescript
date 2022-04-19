@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using WattleScript.Interpreter;
 
 namespace WattleScript.Templating;
 
@@ -16,7 +17,7 @@ public class Tokenizer
         Client,
         Server
     }
-    
+
     private string Source { get; set; }
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
@@ -25,14 +26,20 @@ public class Tokenizer
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
     private StringBuilder PooledStringBuilder = new StringBuilder();
-    private Token LastToken => Tokens[^1];
-    int pos = 0;
-    char c;
-    string currentLexeme = "";
-    int line = 1;
+    private int pos;
+    private char c;
+    private string currentLexeme = "";
+    private int line = 1;
+    private Script? script;
     
-    public Tokenizer()
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="script">can be null but templating engine won't resolve custom directives</param>
+    public Tokenizer(Script? script)
     {
+        this.script = script;
+        
         KeywordsMap = new Dictionary<string, Func<bool>?>
         {
             { "if", ParseKeywordIf },
@@ -60,17 +67,17 @@ public class Tokenizer
 
     bool IsAlphaNumeric(char ch)
     {
-        return !IsAtEnd() && (IsDigit(ch) || IsAlpha(ch));
+        return IsDigit(ch) || IsAlpha(ch);
     }
 
     bool IsAlpha(char ch)
     {
-        return !IsAtEnd() && (char.IsLetter(ch) || ch is '_');
+        return char.IsLetter(ch) || ch is '_';
     }
 
     bool IsDigit(char ch)
     {
-        return !IsAtEnd() && (ch is >= '0' and <= '9');
+        return ch is >= '0' and <= '9';
     }
 
     char Step(int i = 1)
@@ -369,6 +376,38 @@ public class Tokenizer
         return ParseGenericBrkKeywordWithBlock("function");
     }
 
+    // directive [a.b.c]?
+    // parser has to be positioned after "directive", before optional right hand
+    bool ParseDirective()
+    {
+        ParseWhitespaceAndNewlines(Sides.Server);
+
+        // no right hand or invalid right hand
+        if (!IsAlpha(Peek()))
+        {
+            AddToken(TokenTypes.BlockExpr);
+            return true;
+        }
+
+        while (!IsAtEnd())
+        {
+            ParseLiteral(Sides.Server);
+
+            if (Peek() == '.')
+            {
+                Step();
+            }
+
+            if (!IsAlpha(Peek()))
+            {
+                break;
+            }
+        }
+        
+        AddToken(TokenTypes.BlockExpr);
+        return true;
+    }
+
     // keyword () {}
     bool ParseGenericBrkKeywordWithBlock(string keyword)
     {
@@ -488,7 +527,7 @@ public class Tokenizer
 
         return str;
     }
-
+    
     bool ParseWhitespaceAndNewlines(Sides currentSide)
     {
         while (!IsAtEnd())
@@ -864,9 +903,18 @@ public class Tokenizer
                 string firstPart = GetCurrentLexeme();
                 ImplicitExpressionTypes firstPartType = Str2ImplicitExprType(firstPart);
 
+                // 1. we check for known keywords
                 if (firstPartType is ImplicitExpressionTypes.AllowedKeyword or ImplicitExpressionTypes.BannedKeyword)
                 {
                     ParseKeyword();
+                    return;
+                }
+                
+                // 2. scan custom directives, if the feature is available
+                // all directives are parsed as a sequence of oscillating [ALPHA, .] tokens
+                if (script?.Options.Directives.TryGetValue(firstPart, out _) ?? false)
+                {
+                    ParseDirective();
                     return;
                 }
 
@@ -900,14 +948,18 @@ public class Tokenizer
             AddToken(TokenTypes.ImplicitExpr);
         }
 
-        void ParseKeyword()
+        bool ParseKeyword()
         {
             string keyword = GetCurrentLexeme();
 
+            // if keyword is from a know list of keywords we invoke a handler method of that keyword
             if (KeywordsMap.TryGetValue(keyword, out Func<bool>? resolver))
             {
                 resolver?.Invoke();
+                return true;
             }
+
+            return false;
         }
 
         /* Here the goal is to find the matching end of transition expression
