@@ -29,7 +29,8 @@ public class Tokenizer
         KeywordsMap = new Dictionary<string, Func<bool>?>
         {
             { "if", ParseKeywordIf },
-            { "for", ParseKeywordFor }
+            { "for", ParseKeywordFor },
+            { "while", ParseKeywordWhile }
         };
     }
 
@@ -291,6 +292,13 @@ public class Tokenizer
     bool ParseKeywordFor()
     {
         return ParseGenericBrkKeywordWithBlock("for");
+    }
+    
+    // while (i in a..b) {}
+    // parser has to be positioned after "while", either at opening ( or at a whitespace preceding it
+    bool ParseKeywordWhile()
+    {
+        return ParseGenericBrkKeywordWithBlock("while");
     }
 
     // keyword () {}
