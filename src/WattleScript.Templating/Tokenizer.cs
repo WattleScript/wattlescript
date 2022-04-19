@@ -468,6 +468,45 @@ public class Tokenizer
         
         return Tokens;
     }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns>true if we should end current iteration</returns>
+    bool LookaheadForTransition(bool calledFromClientSide)
+    {
+        if (Peek() == '@')
+        {
+            if (Peek(2) == '@') // @@ -> @
+            {
+                Step();
+                Step();
+                RemoveLastCharFromCurrentLexeme();
+                return true;
+            }
+
+            if (Peek(2) == '*') // @* -> comment
+            {
+                if (calledFromClientSide)
+                {
+                    AddToken(TokenTypes.ClientText);
+                }
+                
+                Step();
+                Step();
+                DiscardCurrentLexeme();
+                ParseServerComment();
+                return true;
+            }
+                    
+
+            AddToken(TokenTypes.ClientText);
+            ParseTransition();
+            return true;
+        }
+
+        return false;
+    }
     
         /* In client mode everything is a literal
          * until we encouter @
@@ -478,31 +517,12 @@ public class Tokenizer
         {
             while (!IsAtEnd())
             {
-                if (Peek() == '@')
+                bool shouldContinue = LookaheadForTransition(true);
+                if (shouldContinue)
                 {
-                    if (Peek(2) == '@') // @@ -> @
-                    {
-                        Step();
-                        Step();
-                        RemoveLastCharFromCurrentLexeme();
-                        continue;
-                    }
-
-                    if (Peek(2) == '*') // @* -> comment
-                    {
-                        Step();
-                        Step();
-                        DiscardCurrentLexeme();
-                        ParseServerComment();
-                        continue;
-                    }
-                    
-
-                    AddToken(TokenTypes.ClientText);
-                    ParseTransition();
                     continue;
                 }
-                
+
                 Step();
             }
             
@@ -899,16 +919,13 @@ public class Tokenizer
             string s = GetCurrentLexeme();
             while (!IsAtEnd())
             {
-                if (Peek() == '@')
+                bool shouldContinue = LookaheadForTransition(true);
+                if (shouldContinue)
                 {
-                    if (Peek(2) != '@')
-                    {
-                        AddToken(TokenTypes.ClientText);
-                        ParseTransition();
-                        continue;
-                    }
+                    continue;
                 }
-                else if (Peek() == '<')
+                
+                if (Peek() == '<')
                 {
                     if (IsAlpha(Peek(2))) // we enter new tag
                     {
