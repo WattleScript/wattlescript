@@ -499,14 +499,59 @@ public class Tokenizer
                 ParseServerComment();
                 return true;
             }
-                    
-
+            
             AddToken(TokenTypes.ClientText);
             ParseTransition();
             return true;
         }
 
         return false;
+    }
+
+    bool LookaheadForTransitionServerSide()
+    {
+        if (Peek() == '@')
+        {
+            if (Peek(2) == ':')
+            {
+                AddToken(TokenTypes.BlockExpr);
+                Step();
+                Step();
+                string str = GetCurrentLexeme();
+                DiscardCurrentLexeme();
+                ParseRestOfLineAsClient();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void ParseRestOfLineAsClient()
+    {
+        char chr = Step();
+        while (!IsAtEnd() && chr != '\n' && chr != '\r')
+        {
+            bool shouldContinue = LookaheadForTransition(true);
+            if (shouldContinue)
+            {
+                continue;
+            }
+
+            chr = Step();
+        }
+
+        // if we ended on \r check for \n and consume if matches
+        if (chr == '\r')
+        {
+            chr = Peek();
+            if (chr == '\n')
+            {
+                Step();
+            }   
+        }
+
+        AddToken(TokenTypes.ClientText);
     }
     
         /* In client mode everything is a literal
@@ -877,6 +922,12 @@ public class Tokenizer
 
                 if (!InSpecialSequence())
                 {
+                    bool cnt = LookaheadForTransitionServerSide();
+                    if (cnt)
+                    {
+                        continue;
+                    }
+                    
                     if (Peek() == '<')
                     {
                         if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
