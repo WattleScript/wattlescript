@@ -5,50 +5,52 @@ namespace WattleScript.Templating;
 
 public class TemplatingEngine
 {
+    private readonly StringBuilder pooledSb = new StringBuilder();
+    
     string EncodeJsString(string s)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.Append('"');
+        pooledSb.Clear();
+        pooledSb.Append('"');
         foreach (char c in s)
         {
             switch (c)
             {
                 case '\"':
-                    sb.Append("\\\"");
+                    pooledSb.Append("\\\"");
                     break;
                 case '\\':
-                    sb.Append("\\\\");
+                    pooledSb.Append("\\\\");
                     break;
                 case '\b':
-                    sb.Append("\\b");
+                    pooledSb.Append("\\b");
                     break;
                 case '\f':
-                    sb.Append("\\f");
+                    pooledSb.Append("\\f");
                     break;
                 case '\n':
-                    sb.Append("\\n");
+                    pooledSb.Append("\\n");
                     break;
                 case '\r':
-                    sb.Append("\\r");
+                    pooledSb.Append("\\r");
                     break;
                 case '\t':
-                    sb.Append("\\t");
+                    pooledSb.Append("\\t");
                     break;
                 default:
-                    int i = (int)c;
-                    if (i < 32 || i > 127)
+                    int i = c;
+                    if (i is < 32 or > 127)
                     {
-                        sb.AppendFormat("\\u{0:X04}", i);
+                        pooledSb.Append($"\\u{i:X04}");
                     }
                     else
                     {
-                        sb.Append(c);
+                        pooledSb.Append(c);
                     }
                     break;
             }
         }
-        sb.Append('"');
-        return sb.ToString();
+        pooledSb.Append('"');
+        return pooledSb.ToString();
     }
 
     List<Token> Optimise(List<Token>? tokens)
@@ -99,8 +101,8 @@ public class TemplatingEngine
     {
         Parser parser = new Parser(script);
         List<Token> tokens = parser.Parse(code);
-        StringBuilder sb = new StringBuilder();
-
+        pooledSb.Clear();
+        
         if (optimise)
         {
             tokens = Optimise(tokens);
@@ -108,10 +110,10 @@ public class TemplatingEngine
 
         foreach (Token tkn in tokens)
         {
-            sb.AppendLine(tkn.ToString());
+            pooledSb.AppendLine(tkn.ToString());
         }
         
-        string finalText = sb.ToString();
+        string finalText = pooledSb.ToString();
         return finalText;
     }
     
