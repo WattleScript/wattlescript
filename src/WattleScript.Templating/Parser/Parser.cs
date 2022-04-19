@@ -409,7 +409,7 @@ internal partial class Parser
             }
         }
 
-        void ParseTransition(Sides currentSide)
+        bool ParseTransition(Sides currentSide)
         {
             /* Valid transition sequences are
             * @{ - block
@@ -438,10 +438,10 @@ internal partial class Parser
                 DiscardCurrentLexeme();
                 ParseExplicitExpression();
             }
-            else if (c == ':')
+            else if (c == ':' && currentSide == Sides.Client)
             {
                 DiscardCurrentLexeme();
-
+                ParseRestOfLineAsClient();
             }
             else if (IsAlpha(c))
             {
@@ -449,8 +449,18 @@ internal partial class Parser
             }
             else
             {
-                // [todo] report err, synchronise
+                // [todo] either an invalid transition or an annotation
+                if (currentSide == Sides.Server)
+                {
+                    // we don't know enough to decide so we treat it as an annotation in server mode for now
+                    currentLexeme = $"@{GetCurrentLexeme()}";
+                    return true;
+                }
+
+                return Throw("Invalid character after @");
             }
+
+            return false;
         }
 
         ImplicitExpressionTypes Str2ImplicitExprType(string str)
