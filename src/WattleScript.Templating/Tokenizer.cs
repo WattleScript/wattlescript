@@ -10,6 +10,12 @@ public class Tokenizer
         AllowedKeyword,
         BannedKeyword
     }
+
+    enum Sides
+    {
+        Client,
+        Server
+    }
     
     private string Source { get; set; }
     private List<Token> Tokens { get; set; } = new List<Token>();
@@ -283,7 +289,7 @@ public class Tokenizer
     {
         ParseGenericBrkKeywordWithBlock("if");
 
-        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else") || NextLiteralSkipEmptyCharsMatches("elseif"); // else handles "else if" but we have to check for "elseif" manually
+        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else", Sides.Server) || NextLiteralSkipEmptyCharsMatches("elseif", Sides.Server); // else handles "else if" but we have to check for "elseif" manually
         if (matchesElse)
         {
             ParseKeywordElseOrElseIf();
@@ -314,11 +320,11 @@ public class Tokenizer
     bool ParseKeywordDo()
     {
         bool doParsed = ParseGenericKeywordWithBlock("do");
-        bool matchesWhile = NextLiteralSkipEmptyCharsMatches("while");
+        bool matchesWhile = NextLiteralSkipEmptyCharsMatches("while", Sides.Server);
         
         if (matchesWhile)
         {
-            ParseWhitespaceAndNewlines();
+            ParseWhitespaceAndNewlines(Sides.Server);
             string whileStr = StepN(5);
             bool whileParsed = ParseGenericBrkKeywordWithoutBlock("while");
 
@@ -335,7 +341,7 @@ public class Tokenizer
     // parser has to be positioned after "function", either at first ALPHA char of the function's name or whitespace preceding it
     bool ParseKeywordFunction()
     {
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         
         char chr = Peek();
         if (chr == '(')
@@ -353,7 +359,7 @@ public class Tokenizer
             return Throw("First char in function's name has to be an alpha character");
         }
 
-        string fnName = ParseLiteral();
+        string fnName = ParseLiteral(Sides.Server);
 
         if (string.IsNullOrWhiteSpace(fnName))
         {
@@ -421,9 +427,9 @@ public class Tokenizer
     bool ParseKeywordElseOrElseIf()
     {
         StorePos();
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         string elseStr = StepN(4);
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         string elseIfStr = StepN(2);
         RestorePos();
 
@@ -442,9 +448,9 @@ public class Tokenizer
     // else if () {}
     bool ParseKeywordElseIf()
     {
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         string elseStr = StepN(4); // eat else
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         string elseIfStr = StepN(2); // ear if
 
         return ParseKeywordIf();
@@ -453,7 +459,7 @@ public class Tokenizer
     // else {}
     bool ParseKeywordElse()
     {
-        ParseWhitespaceAndNewlines();
+        ParseWhitespaceAndNewlines(Sides.Server);
         //DiscardCurrentLexeme();
         
         string elseStr = StepN(4);
@@ -483,10 +489,16 @@ public class Tokenizer
         return str;
     }
 
-    bool ParseWhitespaceAndNewlines()
+    bool ParseWhitespaceAndNewlines(Sides currentSide)
     {
         while (!IsAtEnd())
         {
+            bool shouldContinue = LookaheadForTransitionClient(currentSide);
+            if (shouldContinue)
+            {
+                continue;
+            }
+            
             if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
             {
                 Step();
@@ -499,7 +511,7 @@ public class Tokenizer
         return true;
     }
 
-    bool NextLiteralSkipEmptyCharsMatches(string literal)
+    bool NextLiteralSkipEmptyCharsMatches(string literal, Sides currentSide)
     {
         if (IsAtEnd())
         {
@@ -511,7 +523,7 @@ public class Tokenizer
         bool started = false;
         while (!IsAtEnd())
         {
-            bool shouldContinue = LookaheadForTransition(true);
+            bool shouldContinue = LookaheadForTransitionClient(currentSide);
             if (shouldContinue)
             {
                 continue;
@@ -579,8 +591,10 @@ public class Tokenizer
     /// 
     /// </summary>
     /// <returns>true if we should end current iteration</returns>
-    bool LookaheadForTransition(bool calledFromClientSide)
+    bool LookaheadForTransitionClient(Sides currentSide)
     {
+        TokenTypes transitionType = currentSide == Sides.Client ? TokenTypes.ClientText : TokenTypes.BlockExpr;
+        
         if (Peek() == '@')
         {
             if (Peek(2) == '@') // @@ -> @
@@ -593,11 +607,8 @@ public class Tokenizer
 
             if (Peek(2) == '*') // @* -> comment
             {
-                if (calledFromClientSide)
-                {
-                    AddToken(TokenTypes.ClientText);
-                }
-                
+                AddToken(transitionType);
+
                 Step();
                 Step();
                 DiscardCurrentLexeme();
@@ -605,8 +616,8 @@ public class Tokenizer
                 return true;
             }
             
-            AddToken(TokenTypes.ClientText);
-            ParseTransition();
+            AddToken(transitionType);
+            ParseTransition(currentSide);
             return true;
         }
 
@@ -637,7 +648,7 @@ public class Tokenizer
         char chr = Step();
         while (!IsAtEnd() && chr != '\n' && chr != '\r')
         {
-            bool shouldContinue = LookaheadForTransition(true);
+            bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
             if (shouldContinue)
             {
                 continue;
@@ -668,7 +679,7 @@ public class Tokenizer
         {
             while (!IsAtEnd())
             {
-                bool shouldContinue = LookaheadForTransition(true);
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
                 if (shouldContinue)
                 {
                     continue;
@@ -708,7 +719,7 @@ public class Tokenizer
             }
         }
 
-        void ParseTransition()
+        void ParseTransition(Sides currentSide)
         {
             /* Valid transition sequences are
             * @{ - block
@@ -744,7 +755,7 @@ public class Tokenizer
             }
             else if (IsAlpha(c))
             {
-                ParseImplicitExpression();
+                ParseImplicitExpression(currentSide);
             }
             else
             {
@@ -767,13 +778,13 @@ public class Tokenizer
             return ImplicitExpressionTypes.Literal;
         }
 
-        string ParseLiteral()
+        string ParseLiteral(Sides currentSide)
         {
             ClearPooledBuilder();
             
             while (!IsAtEnd())
             {
-                bool shouldSkip = LookaheadForTransition(true);
+                bool shouldSkip = LookaheadForTransitionClient(currentSide);
                 if (shouldSkip)
                 {
                     continue;
@@ -793,14 +804,14 @@ public class Tokenizer
             return str;
         }
             
-        string ParseLiteralStartsWithAlpha()
+        string ParseLiteralStartsWithAlpha(Sides currentSide)
         {
             ClearPooledBuilder();
             bool first = true;
                 
             while (!IsAtEnd())
             {
-                bool shouldSkip = LookaheadForTransition(true);
+                bool shouldSkip = LookaheadForTransitionClient(currentSide);
                 if (shouldSkip)
                 {
                     continue;
@@ -845,11 +856,11 @@ public class Tokenizer
             AddToken(TokenTypes.ExplicitExpr);
         }
 
-        void ParseImplicitExpression()
+        void ParseImplicitExpression(Sides currentSide)
         {
             while (!IsAtEnd())
             {
-                ParseLiteralStartsWithAlpha();
+                ParseLiteralStartsWithAlpha(currentSide);
                 string firstPart = GetCurrentLexeme();
                 ImplicitExpressionTypes firstPartType = Str2ImplicitExprType(firstPart);
 
@@ -876,7 +887,7 @@ public class Tokenizer
                     }
                     
                     Step();
-                    ParseLiteralStartsWithAlpha();
+                    ParseLiteralStartsWithAlpha(currentSide);
                 }
 
                 bufC = Peek();
@@ -1199,7 +1210,7 @@ public class Tokenizer
             string s = GetCurrentLexeme();
             while (!IsAtEnd())
             {
-                bool shouldContinue = LookaheadForTransition(true);
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
                 if (shouldContinue)
                 {
                     continue;
