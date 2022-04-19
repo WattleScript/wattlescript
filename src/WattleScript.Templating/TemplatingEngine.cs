@@ -3,12 +3,12 @@ using WattleScript.Interpreter;
 
 namespace WattleScript.Templating;
 
-public class Template
+public class TemplatingEngine
 {
     string EncodeJsString(string s)
     {
         StringBuilder sb = new StringBuilder();
-        sb.Append("\"");
+        sb.Append('"');
         foreach (char c in s)
         {
             switch (c)
@@ -47,8 +47,7 @@ public class Template
                     break;
             }
         }
-        sb.Append("\"");
-
+        sb.Append('"');
         return sb.ToString();
     }
 
@@ -79,6 +78,11 @@ public class Template
             if (token.Type == nextToken.Type)
             {
                 token.Lexeme += nextToken.Lexeme;
+                token.FromLine = Math.Min(token.FromLine, nextToken.FromLine);
+                token.ToLine = Math.Max(token.ToLine, nextToken.ToLine);
+                token.StartCol = Math.Min(token.StartCol, nextToken.StartCol);
+                token.EndCol = Math.Max(token.EndCol, nextToken.EndCol);
+                
                 tokens.RemoveAt(i);
                 i--;
                 continue;
@@ -90,11 +94,31 @@ public class Template
         
         return tokens;
     }
+
+    public string Debug(Script script, string code, bool optimise)
+    {
+        Parser parser = new Parser(script);
+        List<Token> tokens = parser.Parse(code);
+        StringBuilder sb = new StringBuilder();
+
+        if (optimise)
+        {
+            tokens = Optimise(tokens);
+        }
+
+        foreach (Token tkn in tokens)
+        {
+            sb.AppendLine(tkn.ToString());
+        }
+        
+        string finalText = sb.ToString();
+        return finalText;
+    }
     
     public string Render(Script script, string code, bool optimise)
     {
-        Tokenizer tk = new Tokenizer(script);
-        List<Token> tokens = tk.Tokenize(code);
+        Parser parser = new Parser(script);
+        List<Token> tokens = parser.Parse(code);
 
         StringBuilder sb = new StringBuilder();
         bool firstClientPending = true;
@@ -108,7 +132,7 @@ public class Template
         {
             switch (tkn.Type)
             {
-                case TokenTypes.ClientText:
+                case TokenTypes.Text:
                 {
                     string lexeme = tkn.Lexeme;
                     if (firstClientPending)
@@ -127,7 +151,7 @@ public class Template
                 case TokenTypes.ExplicitExpr:
                     sb.AppendLine($"stdout({tkn.Lexeme})");
                     break;
-                case TokenTypes.ServerComment:
+                case TokenTypes.Comment:
                     sb.AppendLine($"/*{tkn.Lexeme}*/");
                     break;
             }

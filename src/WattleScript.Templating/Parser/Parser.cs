@@ -3,7 +3,7 @@ using WattleScript.Interpreter;
 
 namespace WattleScript.Templating;
 
-public class Tokenizer
+internal partial class Parser
 {
     enum ImplicitExpressionTypes
     {
@@ -17,8 +17,14 @@ public class Tokenizer
         Client,
         Server
     }
+    
+    enum StepModes
+    {
+        CurrentLexeme,
+        Buffer
+    }
 
-    private string Source { get; set; }
+    private string? source;
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
     private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function"};
@@ -27,19 +33,22 @@ public class Tokenizer
     private StringBuilder Buffer = new StringBuilder();
     private StringBuilder PooledStringBuilder = new StringBuilder();
     private int pos;
+    private int lastCommitedPos;
+    private int lastCommitedLine;
     private char c;
     private string currentLexeme = "";
     private int line = 1;
     private Script? script;
+    private StepModes stepMode = StepModes.CurrentLexeme;
     
     /// <summary>
     /// 
     /// </summary>
     /// <param name="script">can be null but templating engine won't resolve custom directives</param>
-    public Tokenizer(Script? script)
+    public Parser(Script? script)
     {
         this.script = script;
-        
+
         KeywordsMap = new Dictionary<string, Func<bool>?>
         {
             { "if", ParseKeywordIf },
@@ -49,96 +58,20 @@ public class Tokenizer
             { "function", ParseKeywordFunction }
         };
     }
-
-    void ClearPooledBuilder()
-    {
-        PooledStringBuilder.Clear();
-    }
     
-    bool IsAtEnd()
+    public List<Token> Parse(string templateSource, bool includeNewlines = false)
     {
-        return pos >= Source.Length;
-    }
-    
-    string GetCurrentLexeme()
-    {
-        return currentLexeme;
-    }
+        source = templateSource;
+        ParseClient();
 
-    bool IsAlphaNumeric(char ch)
-    {
-        return IsDigit(ch) || IsAlpha(ch);
-    }
-
-    bool IsAlpha(char ch)
-    {
-        return char.IsLetter(ch) || ch is '_';
-    }
-
-    bool IsDigit(char ch)
-    {
-        return ch is >= '0' and <= '9';
-    }
-
-    char Step(int i = 1)
-    {
-        char cc = Source[pos];
-
-        if (stepMode == StepModes.CurrentLexeme)
-        {
-            currentLexeme += cc;    
-        }
-        else
-        {
-            Buffer.Append(cc);
-        }
-        
-        pos += i;
-        c = cc;
-        return cc;
-    }
-
-    private int storedPos;
-    void StorePos()
-    {
-        storedPos = pos;
-    }
-
-    void RestorePos()
-    {
-        pos = storedPos;
-        if (pos >= Source.Length)
-        {
-            pos = Source.Length - 1;
-        }
-        
-        storedPos = 0;
-        c = Source[pos];
-        DiscardCurrentLexeme();
-    }
-
-    char Peek(int i = 1)
-    {
         if (IsAtEnd())
         {
-            return '\n';
+            AddToken(TokenTypes.Eof);
         }
 
-        int peekedPos = pos + i - 1;
-
-        if (peekedPos < 0)
-        {
-            pos = 0;
-        }
-
-        if (Source.Length <= peekedPos)
-        {
-            return Source[^1];
-        }
-
-        return Source[peekedPos];
+        return Tokens;
     }
-    
+
     bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced, bool handleStrings, bool handleServerComments)
     {
         bool inString = false;
@@ -230,22 +163,6 @@ public class Tokenizer
         return false;
     }
 
-    bool Match(char expected)
-    {
-        if (IsAtEnd())
-        {
-            return false;
-        }
-
-        if (Source[pos] != expected)
-        {
-            return false;
-        }
-
-        Step();
-        return true;
-    }
-
     bool MatchNextNonWhiteSpaceChar(char ch)
     {
         while (!IsAtEnd())
@@ -289,245 +206,7 @@ public class Tokenizer
 
         return false;
     }
-    
-    // if (expr) {}
-    // parser has to be positioned after if, either at opening ( or at whitespace before it
-    bool ParseKeywordIf()
-    {
-        ParseGenericBrkKeywordWithBlock("if");
 
-        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else", Sides.Server) || NextLiteralSkipEmptyCharsMatches("elseif", Sides.Server); // else handles "else if" but we have to check for "elseif" manually
-        if (matchesElse)
-        {
-            ParseKeywordElseOrElseIf();
-        }
-        
-        return false;
-    }
-
-    // for (i in a..b)
-    // for (i = 0; i < x; i++) 
-    // for (;;)
-    // we always have () around expr/s
-    // parser has to be positioned after "for", either at opening ( or at a whitespace preceding it
-    bool ParseKeywordFor()
-    {
-        return ParseGenericBrkKeywordWithBlock("for");
-    }
-    
-    // while (i in a..b) {}
-    // parser has to be positioned after "while", either at opening ( or at a whitespace preceding it
-    bool ParseKeywordWhile()
-    {
-        return ParseGenericBrkKeywordWithBlock("while");
-    }
-    
-    // do {} while ()
-    // parser has to be positioned after "do", either at opening { or at a whitespace preceding it
-    bool ParseKeywordDo()
-    {
-        bool doParsed = ParseGenericKeywordWithBlock("do");
-        bool matchesWhile = NextLiteralSkipEmptyCharsMatches("while", Sides.Server);
-        
-        if (matchesWhile)
-        {
-            ParseWhitespaceAndNewlines(Sides.Server);
-            string whileStr = StepN(5);
-            bool whileParsed = ParseGenericBrkKeywordWithoutBlock("while");
-
-            if (whileParsed)
-            {
-                AddToken(TokenTypes.BlockExpr);
-            }
-        }
-        
-        return doParsed;
-    }
-
-    // function foo() {}
-    // parser has to be positioned after "function", either at first ALPHA char of the function's name or whitespace preceding it
-    bool ParseKeywordFunction()
-    {
-        ParseWhitespaceAndNewlines(Sides.Server);
-        
-        char chr = Peek();
-        if (chr == '(')
-        {
-            return Throw("Missing function's name");
-        }
-
-        if (chr == '{')
-        {
-            return Throw("Missing function's name and signature");
-        }
-        
-        if (!IsAlpha(chr))
-        {
-            return Throw("First char in function's name has to be an alpha character");
-        }
-
-        string fnName = ParseLiteral(Sides.Server);
-
-        if (string.IsNullOrWhiteSpace(fnName))
-        {
-            return Throw("Missing function's name");
-        }
-
-        return ParseGenericBrkKeywordWithBlock("function");
-    }
-
-    // directive [a.b.c]?
-    // parser has to be positioned after "directive", before optional right hand
-    bool ParseDirective()
-    {
-        ParseWhitespaceAndNewlines(Sides.Server);
-
-        // no right hand or invalid right hand
-        if (!IsAlpha(Peek()))
-        {
-            AddToken(TokenTypes.BlockExpr);
-            return true;
-        }
-
-        while (!IsAtEnd())
-        {
-            ParseLiteral(Sides.Server);
-
-            if (Peek() == '.')
-            {
-                Step();
-            }
-
-            if (!IsAlpha(Peek()))
-            {
-                break;
-            }
-        }
-        
-        AddToken(TokenTypes.BlockExpr);
-        return true;
-    }
-
-    // keyword () {}
-    bool ParseGenericBrkKeywordWithBlock(string keyword)
-    {
-        bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
-        string l = GetCurrentLexeme();
-
-        if (!openBrkMatched)
-        {
-            Throw($"Expected ( after {keyword}");
-        }
-        
-        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
-        l = GetCurrentLexeme();
-
-        if (!endExprMatched)
-        {
-            return false;
-        }
-        
-        ParseCodeBlock(true);
-        return true;
-    }
-    
-    // keyword {}
-    bool ParseGenericKeywordWithBlock(string keyword)
-    {
-        bool openBrkMatched = MatchNextNonWhiteSpaceChar('{');
-        string l = GetCurrentLexeme();
-
-        if (!openBrkMatched)
-        {
-            Throw($"Expected {{ after {keyword}");
-        }
-        
-        ParseCodeBlock(true);
-        return true;
-    }
-
-    // keyword ()
-    bool ParseGenericBrkKeywordWithoutBlock(string keyword)
-    {
-        bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
-        string l = GetCurrentLexeme();
-
-        if (!openBrkMatched)
-        {
-            Throw($"Expected ( after {keyword}");
-        }
-        
-        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
-        return endExprMatched;
-    }
-
-    // else {}
-    // or possibly else if () {}
-    bool ParseKeywordElseOrElseIf()
-    {
-        StorePos();
-        ParseWhitespaceAndNewlines(Sides.Server);
-        string elseStr = StepN(4);
-        ParseWhitespaceAndNewlines(Sides.Server);
-        string elseIfStr = StepN(2);
-        RestorePos();
-
-        if (elseStr == "else" && elseIfStr == "if")
-        {
-            ParseKeywordElseIf();
-        }
-        else if (elseStr == "else")
-        {
-            ParseKeywordElse();
-        }
-        
-        return true;
-    }
-
-    // else if () {}
-    bool ParseKeywordElseIf()
-    {
-        ParseWhitespaceAndNewlines(Sides.Server);
-        string elseStr = StepN(4); // eat else
-        ParseWhitespaceAndNewlines(Sides.Server);
-        string elseIfStr = StepN(2); // ear if
-
-        return ParseKeywordIf();
-    }
-    
-    // else {}
-    bool ParseKeywordElse()
-    {
-        ParseWhitespaceAndNewlines(Sides.Server);
-        //DiscardCurrentLexeme();
-        
-        string elseStr = StepN(4);
-
-        if (elseStr != "else")
-        {
-            return false;
-        }
-        
-        string str = GetCurrentLexeme();
-        
-        ParseCodeBlock(true);
-        
-        return false;
-    }
-
-    string StepN(int steps)
-    {
-        string str = "";
-        while (!IsAtEnd() && steps > 0)
-        {
-            char chr = Step();
-            str += chr;
-            steps--;
-        }
-
-        return str;
-    }
-    
     bool ParseWhitespaceAndNewlines(Sides currentSide)
     {
         while (!IsAtEnd())
@@ -598,41 +277,13 @@ public class Tokenizer
         return match;
     }
     
-    public List<Token> Tokenize(string source, bool includeNewlines = false)
-    {
-        bool tokenize = true;
-        bool anyErrors = false;
-        Source = source;
-
-        ParseClient();
-
-        if (IsAtEnd())
-        {
-            tokenize = false;
-            AddToken(TokenTypes.Eof);
-        }
-
-        if (anyErrors)
-        {
-            tokenize = false;
-        }
-        
-        void Error(int line, string message)
-        {
-            anyErrors = true;
-            Messages.Add($"Error at line {line} - {message}");
-        }
-        
-        return Tokens;
-    }
-
     /// <summary>
     /// 
     /// </summary>
     /// <returns>true if we should end current iteration</returns>
     bool LookaheadForTransitionClient(Sides currentSide)
     {
-        TokenTypes transitionType = currentSide == Sides.Client ? TokenTypes.ClientText : TokenTypes.BlockExpr;
+        TokenTypes transitionType = currentSide == Sides.Client ? TokenTypes.Text : TokenTypes.BlockExpr;
         
         if (Peek() == '@')
         {
@@ -706,7 +357,7 @@ public class Tokenizer
             }   
         }
 
-        AddToken(TokenTypes.ClientText);
+        AddToken(TokenTypes.Text);
     }
     
         /* In client mode everything is a literal
@@ -727,7 +378,7 @@ public class Tokenizer
                 Step();
             }
             
-            AddToken(TokenTypes.ClientText);
+            AddToken(TokenTypes.Text);
         }
 
         // @* *@
@@ -742,7 +393,7 @@ public class Tokenizer
                     Step();
                     RemoveLastCharFromCurrentLexeme();
                     RemoveLastCharFromCurrentLexeme(); // eat and discard closing *@
-                    AddToken(TokenTypes.ServerComment);
+                    AddToken(TokenTypes.Comment);
                     break;
                 }
                 
@@ -1150,28 +801,6 @@ public class Tokenizer
             string str = GetCurrentLexeme();
         }
 
-        void ClearBuffer()
-        {
-            Buffer.Clear();
-        }
-
-        private StepModes stepMode = StepModes.CurrentLexeme;
-        enum StepModes
-        {
-            CurrentLexeme,
-            Buffer
-        }
-
-        void SetStepMode(StepModes mode)
-        {
-            stepMode = mode;
-        }
-
-        bool Throw(string message)
-        {
-            throw new Exception(message);
-        }
-
         string ParseHtmlTagNameInBuffer()
         {
             // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha, ?]
@@ -1227,7 +856,7 @@ public class Tokenizer
             }
             
             string s = GetCurrentLexeme();
-            AddToken(TokenTypes.ClientText);
+            AddToken(TokenTypes.Text);
 
             return true;
         }
@@ -1296,63 +925,5 @@ public class Tokenizer
             }
 
             s = GetCurrentLexeme();
-        }
-
-        char GetNextCharNotWhitespace()
-        {
-            StorePos();
-            char ch = '\0';
-            
-            while (!IsAtEnd())
-            {
-                ch = Step();
-                if (Peek() != ' ')
-                {
-                    break;
-                }
-            }
-            RestorePos();
-
-            return ch;
-        }
-
-        string GetBuffer()
-        {
-            return Buffer.ToString();
-        }
-
-        bool CurrentLexemeIsSelfClosedHtmlTag()
-        {
-            return GetCurrentLexeme().EndsWith("/>");
-        }
-
-        bool IsSelfClosingHtmlTag(string htmlTag)
-        {
-            return IsSelfClosing(htmlTag.ToLowerInvariant());
-        }
-
-        void AddToken(TokenTypes type)
-        {
-            if (currentLexeme.Length > 0)
-            {
-                Token token = new Token(type, currentLexeme, null, line);
-                Tokens.Add(token);
-                DiscardCurrentLexeme();   
-            }
-        }
-
-        void DiscardCurrentLexeme()
-        {
-            currentLexeme = "";
-        }
-
-        void AddBufferToCurrentLexeme()
-        {
-            currentLexeme += Buffer.ToString();
-        }
-
-        bool IsSelfClosing(string tagName)
-        {
-            return tagName == "area" || tagName == "base" || tagName == "br" || tagName == "col" || tagName == "embed" || tagName == "hr" || tagName == "img" || tagName == "input" || tagName == "keygen" || tagName == "link" || tagName == "menuitem" || tagName == "meta" || tagName == "param" || tagName == "source" || tagName == "track" || tagName == "wbr";
         }
 }

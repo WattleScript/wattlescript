@@ -1,34 +1,44 @@
-﻿namespace WattleScript.Templating;
+﻿using System.ComponentModel;
+namespace WattleScript.Templating;
 
-
-public enum TokenTypes
+internal enum TokenTypes
 {
+    [Description("BLOCK")]
     BlockExpr,
+    [Description("EXPLICIT")]
     ExplicitExpr,
+    [Description("IMPLICIT")]
     ImplicitExpr,
-    ClientText,
-    ServerComment,
+    [Description("TEXT")]
+    Text,
+    [Description("COMMENT")]
+    Comment,
+    [Description("EOF")]
     Eof,
     Length
 }
     
-public class Token
+internal class Token
 {
     public TokenTypes Type { get; set; }
     public string Lexeme { get; set; }
-    public object Literal { get; set; }
-    public int Line { get; set; }
+    public int FromLine { get; set; }
+    public int ToLine { get; set; }
+    public int StartCol { get; set; }
+    public int EndCol { get; set; }
 
-    public Token(TokenTypes type, string lexeme, object literal, int line)
+    public Token(TokenTypes type, string lexeme, int fromLine, int toLine, int startCol, int endCol)
     {
         Type = type;
         Lexeme = lexeme;
-        Literal = literal;
-        Line = line;
+        FromLine = fromLine;
+        ToLine = toLine;
+        StartCol = startCol;
+        EndCol = endCol;
     }
 
     public override string ToString()
     {
-        return $"{Type} - {Lexeme} - {Literal}";
+        return $"{Type.ToDescriptionString()} [ln {FromLine}-{ToLine}, col {StartCol}-{EndCol}] - {Lexeme}";
     }
 }

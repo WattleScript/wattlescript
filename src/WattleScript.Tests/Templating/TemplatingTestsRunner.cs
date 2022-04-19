@@ -26,28 +26,8 @@ public class TemplatingTestsRunner
     
     public async Task RunCore(string path, bool reportErrors = false)
     {
-        string outputPath = path.Replace(".wthtml", ".html");
-
-        if (!File.Exists(outputPath))
-        {
-            Assert.Inconclusive($"Missing output file for test {path}");
-            return;
-        }
-
-        string code = await File.ReadAllTextAsync(path);
-        string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
-
-        Script script = new Script(CoreModules.Preset_HardSandbox);
-        script.Options.DebugPrint = s => stdOut.AppendLine(s);
-        script.Options.IndexTablesFrom = 0;
-        script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-        script.Options.Syntax = ScriptSyntax.WattleScript;
-        script.Options.Directives.Add("using");
         
-        Template tmp = new Template();
-        string transpiled = tmp.Render(script, code, true);
-
         void PrintLine(Script script, CallbackArguments args)
         {
             stdOut.AppendLine(args[0].CastToString());
@@ -58,6 +38,29 @@ public class TemplatingTestsRunner
             stdOut.Append(args[0].CastToString());
         }
         
+        string outputPath = path.Replace(".wthtml", ".html");
+
+        if (!File.Exists(outputPath))
+        {
+            Assert.Inconclusive($"Missing output file for test {path}");
+            return;
+        }
+
+        string code = await File.ReadAllTextAsync(path);
+        string output = await File.ReadAllTextAsync(outputPath);
+
+        Script script = new Script(CoreModules.Preset_HardSandbox);
+        script.Options.DebugPrint = s => stdOut.AppendLine(s);
+        script.Options.IndexTablesFrom = 0;
+        script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
+        script.Options.Syntax = ScriptSyntax.WattleScript;
+        script.Options.Directives.Add("using");
+        
+        TemplatingEngine tmp = new TemplatingEngine();
+        string transpiled = tmp.Render(script, code, true);
+
+        string debugStr = tmp.Debug(script, code, true);
+
         script.Globals["stdout_line"] = PrintLine;
         script.Globals["stdout"] = Print;
 
