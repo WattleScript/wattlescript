@@ -867,14 +867,16 @@ public class Tokenizer
             ClearBuffer();
             SetStepMode(StepModes.CurrentLexeme);
             
-            
-            
             ParseUntilBalancedChar('<', '>', true, true, true);
             string s = GetCurrentLexeme();
 
-            if (!CurrentLexemeIsSelfClosingHtmlTag())
+            bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
+            bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
+            bool parseContent = !isSelfClosed && !isSelfClosing;
+            
+            if (parseContent)
             {
-                ParseHtmlOrPlaintextUntilClosingTag();
+                ParseHtmlOrPlaintextUntilClosingTag(tagName);
                 ParseHtmlClosingTag();
             }
             
@@ -890,7 +892,7 @@ public class Tokenizer
             string str = GetCurrentLexeme();
         }
 
-        void ParseHtmlOrPlaintextUntilClosingTag()
+        void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName)
         {
             int missingBrks = 1;
             
@@ -959,9 +961,14 @@ public class Tokenizer
             return Buffer.ToString();
         }
 
-        bool CurrentLexemeIsSelfClosingHtmlTag()
+        bool CurrentLexemeIsSelfClosedHtmlTag()
         {
             return GetCurrentLexeme().EndsWith("/>");
+        }
+
+        bool IsSelfClosingHtmlTag(string htmlTag)
+        {
+            return IsSelfClosing(htmlTag.ToLowerInvariant());
         }
 
         void AddToken(TokenTypes type)
