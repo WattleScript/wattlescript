@@ -1,4 +1,6 @@
-﻿namespace WattleScript.Templating;
+﻿using System.Text;
+
+namespace WattleScript.Templating;
 
 public class Tokenizer
 {
@@ -15,6 +17,7 @@ public class Tokenizer
     private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
+    private StringBuilder Buffer = new StringBuilder();
     private Token LastToken => Tokens[^1];
     int pos = 0;
     char c;
@@ -57,7 +60,16 @@ public class Tokenizer
     char Step(int i = 1)
     {
         char cc = Source[pos];
-        currentLexeme += cc;
+
+        if (stepMode == StepModes.CurrentLexeme)
+        {
+            currentLexeme += cc;    
+        }
+        else
+        {
+            Buffer.Append(cc);
+        }
+        
         pos += i;
         c = cc;
         return cc;
@@ -104,22 +116,65 @@ public class Tokenizer
         return Source[peekedPos];
     }
     
-    bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced)
+    bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced, bool handleStrings)
     {
+        bool inString = false;
+        char stringChar = ' ';
+        
         int inbalance = startsInbalanced ? 1 : 0;
         while (!IsAtEnd())
         {
             Step();
+            if (handleStrings)
+            {
+                if (c == '\'')
+                {
+                    if (!inString)
+                    {
+                        inString = true;
+                        stringChar = '\'';
+                    }
+                    else
+                    {
+                        if (stringChar == '\'')
+                        {
+                            inString = false;   
+                        }
+                    }
+                }
+                else if (c == '"')
+                {
+                    if (!inString)
+                    {
+                        inString = true;
+                        stringChar = '"';
+                    }
+                    else
+                    {
+                        if (stringChar == '"')
+                        {
+                            inString = false;   
+                        }
+                    }
+                }
+            }
+            
             if (c == startBr)
             {
-                inbalance++;
+                if (!handleStrings || (handleStrings && !inString))
+                {
+                    inbalance++;    
+                }
             }
             else if (c == endBr)
             {
-                inbalance--;
-                if (inbalance <= 0)
+                if (!handleStrings || (handleStrings && !inString))
                 {
-                    return true;
+                    inbalance--;
+                    if (inbalance <= 0)
+                    {
+                        return true;
+                    }   
                 }
             }
         }
@@ -198,7 +253,7 @@ public class Tokenizer
             return false;
         }
         
-        bool endExprMatched = ParseUntilBalancedChar('(', ')', true);
+        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true);
         l = GetCurrentLexeme();
 
         if (!endExprMatched)
@@ -392,6 +447,7 @@ public class Tokenizer
             else if (c == '(')
             {
                 DiscardCurrentLexeme();
+                ParseExplicitExpression();
             }
             else if (c == ':')
             {
@@ -423,45 +479,61 @@ public class Tokenizer
             return ImplicitExpressionTypes.Literal;
         }
 
+        void ParseLiteral()
+        {
+            while (true)
+            {
+                if (!IsAlphaNumeric(Peek()))
+                {
+                    break;
+                }
+                
+                Step();
+            }   
+        }
+            
+        void ParseLiteralStartsWithAlpha()
+        {
+            bool first = true;
+                
+            while (true)
+            {
+                if (first)
+                {
+                    if (!IsAlpha(Peek()))
+                    {
+                        break;
+                    }
+
+                    first = false;
+                }
+                else if (!IsAlphaNumeric(Peek()))
+                {
+                    break;
+                }
+                
+                Step();
+            }   
+        }
+
+        void ParseExplicitExpression()
+        {
+            // parser is positioned after opening (
+            ParseUntilBalancedChar('(', ')', true, true);
+            string str = GetCurrentLexeme();
+
+            // get rid of closing )
+            if (str.EndsWith(')'))
+            {
+                str = str[..^1];
+            }
+
+            currentLexeme = str;
+            AddToken(TokenTypes.ExplicitExpr);
+        }
+
         void ParseImplicitExpression()
         {
-            void ParseLiteral()
-            {
-                while (true)
-                {
-                    if (!IsAlphaNumeric(Peek()))
-                    {
-                        break;
-                    }
-                
-                    Step();
-                }   
-            }
-            
-            void ParseLiteralStartsWithAlpha()
-            {
-                bool first = true;
-                
-                while (true)
-                {
-                    if (first)
-                    {
-                        if (!IsAlpha(Peek()))
-                        {
-                            break;
-                        }
-
-                        first = false;
-                    }
-                    else if (!IsAlphaNumeric(Peek()))
-                    {
-                        break;
-                    }
-                
-                    Step();
-                }   
-            }
-
             while (!IsAtEnd())
             {
                 ParseLiteralStartsWithAlpha();
@@ -477,11 +549,11 @@ public class Tokenizer
                 char bufC = Peek();
                 if (bufC == '[')
                 {
-                    ParseUntilBalancedChar('[', ']', false);
+                    ParseUntilBalancedChar('[', ']', false, true);
                 }
                 else if (bufC == '(')
                 {
-                    ParseUntilBalancedChar('(', ')', false);
+                    ParseUntilBalancedChar('(', ')', false, true);
                 }
                 else if (bufC == '.')
                 {
@@ -605,15 +677,82 @@ public class Tokenizer
             }
         }
 
-        void ParseHtmlTag()
+        void ClearBuffer()
+        {
+            Buffer.Clear();
+        }
+
+        private StepModes stepMode = StepModes.CurrentLexeme;
+        enum StepModes
+        {
+            CurrentLexeme,
+            Buffer
+        }
+
+        void SetStepMode(StepModes mode)
+        {
+            stepMode = mode;
+        }
+
+        bool Throw(string message)
+        {
+            throw new Exception(message);
+        }
+
+        bool ParseHtmlTag()
         {
             char chr = Step(); // has to be <
             
             // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha]
-            // If we have something else we can consider it a malformated tag
-            // Razor renders first char = NUM as an error but compiles
-            // If it is some other char, Razor throws
-            ParseUntilBalancedChar('<', '>', true);
+            if (!(Peek() == '_' || Peek() == '!' || IsAlpha(Peek())))
+            {
+                Throw("First char after < in an opening HTML tag must be _, ! or alpha");
+            }
+            
+            // The next few chars represent element's name
+            ClearBuffer();
+            SetStepMode(StepModes.Buffer);
+            
+            while (!IsAtEnd() && IsAlphaNumeric(Peek()))
+            {
+                Step();
+            }
+
+            if (IsAtEnd())
+            {
+                Throw("Unclosed HTML tag at the end of file");
+            }
+
+            string tagName = GetBuffer();
+            /*char nextMeaningful = GetNextCharNotWhitespace();
+
+            if (nextMeaningful == '>') // self closing without / or end of start tag
+            {
+                if (IsSelfClosing(tagName))
+                {
+                    
+                }
+            }
+            else if (nextMeaningful == '/') // self closing with /
+            {
+                
+            }
+            else if (IsAlpha(nextMeaningful)) // start of an attribute
+            {
+                
+            }
+            else
+            {
+                return Throw("Unexpected char");
+            }*/
+            
+            AddBufferToCurrentLexeme();
+            ClearBuffer();
+            SetStepMode(StepModes.CurrentLexeme);
+            
+            
+            
+            ParseUntilBalancedChar('<', '>', true, true);
             string s = GetCurrentLexeme();
 
             if (!CurrentLexemeIsSelfClosingHtmlTag())
@@ -624,11 +763,13 @@ public class Tokenizer
             
             s = GetCurrentLexeme();
             AddToken(TokenTypes.ClientText);
+
+            return true;
         }
 
         void ParseHtmlClosingTag()
         {
-            ParseUntilBalancedChar('<', '>', false);
+            ParseUntilBalancedChar('<', '>', false, true);
             string str = GetCurrentLexeme();
         }
 
@@ -678,6 +819,29 @@ public class Tokenizer
             s = GetCurrentLexeme();
         }
 
+        char GetNextCharNotWhitespace()
+        {
+            StorePos();
+            char ch = '\0';
+            
+            while (!IsAtEnd())
+            {
+                ch = Step();
+                if (Peek() != ' ')
+                {
+                    break;
+                }
+            }
+            RestorePos();
+
+            return ch;
+        }
+
+        string GetBuffer()
+        {
+            return Buffer.ToString();
+        }
+
         bool CurrentLexemeIsSelfClosingHtmlTag()
         {
             return GetCurrentLexeme().EndsWith("/>");
@@ -698,4 +862,13 @@ public class Tokenizer
             currentLexeme = "";
         }
 
+        void AddBufferToCurrentLexeme()
+        {
+            currentLexeme += Buffer.ToString();
+        }
+
+        bool IsSelfClosing(string tagName)
+        {
+            return tagName == "area" || tagName == "base" || tagName == "br" || tagName == "col" || tagName == "embed" || tagName == "hr" || tagName == "img" || tagName == "input" || tagName == "keygen" || tagName == "link" || tagName == "menuitem" || tagName == "meta" || tagName == "param" || tagName == "source" || tagName == "track" || tagName == "wbr";
+        }
 }

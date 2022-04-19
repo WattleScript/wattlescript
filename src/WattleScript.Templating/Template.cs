@@ -80,6 +80,10 @@ public class Template
             {
                 sb.AppendLine($"stdout({tkn.Lexeme})");
             }
+            else if (tkn.Type == TokenTypes.ExplicitExpr)
+            {
+                sb.AppendLine($"stdout({tkn.Lexeme})");
+            }
         }
 
         string finalText = sb.ToString();

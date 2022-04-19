@@ -1,0 +1,1 @@
+<div checked='@(1 > 2 ? 'checked' : 'unchecked')'></div>
