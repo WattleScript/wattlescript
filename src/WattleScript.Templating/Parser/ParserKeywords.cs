@@ -139,7 +139,7 @@ internal partial class Parser
             return false;
         }
         
-        ParseCodeBlock(true);
+        ParseCodeBlock(true, true);
         return true;
     }
     
@@ -154,7 +154,7 @@ internal partial class Parser
             Throw($"Expected {{ after {keyword}");
         }
         
-        ParseCodeBlock(true);
+        ParseCodeBlock(true, true);
         return true;
     }
 
@@ -222,7 +222,7 @@ internal partial class Parser
         
         string str = GetCurrentLexeme();
         
-        ParseCodeBlock(true);
+        ParseCodeBlock(true, true);
         
         return false;
     }

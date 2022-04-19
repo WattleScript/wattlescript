@@ -40,6 +40,7 @@ internal partial class Parser
     private int line = 1;
     private Script? script;
     private StepModes stepMode = StepModes.CurrentLexeme;
+    private bool parsingTransitionCharactersEnabled = true;
     
     /// <summary>
     /// 
@@ -206,6 +207,32 @@ internal partial class Parser
 
         return false;
     }
+    
+    bool NextNonWhiteSpaceCharMatches(char ch)
+    {
+        StorePos();
+        while (!IsAtEnd())
+        {
+            if (Peek() == ' ')
+            {
+                Step();
+            }
+            else if (Peek() == ch)
+            {
+                Step();
+                RestorePos();
+                return true;
+            }
+            else
+            {
+                RestorePos();
+                return false;
+            }
+        }
+
+        RestorePos();
+        return false;
+    }
 
     bool ParseWhitespaceAndNewlines(Sides currentSide)
     {
@@ -283,6 +310,11 @@ internal partial class Parser
     /// <returns>true if we should end current iteration</returns>
     bool LookaheadForTransitionClient(Sides currentSide)
     {
+        if (!ParsingControlChars())
+        {
+            return false;
+        }
+        
         TokenTypes transitionType = currentSide == Sides.Client ? TokenTypes.Text : TokenTypes.BlockExpr;
         
         if (Peek() == '@')
@@ -316,6 +348,11 @@ internal partial class Parser
 
     bool LookaheadForTransitionServerSide()
     {
+        if (!ParsingControlChars())
+        {
+            return false;
+        }
+        
         if (Peek() == '@')
         {
             if (Peek(2) == ':')
@@ -415,6 +452,7 @@ internal partial class Parser
             * @{ - block
             * @( - explicit expression
             * @: - line transition (back to client)
+            * @! - explicit escape expression 
             * @TKeyword - if, for, while, do...
             * @TBannedKeyword - else, elseif
             * @ContrainedLiteral - eg. @myVar. First char has to be either alpha or underscore (eg. @8 is invalid)
@@ -430,8 +468,7 @@ internal partial class Parser
             
             if (c == '{')
             {
-                DiscardCurrentLexeme();
-                ParseCodeBlock(false);
+                ParseCodeBlock(false, false);
             }
             else if (c == '(')
             {
@@ -442,6 +479,13 @@ internal partial class Parser
             {
                 DiscardCurrentLexeme();
                 ParseRestOfLineAsClient();
+            }
+            else if (c == '!' && currentSide == Sides.Client && NextNonWhiteSpaceCharMatches('{'))
+            {
+                DiscardCurrentLexeme();
+                SetParsingControlChars(false);
+                ParseCodeBlock(false, false);
+                SetParsingControlChars(true);
             }
             else if (IsAlpha(c))
             {
@@ -633,10 +677,20 @@ internal partial class Parser
          * - looking for a } in case we've entered from a code block
          * - looking for a ) when entered from an explicit expression
          */
-        void ParseCodeBlock(bool keepClosingBrk)
+        void ParseCodeBlock(bool keepOpeningBrk, bool keepClosingBrk)
         {
             bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
             string l = GetCurrentLexeme();
+            if (l == "{")
+            {
+                matchedOpenBrk = true;
+            }
+            
+            if (matchedOpenBrk && !keepOpeningBrk)
+            {
+                RemoveLastCharFromCurrentLexeme();
+            }
+            
             AddToken(TokenTypes.BlockExpr);
             
             while (!IsAtEnd())
@@ -781,7 +835,7 @@ internal partial class Parser
                     {
                         continue;
                     }
-                    
+
                     if (Peek() == '<')
                     {
                         if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))

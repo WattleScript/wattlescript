@@ -182,4 +182,14 @@ internal partial class Parser
     {
         throw new Exception(message);
     }
+
+    void SetParsingControlChars(bool enabled)
+    {
+        parsingTransitionCharactersEnabled = enabled;
+    }
+
+    bool ParsingControlChars()
+    {
+        return parsingTransitionCharactersEnabled;
+    }
 }
