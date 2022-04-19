@@ -18,6 +18,7 @@ public class Tokenizer
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
+    private StringBuilder PooledStringBuilder = new StringBuilder();
     private Token LastToken => Tokens[^1];
     int pos = 0;
     char c;
@@ -31,10 +32,16 @@ public class Tokenizer
             { "if", ParseKeywordIf },
             { "for", ParseKeywordFor },
             { "while", ParseKeywordWhile },
-            { "do", ParseKeywordDo }
+            { "do", ParseKeywordDo },
+            { "function", ParseKeywordFunction }
         };
     }
 
+    void ClearPooledBuilder()
+    {
+        PooledStringBuilder.Clear();
+    }
+    
     bool IsAtEnd()
     {
         return pos >= Source.Length;
@@ -321,7 +328,39 @@ public class Tokenizer
             }
         }
         
-        return true;
+        return doParsed;
+    }
+
+    // function foo() {}
+    // parser has to be positioned after "function", either at first ALPHA char of the function's name or whitespace preceding it
+    bool ParseKeywordFunction()
+    {
+        ParseWhitespaceAndNewlines();
+        
+        char chr = Peek();
+        if (chr == '(')
+        {
+            return Throw("Missing function's name");
+        }
+
+        if (chr == '{')
+        {
+            return Throw("Missing function's name and signature");
+        }
+        
+        if (!IsAlpha(chr))
+        {
+            return Throw("First char in function's name has to be an alpha character");
+        }
+
+        string fnName = ParseLiteral();
+
+        if (string.IsNullOrWhiteSpace(fnName))
+        {
+            return Throw("Missing function's name");
+        }
+
+        return ParseGenericBrkKeywordWithBlock("function");
     }
 
     // keyword () {}
@@ -472,6 +511,12 @@ public class Tokenizer
         bool started = false;
         while (!IsAtEnd())
         {
+            bool shouldContinue = LookaheadForTransition(true);
+            if (shouldContinue)
+            {
+                continue;
+            }
+            
             if (!started)
             {
                 if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
@@ -722,25 +767,45 @@ public class Tokenizer
             return ImplicitExpressionTypes.Literal;
         }
 
-        void ParseLiteral()
+        string ParseLiteral()
         {
-            while (true)
+            ClearPooledBuilder();
+            
+            while (!IsAtEnd())
             {
+                bool shouldSkip = LookaheadForTransition(true);
+                if (shouldSkip)
+                {
+                    continue;
+                }
+                
                 if (!IsAlphaNumeric(Peek()))
                 {
                     break;
                 }
                 
-                Step();
+                char chr = Step();
+                PooledStringBuilder.Append(chr);
             }   
+            
+            string str = PooledStringBuilder.ToString();
+            ClearPooledBuilder();
+            return str;
         }
             
-        void ParseLiteralStartsWithAlpha()
+        string ParseLiteralStartsWithAlpha()
         {
+            ClearPooledBuilder();
             bool first = true;
                 
-            while (true)
+            while (!IsAtEnd())
             {
+                bool shouldSkip = LookaheadForTransition(true);
+                if (shouldSkip)
+                {
+                    continue;
+                }
+                
                 if (first)
                 {
                     if (!IsAlpha(Peek()))
@@ -755,8 +820,13 @@ public class Tokenizer
                     break;
                 }
                 
-                Step();
-            }   
+                char chr = Step();
+                PooledStringBuilder.Append(chr);
+            }
+
+            string str = PooledStringBuilder.ToString();
+            ClearPooledBuilder();
+            return str;
         }
 
         void ParseExplicitExpression()
