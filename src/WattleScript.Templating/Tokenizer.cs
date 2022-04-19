@@ -116,20 +116,26 @@ public class Tokenizer
         return Source[peekedPos];
     }
     
-    bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced, bool handleStrings)
+    bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced, bool handleStrings, bool handleServerComments)
     {
         bool inString = false;
         char stringChar = ' ';
-        
+        bool inMultilineComment = false;
+
+        bool InSpecialSequence()
+        {
+           return inString || inMultilineComment;
+        }
+
         int inbalance = startsInbalanced ? 1 : 0;
         while (!IsAtEnd())
         {
             Step();
-            if (handleStrings)
+            if (handleStrings && !inMultilineComment)
             {
                 if (c == '\'')
                 {
-                    if (!inString)
+                    if (!InSpecialSequence())
                     {
                         inString = true;
                         stringChar = '\'';
@@ -144,7 +150,7 @@ public class Tokenizer
                 }
                 else if (c == '"')
                 {
-                    if (!inString)
+                    if (!InSpecialSequence())
                     {
                         inString = true;
                         stringChar = '"';
@@ -158,17 +164,35 @@ public class Tokenizer
                     }
                 }
             }
+
+            if (handleServerComments && !inString)
+            {
+                if (c == '/' && Peek() == '*')
+                {
+                    if (!inMultilineComment)
+                    {
+                        inMultilineComment = true;   
+                    }
+                }
+                else if (c == '*' && Peek() == '/')
+                {
+                    if (inMultilineComment)
+                    {
+                        inMultilineComment = false;
+                    }
+                }
+            }
             
             if (c == startBr)
             {
-                if (!handleStrings || (handleStrings && !inString))
+                if (!InSpecialSequence())
                 {
                     inbalance++;    
                 }
             }
             else if (c == endBr)
             {
-                if (!handleStrings || (handleStrings && !inString))
+                if (!InSpecialSequence())
                 {
                     inbalance--;
                     if (inbalance <= 0)
@@ -253,7 +277,7 @@ public class Tokenizer
             return false;
         }
         
-        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true);
+        bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
         l = GetCurrentLexeme();
 
         if (!endExprMatched)
@@ -406,18 +430,61 @@ public class Tokenizer
             {
                 if (Peek() == '@')
                 {
-                    if (Peek(2) != '@')
+                    if (Peek(2) == '@') // @@ -> @
                     {
-                        AddToken(TokenTypes.ClientText);
-                        ParseTransition();
+                        Step();
+                        Step();
+                        RemoveLastCharFromCurrentLexeme();
                         continue;
                     }
+
+                    if (Peek(2) == '*') // @* -> comment
+                    {
+                        Step();
+                        Step();
+                        DiscardCurrentLexeme();
+                        ParseServerComment();
+                        continue;
+                    }
+                    
+
+                    AddToken(TokenTypes.ClientText);
+                    ParseTransition();
+                    continue;
                 }
                 
                 Step();
             }
             
             AddToken(TokenTypes.ClientText);
+        }
+
+        // @* *@
+        // parser must be positioned directly after opening @*
+        void ParseServerComment()
+        {
+            while (!IsAtEnd())
+            {
+                if (Peek() == '*' && Peek(2) == '@')
+                {
+                    Step();
+                    Step();
+                    RemoveLastCharFromCurrentLexeme();
+                    RemoveLastCharFromCurrentLexeme(); // eat and discard closing *@
+                    AddToken(TokenTypes.ServerComment);
+                    break;
+                }
+                
+                Step();
+            }
+        }
+        
+        void RemoveLastCharFromCurrentLexeme()
+        {
+            if (GetCurrentLexeme().Length > 0)
+            {
+                currentLexeme = currentLexeme[..^1];
+            }
         }
 
         void ParseTransition()
@@ -519,7 +586,7 @@ public class Tokenizer
         void ParseExplicitExpression()
         {
             // parser is positioned after opening (
-            ParseUntilBalancedChar('(', ')', true, true);
+            ParseUntilBalancedChar('(', ')', true, true, true);
             string str = GetCurrentLexeme();
 
             // get rid of closing )
@@ -549,11 +616,11 @@ public class Tokenizer
                 char bufC = Peek();
                 if (bufC == '[')
                 {
-                    ParseUntilBalancedChar('[', ']', false, true);
+                    ParseUntilBalancedChar('[', ']', false, true, true);
                 }
                 else if (bufC == '(')
                 {
-                    ParseUntilBalancedChar('(', ')', false, true);
+                    ParseUntilBalancedChar('(', ')', false, true, true);
                 }
                 else if (bufC == '.')
                 {
@@ -752,7 +819,7 @@ public class Tokenizer
             
             
             
-            ParseUntilBalancedChar('<', '>', true, true);
+            ParseUntilBalancedChar('<', '>', true, true, true);
             string s = GetCurrentLexeme();
 
             if (!CurrentLexemeIsSelfClosingHtmlTag())
@@ -769,7 +836,7 @@ public class Tokenizer
 
         void ParseHtmlClosingTag()
         {
-            ParseUntilBalancedChar('<', '>', false, true);
+            ParseUntilBalancedChar('<', '>', false, true, true);
             string str = GetCurrentLexeme();
         }
 

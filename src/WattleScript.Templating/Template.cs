@@ -84,6 +84,10 @@ public class Template
             {
                 sb.AppendLine($"stdout({tkn.Lexeme})");
             }
+            else if (tkn.Type == TokenTypes.ServerComment)
+            {
+                sb.AppendLine($"/*{tkn.Lexeme}*/");
+            }
         }
 
         string finalText = sb.ToString();
