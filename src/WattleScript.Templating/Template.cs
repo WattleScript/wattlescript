@@ -50,14 +50,58 @@ public class Template
 
         return sb.ToString();
     }
+
+    public List<Token> Optimise(List<Token>? tokens)
+    {
+        if (tokens == null) // if we have no tokens or only one we can't merge
+        {
+            return new List<Token>();
+        }
+
+        if (tokens.Count <= 1)
+        {
+            return tokens;
+        }
+        
+        int i = 0;
+        Token token = tokens[i];
+
+        while (true)
+        {
+            i++;
+            if (i > tokens.Count - 1)
+            {
+                break;
+            } 
+            
+            Token nextToken = tokens[i];
+            if (token.Type == nextToken.Type)
+            {
+                token.Lexeme += nextToken.Lexeme;
+                tokens.RemoveAt(i);
+                i--;
+                continue;
+            }
+            
+            // move to next token
+            token = tokens[i];
+        }
+        
+        return tokens;
+    }
     
-    public string Render(string code)
+    public string Render(string code, bool optimise)
     {
         Tokenizer tk = new Tokenizer();
         List<Token> tokens = tk.Tokenize(code);
 
         StringBuilder sb = new StringBuilder();
         bool firstClientPending = true;
+
+        if (optimise)
+        {
+            tokens = Optimise(tokens);
+        }
         
         foreach (Token tkn in tokens)
         {

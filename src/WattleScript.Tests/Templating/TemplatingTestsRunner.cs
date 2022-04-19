@@ -39,7 +39,7 @@ public class TemplatingTestsRunner
         StringBuilder stdOut = new StringBuilder();
 
         Template tmp = new Template();
-        string transpiled = tmp.Render(code);
+        string transpiled = tmp.Render(code, true);
         
         Script script = new Script(CoreModules.Preset_HardSandbox);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
