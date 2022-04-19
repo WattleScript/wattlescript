@@ -28,7 +28,8 @@ public class Tokenizer
     {
         KeywordsMap = new Dictionary<string, Func<bool>?>
         {
-            { "if", ParseKeywordIf }
+            { "if", ParseKeywordIf },
+            { "for", ParseKeywordFor }
         };
     }
 
@@ -270,12 +271,36 @@ public class Tokenizer
     // parser has to be positioned after if, either at opening ( or at whitespace before it
     bool ParseKeywordIf()
     {
+        ParseGenericBrkKeywordWithBlock("if");
+
+        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else") || NextLiteralSkipEmptyCharsMatches("elseif"); // else handles "else if" but we have to check for "elseif" manually
+        if (matchesElse)
+        {
+            ParseKeywordElseOrElseIf();
+        }
+        
+        return false;
+    }
+
+    // for (i in a..b)
+    // for (i = 0; i < x; i++) 
+    // for (;;)
+    // we always have () around expr/s
+    // parser has to be positioned after "for", either at opening ( or at a whitespace preceding it
+    bool ParseKeywordFor()
+    {
+        return ParseGenericBrkKeywordWithBlock("for");
+    }
+
+    // keyword () {}
+    bool ParseGenericBrkKeywordWithBlock(string keyword)
+    {
         bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
         string l = GetCurrentLexeme();
-        
+
         if (!openBrkMatched)
         {
-            return false;
+            Throw($"Expected ( after {keyword}");
         }
         
         bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
@@ -286,16 +311,9 @@ public class Tokenizer
             return false;
         }
         
-        //bool openBlockBrkMatched = MatchNextNonWhiteSpaceChar('{');
         ParseCodeBlock(true);
 
-        bool matchesElse = NextLiteralSkipEmptyCharsMatches("else") || NextLiteralSkipEmptyCharsMatches("elseif"); // else handles "else if" but we have to check for "elseif" manually
-        if (matchesElse)
-        {
-            ParseKeywordElseOrElseIf();
-        }
-        
-        return false;
+        return true;
     }
 
     // else {}
