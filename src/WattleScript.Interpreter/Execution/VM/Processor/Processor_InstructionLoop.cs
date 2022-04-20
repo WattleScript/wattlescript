@@ -165,6 +165,9 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecLen(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.Switch:
+							instructionPtr = ExecSwitch(currentPtr, i, ref currentFrame);
+							break;
 						case OpCode.Call:
 						case OpCode.ThisCall:
 							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, GetString(i.NumVal2));
@@ -315,7 +318,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
-							throw new NotImplementedException($"Execution for {i.OpCode} not implented yet!");
+							throw new NotImplementedException($"Execution for {i.OpCode} not implemented yet!");
 					}
 				}
 
@@ -967,6 +970,67 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				var l = m_ValueStack.Pop().ToScalar();
 				throw ScriptRuntimeException.ArithmeticOnNonNumber(l);
+			}
+		}
+
+		private int ExecSwitch(int currentPtr, Instruction i, ref CallStackItem cframe)
+		{
+			//Decode
+			//First 3 table entries are present with bit flags
+			int nil = -1, ctrue = -1, cfalse = -1;
+			int strOff = 1;
+			uint strCount = (uint)i.NumVal;
+			if ((strCount & 0x80000000) != 0)
+				nil = strOff++;
+			if ((strCount & 0x40000000) != 0)
+				ctrue = strOff++;
+			if ((strCount & 0x20000000) != 0)
+				cfalse = strOff++;
+			//clear flags to get count of string entries
+			strCount &= 0x1FFFFFFF;
+			//get number entries
+			int numOff = (int) (strOff + strCount);
+			uint numCount = i.NumValB;
+			//default comes immediately after switch case
+			int defaultPtr = (int)(currentPtr + numOff + numCount);
+			int GetJump(FunctionProto p, int offset) => (int) (currentPtr + (p.Code[currentPtr + offset].NumValB));
+			var value = m_ValueStack.Pop().ToScalar();
+			switch (value.Type)
+			{
+				case DataType.Nil:
+					return nil != -1 ? GetJump(cframe.Function, nil) : defaultPtr;
+				case DataType.Boolean:
+					if (value.Boolean) {
+						return ctrue != -1 ? GetJump(cframe.Function, ctrue) : defaultPtr;
+					}
+					else {
+						return cfalse != -1 ? GetJump(cframe.Function, cfalse) : defaultPtr;
+					}
+				case DataType.Number:
+					var d = value.Number;
+					for (int j = 0; j < numCount; j++)
+					{
+						var ins = cframe.Function.Code[currentPtr + numOff + j];
+						if (ins.OpCode == OpCode.SInteger && ins.NumVal == d) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.Numbers[ins.NumVal]) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+					}
+					return defaultPtr;
+				case DataType.String:
+					var s = value.String;
+					for (int j = 0; j < strCount; j++)
+					{
+						var ins = cframe.Function.Code[currentPtr + strOff + j];
+						if (s == cframe.Function.Strings[ins.NumVal]) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+					}
+					return defaultPtr;
+				default:
+					return defaultPtr;
 			}
 		}
 

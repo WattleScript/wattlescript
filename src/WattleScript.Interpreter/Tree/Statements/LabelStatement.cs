@@ -37,6 +37,11 @@ namespace WattleScript.Interpreter.Tree.Statements
 			Label = NameToken.Text;
 		}
 
+		public LabelStatement(ScriptLoadingContext lcontext, string label) : base(lcontext)
+		{
+			Label = label;
+		}
+
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
 			lcontext.Scope.DefineLabel(this);

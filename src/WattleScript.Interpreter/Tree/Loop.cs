@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
 
@@ -9,6 +10,7 @@ namespace WattleScript.Interpreter.Tree
 		public RuntimeScopeBlock Scope;
 		public List<int> BreakJumps = new List<int>();
 		public List<int> ContinueJumps = new List<int>();
+		public bool Switch = false;
 
 		public void CompileBreak(FunctionBuilder bc)
 		{
@@ -25,6 +27,8 @@ namespace WattleScript.Interpreter.Tree
 		{
 			return false;
 		}
+		
+		public bool IsSwitch() => Switch;
 	}
 
 	internal class LoopBoundary : ILoop
@@ -43,6 +47,8 @@ namespace WattleScript.Interpreter.Tree
 		{
 			return true;
 		}
+
+		public bool IsSwitch() => false;
 	}
 
 }

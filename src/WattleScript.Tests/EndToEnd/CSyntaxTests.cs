@@ -199,6 +199,32 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void SwitchBasic()
+        {
+            TestScript.Run(@"
+            function doswitch(arg) {
+                switch(arg) {
+                    case nil:
+                        return 1;
+                    case true:
+                        return 2;
+                    default:
+                        return 3;
+                    case 'hello':
+                        return 4;
+                    case 5:
+                        return 5;
+                }
+            }
+            assert.areequal(1, doswitch(), 'nil');
+            assert.areequal(2, doswitch(true), 'true');
+            assert.areequal(3, doswitch('abcd'), 'default');
+            assert.areequal(4, doswitch('hello'), 'string');
+            assert.areequal(5, doswitch(5), 'number');
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
         public void DotThisCall()
         {
             TestScript.Run(@"
