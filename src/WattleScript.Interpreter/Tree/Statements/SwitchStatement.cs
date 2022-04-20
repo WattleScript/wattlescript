@@ -102,7 +102,17 @@ namespace WattleScript.Interpreter.Tree.Statements
                 CheckTokenType(lcontext, TokenType.Colon);
             }
 
-            block.Block = new CompositeStatement(lcontext, BlockEndType.Switch);
+            if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
+            {
+                CheckTokenType(lcontext, TokenType.Brk_Open_Curly);
+                block.Block = new CompositeStatement(lcontext, BlockEndType.CloseCurly);
+                CheckTokenType(lcontext, TokenType.Brk_Close_Curly);
+            }
+            else
+            {
+                block.Block = new CompositeStatement(lcontext, BlockEndType.Switch);    
+            }
+            
             caseBlocks.Add(block);
         }
         
