@@ -56,6 +56,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			
 			m_Local = local;
 			Token name = CheckTokenType(lcontext, TokenType.Name);
+			SelfType selfType = SelfType.None;
 			
 			if (m_Local)
 			{
@@ -110,7 +111,13 @@ namespace WattleScript.Interpreter.Tree.Statements
 				}
 			}
 
-			m_FuncDef = new FunctionDefinitionExpression(lcontext, m_IsMethodCallingConvention, false);
+			if (m_IsMethodCallingConvention) selfType = SelfType.Explicit;
+			else if (m_MethodName != null && lcontext.Syntax == ScriptSyntax.WattleScript)
+			{
+				selfType = SelfType.Implicit;
+			}
+
+			m_FuncDef = new FunctionDefinitionExpression(lcontext, selfType, false);
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 

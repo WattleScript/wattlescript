@@ -9,6 +9,12 @@ using WattleScript.Interpreter.Tree.Statements;
 
 namespace WattleScript.Interpreter.Tree.Expressions
 {
+	enum SelfType
+	{
+		None,
+		Explicit,
+		Implicit
+	}
 	class FunctionDefinitionExpression : Expression, IClosureBuilder
 	{
 		SymbolRef[] m_ParamNames = null;
@@ -17,6 +23,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		List<SymbolRef> m_Closure = new List<SymbolRef>();
 		private Annotation[] m_Annotations;
 		bool m_HasVarArgs = false;
+		bool m_ImplicitThis = false;
 		
 		private FunctionBuilder m_bc = null;
 		
@@ -28,14 +35,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool usesGlobalEnv)
-			: this(lcontext, false, usesGlobalEnv, false)
+			: this(lcontext, SelfType.None, usesGlobalEnv, false)
 		{ }
 
-		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool isLambda)
-			: this(lcontext, pushSelfParam, false, isLambda)
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda)
+			: this(lcontext, self, false, isLambda)
 		{ }
 		
-		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool pushSelfParam, bool usesGlobalEnv, bool isLambda)
+		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda)
 			: base(lcontext)
 		{
 			this.lcontext = lcontext;
@@ -59,12 +66,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				if (openRound.Type == TokenType.Name)
 					paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>(new FunctionDefinitionStatement.FunctionParamRef[] {new FunctionDefinitionStatement.FunctionParamRef(openRound.Text)});
 				else
-					paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
+					paramnames = BuildParamList(lcontext, self, openRound);
 			}
 			else
 			{
 				openRound = CheckTokenType(lcontext, TokenType.Brk_Open_Round);
-				paramnames = BuildParamList(lcontext, pushSelfParam, openRound);
+				paramnames = BuildParamList(lcontext, self, openRound);
 				if (lcontext.Syntax != ScriptSyntax.Lua && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly) {
 					openCurly = true;
 					lcontext.Lexer.Next();
@@ -163,16 +170,17 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return s;
 		}
 
-		private List<FunctionDefinitionStatement.FunctionParamRef> BuildParamList(ScriptLoadingContext lcontext, bool pushSelfParam, Token openBracketToken)
+		private List<FunctionDefinitionStatement.FunctionParamRef> BuildParamList(ScriptLoadingContext lcontext, SelfType self, Token openBracketToken)
 		{
 			TokenType closeToken = openBracketToken.Type == TokenType.Lambda ? TokenType.Lambda : TokenType.Brk_Close_Round;
 
 			List<FunctionDefinitionStatement.FunctionParamRef> paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>();
 
 			// method decls with ':' must push an implicit 'self' param
-			if (pushSelfParam)
+			if (self != SelfType.None)
 				paramnames.Add(lcontext.Syntax == ScriptSyntax.WattleScript ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
-
+			m_ImplicitThis = self == SelfType.Implicit;
+			
 			bool parsingDefaultParams = false;
 			while (lcontext.Lexer.Current.Type != closeToken)
 			{
@@ -335,6 +343,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			var proto = bc.GetProto(funcName, m_StackFrame);
 			proto.Annotations = m_Annotations;
 			proto.Upvalues = m_Closure.ToArray();
+			if (m_ParamNames.Length > 0 && (m_ParamNames[0].i_Name == "self" || m_ParamNames[0].i_Name == "this"))
+			{
+				proto.Flags |= FunctionFlags.TakesSelf;
+			}
+			if (m_ImplicitThis) proto.Flags |= FunctionFlags.ImplicitThis;
 			
 			if(parent != null) parent.Protos.Add(proto);
 			

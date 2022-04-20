@@ -376,7 +376,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						var cbargs = new[] { DynValue.NewString(e.DecoratedMessage) };
 
-						DynValue handled = csi.ErrorHandler.Invoke(new ScriptExecutionContext(this, csi.ErrorHandler, GetCurrentSourceRef(instructionPtr)), cbargs);
+						DynValue handled = csi.ErrorHandler.Invoke(new ScriptExecutionContext(this, csi.ErrorHandler, GetCurrentSourceRef(instructionPtr)), cbargs, DynValue.Nil);
 
 						m_ValueStack.Push(handled);
 
@@ -412,7 +412,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				else if (messageHandler.Type == DataType.ClrFunction)
 				{
 					ScriptExecutionContext ctx = new ScriptExecutionContext(this, messageHandler.Callback, sourceRef);
-					ret = messageHandler.Callback.Invoke(ctx, args);
+					ret = messageHandler.Callback.Invoke(ctx, args, DynValue.Nil);
 				}
 				else
 				{
@@ -624,7 +624,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private IList<DynValue> CreateArgsListForFunctionCall(int numargs, int offsFromTop)
 		{
-			if (numargs == 0) return Array.Empty<DynValue>();
+			if (numargs <= 0) return Array.Empty<DynValue>();
 
 			DynValue lastParam = m_ValueStack.Peek(offsFromTop);
 
@@ -646,15 +646,39 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private void ExecArgs(Instruction I)
 		{
-			int localCount = m_ExecutionStack.Peek().Function.LocalCount;
+			var stackframe = m_ExecutionStack.Peek();
+
+			int localCount = stackframe.Function.LocalCount;
 			int numargs = (int)m_ValueStack.Peek(localCount).Number;
+			bool implicitThis = false;
+			if (numargs < 0)
+			{
+				numargs = -numargs;
+				implicitThis = true;
+			}
+
 			// unpacks last tuple arguments to simplify a lot of code down under
 			var argsList = CreateArgsListForFunctionCall(numargs, 1 + localCount);
-			var stackframe = m_ExecutionStack.Peek();
-			
-			for (int i = 0; i < I.NumVal; i++)
+
+			int offset = 0;
+			int startIdx = 0;
+			//Skip implicit this passed on stack
+			if (implicitThis && (stackframe.Function.Flags & FunctionFlags.TakesSelf) != FunctionFlags.TakesSelf) {
+				offset = 1;
+			}
+			//Only fill implicit this argument if method is thiscall.
+			if ((stackframe.Function.Flags & FunctionFlags.ImplicitThis) == FunctionFlags.ImplicitThis &&
+			    (stackframe.Flags & CallStackItemFlags.MethodCall) != CallStackItemFlags.MethodCall)
 			{
-				if (i >= argsList.Count) {
+				m_ValueStack[stackframe.BasePointer + I.NumVal - 1] = DynValue.Nil;
+				startIdx = 1; //Fill from 2nd arg (skip self)
+				offset = -1; //First argument from list
+			}
+			
+			for (int i = startIdx; i < I.NumVal; i++)
+			{
+				int argIdx = i + offset;
+				if (argIdx >= argsList.Count) {
 					//Argument locals are stored in reverse order
 					//This is to do with some edge cases in argument naming
 					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = DynValue.Nil;
@@ -662,18 +686,18 @@ namespace WattleScript.Interpreter.Execution.VM
 				//Make a tuple if the last argument is varargs
 				else if (i == I.NumVal - 1 && I.NumVal2 != 0)
 				{
-					int len = argsList.Count - i;
+					int len = argsList.Count - argIdx;
 					DynValue[] varargs = new DynValue[len];
 
-					for (int ii = 0; ii < len; ii++, i++)
+					for (int ii = 0; ii < len; ii++, argIdx++)
 					{
-						varargs[ii] = argsList[i].ToScalar();
+						varargs[ii] = argsList[argIdx].ToScalar();
 					}
 					m_ValueStack[stackframe.BasePointer] = DynValue.NewTuple(Internal_AdjustTuple(varargs));
 				}
 				else
 				{
-					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = argsList[i].ToScalar();
+					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = argsList[argIdx].ToScalar();
 				}
 			}
 		}
@@ -681,6 +705,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
 			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
 		{
+			bool implicitThis = argsCount < 0;
+			if (implicitThis) argsCount = -argsCount;
 			DynValue fn = m_ValueStack.Peek(argsCount);
 			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
 
@@ -714,8 +740,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				case DataType.ClrFunction:
 				{
-					//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
-					IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
+					IList<DynValue> args = CreateArgsListForFunctionCall(implicitThis ? (argsCount - 1) : argsCount, 0);
+					DynValue thisObj = DynValue.Nil;
+					if (implicitThis) thisObj = m_ValueStack[m_ValueStack.Count - argsCount];
 					// we expand tuples before callbacks
 					// args = DynValue.ExpandArgumentsToList(args);
 
@@ -734,8 +761,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						ErrorHandlerBeforeUnwind = unwindHandler,
 						Flags = flags,
 					});
-
-					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
+					
+					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, thisObj, isMethodCall: thisCall && !implicitThis);
 					m_ValueStack.RemoveLast(argsCount + 1);
 					if (m_Script.Options.AutoAwait && 
 					    ret.Type == DataType.UserData &&
@@ -751,7 +778,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					return Internal_CheckForTailRequests(canAwait, instructionPtr);
 				}
 				case DataType.Function:
-					m_ValueStack.Push(DynValue.NewNumber(argsCount));
+					m_ValueStack.Push(DynValue.NewNumber(implicitThis ? -argsCount : argsCount));
 					m_ExecutionStack.Push(new CallStackItem()
 					{
 						ReturnAddress = instructionPtr,
@@ -800,6 +827,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			CallStackItem csi = PopToBasePointer();
 			int retpoint = csi.ReturnAddress;
 			var argscnt = (int)(m_ValueStack.Pop().Number);
+			if (argscnt < 0) argscnt = -argscnt;
 			m_ValueStack.RemoveLast(argscnt + 1);
 
 			// Re-push all cur args and func ptr
@@ -845,6 +873,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
 					var argscnt = (int)(m_ValueStack.Pop().Number);
+					if (argscnt < 0) argscnt = -argscnt;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(DynValue.Void);
 					break;
@@ -855,6 +884,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
 					var argscnt = (int)(m_ValueStack.Pop().Number);
+					if (argscnt < 0) argscnt = -argscnt;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(retval);
 					retpoint = Internal_CheckForTailRequests(false, retpoint);
@@ -866,7 +896,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			if (csi.Continuation != null)
 				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.SourceRefs[currentPtr]),
-					new[] { m_ValueStack.Pop() }));
+					new[] { m_ValueStack.Pop() }, DynValue.Nil));
 
 			return retpoint;
 		}

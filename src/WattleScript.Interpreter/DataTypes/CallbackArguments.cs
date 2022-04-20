@@ -10,6 +10,7 @@ namespace WattleScript.Interpreter
 	{
 		IList<DynValue> m_Args;
 		int m_Count;
+		private DynValue m_implicitThis;
 		bool m_LastIsTuple = false;
 
 		/// <summary>
@@ -17,7 +18,7 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		/// <param name="args">The arguments.</param>
 		/// <param name="isMethodCall">if set to <c>true</c> [is method call].</param>
-		public CallbackArguments(IList<DynValue> args, bool isMethodCall)
+		public CallbackArguments(IList<DynValue> args, DynValue implicitThis, bool isMethodCall)
 		{
 			m_Args = args;
 
@@ -45,6 +46,7 @@ namespace WattleScript.Interpreter
 			}
 
 			IsMethodCall = isMethodCall;
+			m_implicitThis = implicitThis;
 		}
 
 		/// <summary>
@@ -59,8 +61,12 @@ namespace WattleScript.Interpreter
 		/// Gets or sets a value indicating whether this is a method call.
 		/// </summary>
 		public bool IsMethodCall { get; private set; }
-
-
+		
+		public DynValue This
+		{
+			get => IsMethodCall ? this[0] : m_implicitThis;
+		}
+		
 		/// <summary>
 		/// Gets the <see cref="DynValue"/> at the specified index, or Void if not found 
 		/// </summary>
@@ -218,7 +224,7 @@ namespace WattleScript.Interpreter
 			if (this.IsMethodCall)
 			{
 				Slice<DynValue> slice = new Slice<DynValue>(m_Args, 1, m_Args.Count - 1, false);
-				return new CallbackArguments(slice, false);
+				return new CallbackArguments(slice, m_implicitThis, false);
 			}
 			else return this;
 		}
