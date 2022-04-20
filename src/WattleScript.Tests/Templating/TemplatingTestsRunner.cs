@@ -98,7 +98,7 @@ public class TemplatingTestsRunner
         {
             if (e is AssertionException ae)
             {
-                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}");
+                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}\nParsed template:\n{transpiled}");
                 return;
             }
 
