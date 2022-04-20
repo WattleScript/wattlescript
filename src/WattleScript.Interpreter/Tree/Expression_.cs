@@ -271,10 +271,20 @@ namespace WattleScript.Interpreter.Tree
 								index = new ExprListExpression(explist, lcontext);
 							}
 							CheckMatch(lcontext, openBrk, TokenType.Brk_Close_Square, "]");
+							//Regular indexing
 							var ne = new IndexExpression(e, index, T.Type == TokenType.BrkOpenSquareNil, lcontext);
 							//Break nil checking chain on next nil check
-							if (e is IndexExpression ie && T.Type != TokenType.BrkOpenSquareNil) ie.NilChainNext = ne;
+							if (e is IndexExpression ie && T.Type != TokenType.BrkOpenSquareNil)
+								ie.NilChainNext = ne;
 							e = ne;
+							if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round &&
+							    lcontext.Syntax == ScriptSyntax.WattleScript)
+							{
+								//Function call
+								var call = new FunctionCallExpression(lcontext, ne, null, CallKind.ImplicitThisCall);
+								ne.NilChainNext = call;
+								e = call;
+							}
 							break;
 						}
 					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.WattleScript:

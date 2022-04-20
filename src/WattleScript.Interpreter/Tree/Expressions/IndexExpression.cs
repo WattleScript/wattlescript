@@ -73,9 +73,15 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_IndexExp?.ResolveScope(lcontext);
 		}
 
+
 		public override void Compile(FunctionBuilder bc)
 		{
+			Compile(bc, false);
+		}
+		public void Compile(FunctionBuilder bc, bool duplicate)
+		{
 			m_BaseExp.Compile(bc);
+			if (duplicate) bc.Emit_Copy(0);
 			if (isLength) {
 				if (nilCheck) {
 					bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));

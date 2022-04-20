@@ -227,20 +227,22 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         public void ImplicitThis()
         {
             TestScript.Run(@"
-            this = 'hello'; //checking global state doesn't interfere
+            this = 'hello'; //making sure 'this' local is defined
             var tbl = {}
-            function tbl.implicitnil(arg)
-            {
-                assert.areequal(nil, this);
-                assert.areequal(7, arg);
-            }
             function tbl.implicitthis(arg)
             {
                 assert.areequal(tbl, this);
                 assert.areequal(7, arg);
             }
-            tbl['implicitnil'](7); //regular indexing = don't pass 'this'
+            function tbl.shouldnil(arg)
+            {
+                assert.areequal(nil, this);
+                assert.areequal(7, arg);
+            }
             tbl.implicitthis(7); //dot call will pass implicit 'this' parameter
+            tbl['implicitthis'](7); //regular indexing = also pass implicit 'this'
+            local fun = tbl.shouldnil;
+            fun(7); //no left hand side = no this to pass
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 

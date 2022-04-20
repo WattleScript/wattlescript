@@ -85,15 +85,24 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
-			m_Function.Compile(bc);
+			int argslen = m_Arguments.Count;
+
+			if (m_Kind == CallKind.ImplicitThisCall && m_Name == null)
+			{
+				((IndexExpression)m_Function).Compile(bc, true);
+				bc.Emit_Swap(0, 1);
+				++argslen;
+			}
+			else
+			{
+				m_Function.Compile(bc);
+			}
 
 			int nilCoalesce = -1;
 			if (m_Kind == CallKind.ImplicitThisSkipNil)
 			{
 				nilCoalesce = bc.Emit_Jump(OpCode.JNilChk, -1);
 			}
-			
-			int argslen = m_Arguments.Count;
 
 			if (!string.IsNullOrEmpty(m_Name))
 			{
