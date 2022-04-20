@@ -34,6 +34,13 @@ internal partial class Parser
         return ParseGenericBrkKeywordWithBlock("while");
     }
     
+    // switch (expr) {}
+    // parser has to be positioned after "switch", either at opening ( or at a whitespace preceding it
+    bool ParseKeywordSwitch()
+    {
+        return ParseGenericBrkKeywordWithBlock("switch");
+    }
+    
     // do {} while ()
     // parser has to be positioned after "do", either at opening { or at a whitespace preceding it
     bool ParseKeywordDo()

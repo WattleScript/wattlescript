@@ -27,7 +27,7 @@ internal partial class Parser
     private string? source;
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
-    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function"};
+    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
@@ -56,7 +56,8 @@ internal partial class Parser
             { "for", ParseKeywordFor },
             { "while", ParseKeywordWhile },
             { "do", ParseKeywordDo },
-            { "function", ParseKeywordFunction }
+            { "function", ParseKeywordFunction },
+            { "switch", ParseKeywordSwitch },
         };
     }
     
@@ -208,9 +209,15 @@ internal partial class Parser
         return false;
     }
     
-    bool NextNonWhiteSpaceCharMatches(char ch)
+    bool NextNonWhiteSpaceCharMatches(char ch, int skip = 0)
     {
         StorePos();
+
+        for (int i = 0; i < skip; i++)
+        {
+            Step();
+        }
+        
         while (!IsAtEnd())
         {
             if (Peek() == ' ')
@@ -464,24 +471,28 @@ internal partial class Parser
 
             Step(); // @
             DiscardCurrentLexeme();
-            Step();
+            c = Peek();
             
             if (c == '{')
             {
+                Step();
                 ParseCodeBlock(false, false);
             }
             else if (c == '(')
             {
+                Step();
                 DiscardCurrentLexeme();
                 ParseExplicitExpression();
             }
             else if (c == ':' && currentSide == Sides.Client)
             {
+                Step();
                 DiscardCurrentLexeme();
                 ParseRestOfLineAsClient();
             }
-            else if (c == '!' && currentSide == Sides.Client && NextNonWhiteSpaceCharMatches('{'))
+            else if (c == '!' && currentSide == Sides.Client && NextNonWhiteSpaceCharMatches('{', 1))
             {
+                Step();
                 DiscardCurrentLexeme();
                 SetParsingControlChars(false);
                 ParseCodeBlock(false, false);
