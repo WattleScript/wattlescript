@@ -43,13 +43,22 @@ namespace WattleScript.Interpreter.Execution.VM
 		}
 
 
-
+		public DynValue ThisCall(DynValue function, DynValue[] args)
+		{
+			return Call_Internal(function, args, true);
+		}
+		
 		public DynValue Call(DynValue function, DynValue[] args)
+		{
+			return Call_Internal(function, args, false);
+		}
+
+		private DynValue Call_Internal(DynValue function, DynValue[] args, bool thisCall)
 		{
 			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
 
 			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
-				return coroutinesStack[coroutinesStack.Count - 1].Call(function, args);
+				return coroutinesStack[coroutinesStack.Count - 1].Call_Internal(function, args, thisCall);
 
 			EnterProcessor();
 
@@ -61,7 +70,9 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				try
 				{
-					int entrypoint = PushClrToScriptStackFrame(CallStackItemFlags.CallEntryPoint, function, args);
+					var flags = CallStackItemFlags.CallEntryPoint;
+					if (thisCall) flags |= CallStackItemFlags.MethodCall;
+					int entrypoint = PushClrToScriptStackFrame(flags, function, args);
 					return Processing_Loop(entrypoint);
 				}
 				finally
@@ -77,13 +88,23 @@ namespace WattleScript.Interpreter.Execution.VM
 				LeaveProcessor();
 			}
 		}
-		
+
+		public async Task<DynValue> ThisCallAsync(DynValue function, DynValue[] args)
+		{
+			return await CallAsync_Internal(function, args, true);
+		}
+
 		public async Task<DynValue> CallAsync(DynValue function, DynValue[] args)
+		{
+			return await CallAsync_Internal(function, args, false);
+		}
+		
+		private async Task<DynValue> CallAsync_Internal(DynValue function, DynValue[] args, bool thisCall)
 		{
 			List<Processor> coroutinesStack = m_Parent != null ? m_Parent.m_CoroutinesStack : this.m_CoroutinesStack;
 
 			if (coroutinesStack.Count > 0 && coroutinesStack[coroutinesStack.Count - 1] != this)
-				return await coroutinesStack[coroutinesStack.Count - 1].CallAsync(function, args);
+				return await coroutinesStack[coroutinesStack.Count - 1].CallAsync_Internal(function, args, thisCall);
 
 			EnterProcessor();
 
@@ -95,8 +116,9 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				try
 				{
-					
-					m_SavedInstructionPtr  = PushClrToScriptStackFrame(CallStackItemFlags.CallEntryPoint, function, args);
+					var flags = CallStackItemFlags.CallEntryPoint;
+					if (thisCall) flags |= CallStackItemFlags.MethodCall;
+					m_SavedInstructionPtr  = PushClrToScriptStackFrame(flags, function, args);
 					DynValue retval;
 					while ((retval = Processing_Loop(m_SavedInstructionPtr, true)).Type == DataType.AwaitRequest)
 					{

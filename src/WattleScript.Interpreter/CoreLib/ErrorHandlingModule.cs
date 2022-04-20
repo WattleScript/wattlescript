@@ -33,7 +33,7 @@ namespace WattleScript.Interpreter.CoreLib
 			{
 				try
 				{
-					DynValue ret = args[0].Callback.Invoke(executionContext, a);
+					DynValue ret = args[0].Callback.Invoke(executionContext, a, DynValue.Nil);
 					if (ret.Type == DataType.TailCallRequest)
 					{
 						if (ret.TailCallData.Continuation != null || ret.TailCallData.ErrorHandler != null)
@@ -125,7 +125,7 @@ namespace WattleScript.Interpreter.CoreLib
 				args.AsType(1, "xpcall", DataType.Function, false);
 			}
 
-			return SetErrorHandlerStrategy("xpcall", executionContext, new CallbackArguments(a, false), handler);
+			return SetErrorHandlerStrategy("xpcall", executionContext, new CallbackArguments(a, DynValue.Nil, false), handler);
 		}
 
 	}

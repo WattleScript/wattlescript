@@ -65,6 +65,10 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Continue;
 					case "null":
 						return TokenType.Nil;
+					case "switch":
+						return TokenType.Switch;
+					case "case":
+						return TokenType.Case;
 				}
 			}
 

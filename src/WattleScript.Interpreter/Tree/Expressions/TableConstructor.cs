@@ -189,18 +189,36 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
 			bc.Emit_NewTable(m_Shared);
-
+			//Set pair values in groups of 8
+			int j = 0;
 			foreach (var kvp in m_CtorArgs)
 			{
+				if (j >= 8)
+				{
+					bc.Emit_TblInitN(j * 2);
+					j = 0;
+				}
 				kvp.Key.Compile(bc);
 				kvp.Value.Compile(bc);
-				bc.Emit_TblInitN();
+				j++;
 			}
-
+			if (j > 0) {
+				bc.Emit_TblInitN(j * 2);
+			}
+			//Set positional values in groups of 16
+			j = 0;
 			for (int i = 0; i < m_PositionalValues.Count; i++ )
 			{
+				if ((i == m_PositionalValues.Count - 1 && j > 0)|| j >= 16)
+				{
+					bc.Emit_TblInitI(false, j);
+					j = 0;
+				}
 				m_PositionalValues[i].Compile(bc);
-				bc.Emit_TblInitI(i == m_PositionalValues.Count - 1);
+				if (i == m_PositionalValues.Count - 1) {
+					bc.Emit_TblInitI(true, 1);
+				}
+				j++;
 			}
 		}
 

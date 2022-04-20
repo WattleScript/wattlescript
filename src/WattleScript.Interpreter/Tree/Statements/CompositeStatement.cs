@@ -9,7 +9,8 @@ namespace WattleScript.Interpreter.Tree.Statements
 	enum BlockEndType
 	{
 		Normal,
-		CloseCurly
+		CloseCurly,
+		Switch
 	}
 	class CompositeStatement : Statement 
 	{
@@ -26,7 +27,11 @@ namespace WattleScript.Interpreter.Tree.Statements
 					Token t = lcontext.Lexer.Current;
 					if (t.IsEndOfBlock()) break;
 					if (endType == BlockEndType.CloseCurly && t.Type == TokenType.Brk_Close_Curly) break;
-
+					if (endType == BlockEndType.Switch) {
+						if (t.Type == TokenType.Brk_Close_Curly) break;
+						if (t.Type == TokenType.Case) break;
+						if (t.Type == TokenType.Name && t.Text == "default") break;
+					}
 					Statement s = CreateStatement(lcontext, out bool forceLast);
 					m_Statements.Add(s);
 					if (forceLast) break;

@@ -197,6 +197,117 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             Assert.AreEqual("hello", myfunc.Annotations[0].Value.Table["name"]);
             Assert.AreEqual(10, myfunc.Annotations[0].Value.Table["value"]);
         }
+
+        [Test]
+        public void SwitchBasic()
+        {
+            TestScript.Run(@"
+            function doswitch(arg) {
+                switch(arg) {
+                    case nil:
+                        return 1;
+                    case true:
+                        return 2;
+                    default:
+                        return 3;
+                    case 'hello':
+                        return 4;
+                    case 5:
+                        return 5;
+                }
+            }
+            assert.areequal(1, doswitch(), 'nil');
+            assert.areequal(2, doswitch(true), 'true');
+            assert.areequal(3, doswitch('abcd'), 'default');
+            assert.areequal(4, doswitch('hello'), 'string');
+            assert.areequal(5, doswitch(5), 'number');
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public void DotThisCall()
+        {
+            TestScript.Run(@"
+            var tbl = { 
+                str = 'hello',
+                func2 = (x) => {   
+                    assert.areequal(nil, this);
+                    assert.areequal(7, x);
+                }
+            }
+            function tbl:hello(num) {
+                assert.areequal('hello', this?.str)
+                assert.areequal(7, num);
+            }
+            tbl.hello(7);
+            tbl::hello(7);
+            tbl.func2(7);
+
+
+            table.insert(tbl, 1, 'goodbye');
+            assert.areequal('goodbye', tbl[1]);
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public void ImplicitThis()
+        {
+            TestScript.Run(@"
+            this = 'hello'; //making sure 'this' local is defined
+            var tbl = {}
+            function tbl.implicitthis(arg)
+            {
+                assert.areequal(tbl, this);
+                assert.areequal(7, arg);
+            }
+            function tbl.shouldnil(arg)
+            {
+                assert.areequal(nil, this);
+                assert.areequal(7, arg);
+            }
+            tbl.implicitthis(7); //dot call will pass implicit 'this' parameter
+            tbl['implicitthis'](7); //regular indexing = also pass implicit 'this'
+            local fun = tbl.shouldnil;
+            fun(7); //no left hand side = no this to pass
+            ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public async Task HostThisCall()
+        {
+            UserData.RegisterType<LuaAssertApi>();
+            var sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Globals["assert"] = new LuaAssertApi();
+            
+            var tbl = sc.DoString(@"
+            var tbl = {}
+            tbl.str = 'hello'
+            function tbl.func(arg)
+            {
+                assert.areequal('hello', this?.str);
+                assert.areequal(7, arg);
+            }
+            function tbl.func2(arg1, arg2)
+            {
+                assert.areequal(nil, this);
+                assert.areequal(2, arg1);
+                assert.areequal(3, arg2);
+            }
+            return tbl;
+            ");
+            var function = tbl.Table.Get("func").Function;
+            var function2 = tbl.Table.Get("func2").Function;
+            //sync this call
+            function.ThisCall(tbl, DynValue.NewNumber(7));
+            sc.ThisCall(function, tbl, 7);
+            //async this call
+            await function.ThisCallAsync(tbl, DynValue.NewNumber(7));
+            await sc.ThisCallAsync(function, tbl, DynValue.NewNumber(7));
+            //regular calls
+            function2.Call(2, 3);
+            await function2.CallAsync(2, 3);
+        }
         
 
         [Test]

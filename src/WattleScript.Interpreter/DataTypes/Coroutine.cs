@@ -160,7 +160,7 @@ namespace WattleScript.Interpreter
 				return m_Processor.Coroutine_Resume(args);
 			else if (Type == CoroutineType.ClrCallback)
 			{
-				DynValue ret = m_ClrCallback.Invoke(context, args);
+				DynValue ret = m_ClrCallback.Invoke(context, args, DynValue.Nil);
 				MarkClrCallbackAsDead();
 				return ret;
 			}

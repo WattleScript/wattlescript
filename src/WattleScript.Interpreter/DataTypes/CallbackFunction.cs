@@ -43,7 +43,7 @@ namespace WattleScript.Interpreter
 		/// <param name="args">The arguments.</param>
 		/// <param name="isMethodCall">if set to <c>true</c> this is a method call.</param>
 		/// <returns></returns>
-		public DynValue Invoke(ScriptExecutionContext executionContext, IList<DynValue> args, bool isMethodCall = false)
+		public DynValue Invoke(ScriptExecutionContext executionContext, IList<DynValue> args, DynValue implicitThis, bool isMethodCall = false)
 		{
 			if (isMethodCall)
 			{
@@ -55,7 +55,7 @@ namespace WattleScript.Interpreter
 					isMethodCall = (args.Count > 0 && args[0].Type == DataType.UserData);
 			}
 
-			return ClrCallback(executionContext, new CallbackArguments(args, isMethodCall));
+			return ClrCallback(executionContext, new CallbackArguments(args, implicitThis, isMethodCall));
 		}
 
 		/// <summary>

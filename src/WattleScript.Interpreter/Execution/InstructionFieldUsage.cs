@@ -8,8 +8,10 @@ namespace WattleScript.Interpreter.Execution
 	{
 		None = 0,
 		NumVal = 0x1,
-		NumVal2 = 0x4,
-		NumVal3 = 0x8,
+		NumVal2 = 0x2,
+		NumVal3 = 0x4,
+		NumVal1Hex = 0x8,
+		NumValB = 0x10
 	}
 
 	internal static class InstructionFieldUsage_Extensions
@@ -18,7 +20,6 @@ namespace WattleScript.Interpreter.Execution
 		{
 			switch (op)
 			{
-				case OpCode.TblInitN:
 				case OpCode.Scalar:
 				case OpCode.IterUpd:
 				case OpCode.IterPrep:
@@ -45,7 +46,6 @@ namespace WattleScript.Interpreter.Execution
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:
-				case OpCode.TblInitI:
 				case OpCode.ExpTuple:
 				case OpCode.Incr:
 				case OpCode.ToNum:
@@ -53,6 +53,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.MkTuple:
 				case OpCode.CloseUp:
 				case OpCode.StrFormat:
+				case OpCode.TblInitN:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:
@@ -68,6 +69,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.CopyValue:
 				case OpCode.JLclInit:
 				case OpCode.Args:
+				case OpCode.TblInitI:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:
@@ -96,6 +98,13 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Call:
 				case OpCode.ThisCall:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
+				case OpCode.Switch:
+					return InstructionFieldUsage.NumVal1Hex | InstructionFieldUsage.NumValB;
+				case OpCode.SSpecial:
+				case OpCode.SString:
+				case OpCode.SInteger: 
+				case OpCode.SNumber:
+					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumValB;
 				default:
 					throw new NotImplementedException(string.Format("InstructionFieldUsage for instruction {0}", op));
 			}

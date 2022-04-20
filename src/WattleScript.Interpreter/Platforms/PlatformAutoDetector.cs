@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using WattleScript.Interpreter.Interop;
 using WattleScript.Interpreter.Loaders;
 
@@ -27,6 +28,11 @@ namespace WattleScript.Interpreter.Platforms
 		/// Gets a value indicating whether this instance is running on Unity-3D
 		/// </summary>
 		public static bool IsRunningOnUnity { get; private set; }
+		
+		/// <summary>
+		/// Gets a value indicating whether this instance is running in a browser
+		/// </summary>
+		public static bool IsRunningInBrowser { get; private set; }
 
 		/// <summary>
 		/// Gets a value indicating whether this instance has been built as a Portable Class Library
@@ -47,7 +53,6 @@ namespace WattleScript.Interpreter.Platforms
 			// We do a lazy eval here, so we can wire out this code by not calling it, if necessary..
 			get
 			{
-
 				if (!m_IsRunningOnAOT.HasValue)
 				{
 					try
@@ -72,6 +77,8 @@ namespace WattleScript.Interpreter.Platforms
 			if (m_AutoDetectionsDone)
 				return;
 
+			IsRunningInBrowser = RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
+			
 			IsRunningOnUnity = AppDomain.CurrentDomain
 				.GetAssemblies()
 				.SelectMany(a => a.SafeGetTypes())
@@ -91,7 +98,7 @@ namespace WattleScript.Interpreter.Platforms
 		{
 			AutoDetectPlatformFlags();
 			
-			if (IsRunningOnUnity)
+			if (IsRunningOnUnity || IsRunningInBrowser)
 				return new LimitedPlatformAccessor();
 			
 			return new StandardPlatformAccessor();

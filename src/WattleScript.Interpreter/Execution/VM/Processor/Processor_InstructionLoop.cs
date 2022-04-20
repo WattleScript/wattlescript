@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Interop;
+using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Execution.VM
 {
@@ -164,6 +165,9 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecLen(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
+						case OpCode.Switch:
+							instructionPtr = ExecSwitch(currentPtr, i, ref currentFrame);
+							break;
 						case OpCode.Call:
 						case OpCode.ThisCall:
 							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, GetString(i.NumVal2));
@@ -282,7 +286,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							ExecStoreLcl(i, ref currentFrame);
 							break;
 						case OpCode.TblInitN:
-							ExecTblInitN();
+							ExecTblInitN(i);
 							break;
 						case OpCode.TblInitI:
 							ExecTblInitI(i);
@@ -314,7 +318,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
-							throw new NotImplementedException($"Execution for {i.OpCode} not implented yet!");
+							throw new NotImplementedException($"Execution for {i.OpCode} not implemented yet!");
 					}
 				}
 
@@ -376,7 +380,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						var cbargs = new[] { DynValue.NewString(e.DecoratedMessage) };
 
-						DynValue handled = csi.ErrorHandler.Invoke(new ScriptExecutionContext(this, csi.ErrorHandler, GetCurrentSourceRef(instructionPtr)), cbargs);
+						DynValue handled = csi.ErrorHandler.Invoke(new ScriptExecutionContext(this, csi.ErrorHandler, GetCurrentSourceRef(instructionPtr)), cbargs, DynValue.Nil);
 
 						m_ValueStack.Push(handled);
 
@@ -412,7 +416,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				else if (messageHandler.Type == DataType.ClrFunction)
 				{
 					ScriptExecutionContext ctx = new ScriptExecutionContext(this, messageHandler.Callback, sourceRef);
-					ret = messageHandler.Callback.Invoke(ctx, args);
+					ret = messageHandler.Callback.Invoke(ctx, args, DynValue.Nil);
 				}
 				else
 				{
@@ -624,7 +628,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private IList<DynValue> CreateArgsListForFunctionCall(int numargs, int offsFromTop)
 		{
-			if (numargs == 0) return Array.Empty<DynValue>();
+			if (numargs <= 0) return Array.Empty<DynValue>();
 
 			DynValue lastParam = m_ValueStack.Peek(offsFromTop);
 
@@ -646,15 +650,39 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private void ExecArgs(Instruction I)
 		{
-			int localCount = m_ExecutionStack.Peek().Function.LocalCount;
+			var stackframe = m_ExecutionStack.Peek();
+
+			int localCount = stackframe.Function.LocalCount;
 			int numargs = (int)m_ValueStack.Peek(localCount).Number;
+			bool implicitThis = false;
+			if (numargs < 0)
+			{
+				numargs = -numargs;
+				implicitThis = true;
+			}
+
 			// unpacks last tuple arguments to simplify a lot of code down under
 			var argsList = CreateArgsListForFunctionCall(numargs, 1 + localCount);
-			var stackframe = m_ExecutionStack.Peek();
-			
-			for (int i = 0; i < I.NumVal; i++)
+
+			int offset = 0;
+			int startIdx = 0;
+			//Skip implicit this passed on stack
+			if (implicitThis && (stackframe.Function.Flags & FunctionFlags.TakesSelf) != FunctionFlags.TakesSelf) {
+				offset = 1;
+			}
+			//Only fill implicit this argument if method is thiscall.
+			if ((stackframe.Function.Flags & FunctionFlags.ImplicitThis) == FunctionFlags.ImplicitThis &&
+			    (stackframe.Flags & CallStackItemFlags.MethodCall) != CallStackItemFlags.MethodCall)
 			{
-				if (i >= argsList.Count) {
+				m_ValueStack[stackframe.BasePointer + I.NumVal - 1] = DynValue.Nil;
+				startIdx = 1; //Fill from 2nd arg (skip self)
+				offset = -1; //First argument from list
+			}
+			
+			for (int i = startIdx; i < I.NumVal; i++)
+			{
+				int argIdx = i + offset;
+				if (argIdx >= argsList.Count) {
 					//Argument locals are stored in reverse order
 					//This is to do with some edge cases in argument naming
 					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = DynValue.Nil;
@@ -662,18 +690,18 @@ namespace WattleScript.Interpreter.Execution.VM
 				//Make a tuple if the last argument is varargs
 				else if (i == I.NumVal - 1 && I.NumVal2 != 0)
 				{
-					int len = argsList.Count - i;
+					int len = argsList.Count - argIdx;
 					DynValue[] varargs = new DynValue[len];
 
-					for (int ii = 0; ii < len; ii++, i++)
+					for (int ii = 0; ii < len; ii++, argIdx++)
 					{
-						varargs[ii] = argsList[i].ToScalar();
+						varargs[ii] = argsList[argIdx].ToScalar();
 					}
 					m_ValueStack[stackframe.BasePointer] = DynValue.NewTuple(Internal_AdjustTuple(varargs));
 				}
 				else
 				{
-					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = argsList[i].ToScalar();
+					m_ValueStack[stackframe.BasePointer + (I.NumVal - i - 1)] = argsList[argIdx].ToScalar();
 				}
 			}
 		}
@@ -681,6 +709,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
 			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)
 		{
+			bool implicitThis = argsCount < 0;
+			if (implicitThis) argsCount = -argsCount;
 			DynValue fn = m_ValueStack.Peek(argsCount);
 			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
 
@@ -714,8 +744,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				case DataType.ClrFunction:
 				{
-					//IList<DynValue> args = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - argsCount, argsCount, false);
-					IList<DynValue> args = CreateArgsListForFunctionCall(argsCount, 0);
+					IList<DynValue> args = CreateArgsListForFunctionCall(implicitThis ? (argsCount - 1) : argsCount, 0);
+					DynValue thisObj = DynValue.Nil;
+					if (implicitThis) thisObj = m_ValueStack[m_ValueStack.Count - argsCount];
 					// we expand tuples before callbacks
 					// args = DynValue.ExpandArgumentsToList(args);
 
@@ -734,8 +765,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						ErrorHandlerBeforeUnwind = unwindHandler,
 						Flags = flags,
 					});
-
-					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, isMethodCall: thisCall);
+					
+					var ret = fn.Callback.Invoke(new ScriptExecutionContext(this, fn.Callback, sref) { CanAwait = canAwait }, args, thisObj, isMethodCall: thisCall && !implicitThis);
 					m_ValueStack.RemoveLast(argsCount + 1);
 					if (m_Script.Options.AutoAwait && 
 					    ret.Type == DataType.UserData &&
@@ -751,7 +782,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					return Internal_CheckForTailRequests(canAwait, instructionPtr);
 				}
 				case DataType.Function:
-					m_ValueStack.Push(DynValue.NewNumber(argsCount));
+					m_ValueStack.Push(DynValue.NewNumber(implicitThis ? -argsCount : argsCount));
 					m_ExecutionStack.Push(new CallStackItem()
 					{
 						ReturnAddress = instructionPtr,
@@ -800,6 +831,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			CallStackItem csi = PopToBasePointer();
 			int retpoint = csi.ReturnAddress;
 			var argscnt = (int)(m_ValueStack.Pop().Number);
+			if (argscnt < 0) argscnt = -argscnt;
 			m_ValueStack.RemoveLast(argscnt + 1);
 
 			// Re-push all cur args and func ptr
@@ -845,6 +877,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
 					var argscnt = (int)(m_ValueStack.Pop().Number);
+					if (argscnt < 0) argscnt = -argscnt;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(DynValue.Void);
 					break;
@@ -855,6 +888,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					csi = PopToBasePointer();
 					retpoint = csi.ReturnAddress;
 					var argscnt = (int)(m_ValueStack.Pop().Number);
+					if (argscnt < 0) argscnt = -argscnt;
 					m_ValueStack.RemoveLast(argscnt + 1);
 					m_ValueStack.Push(retval);
 					retpoint = Internal_CheckForTailRequests(false, retpoint);
@@ -866,7 +900,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			if (csi.Continuation != null)
 				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.SourceRefs[currentPtr]),
-					new[] { m_ValueStack.Pop() }));
+					new[] { m_ValueStack.Pop() }, DynValue.Nil));
 
 			return retpoint;
 		}
@@ -936,6 +970,67 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				var l = m_ValueStack.Pop().ToScalar();
 				throw ScriptRuntimeException.ArithmeticOnNonNumber(l);
+			}
+		}
+
+		private int ExecSwitch(int currentPtr, Instruction i, ref CallStackItem cframe)
+		{
+			//Decode
+			//First 3 table entries are present with bit flags
+			int nil = -1, ctrue = -1, cfalse = -1;
+			int strOff = 1;
+			uint strCount = (uint)i.NumVal;
+			if ((strCount & 0x80000000) != 0)
+				nil = strOff++;
+			if ((strCount & 0x40000000) != 0)
+				ctrue = strOff++;
+			if ((strCount & 0x20000000) != 0)
+				cfalse = strOff++;
+			//clear flags to get count of string entries
+			strCount &= 0x1FFFFFFF;
+			//get number entries
+			int numOff = (int) (strOff + strCount);
+			uint numCount = i.NumValB;
+			//default comes immediately after switch case
+			int defaultPtr = (int)(currentPtr + numOff + numCount);
+			int GetJump(FunctionProto p, int offset) => (int) (currentPtr + (p.Code[currentPtr + offset].NumValB));
+			var value = m_ValueStack.Pop().ToScalar();
+			switch (value.Type)
+			{
+				case DataType.Nil:
+					return nil != -1 ? GetJump(cframe.Function, nil) : defaultPtr;
+				case DataType.Boolean:
+					if (value.Boolean) {
+						return ctrue != -1 ? GetJump(cframe.Function, ctrue) : defaultPtr;
+					}
+					else {
+						return cfalse != -1 ? GetJump(cframe.Function, cfalse) : defaultPtr;
+					}
+				case DataType.Number:
+					var d = value.Number;
+					for (int j = 0; j < numCount; j++)
+					{
+						var ins = cframe.Function.Code[currentPtr + numOff + j];
+						if (ins.OpCode == OpCode.SInteger && ins.NumVal == d) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.Numbers[ins.NumVal]) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+					}
+					return defaultPtr;
+				case DataType.String:
+					var s = value.String;
+					for (int j = 0; j < strCount; j++)
+					{
+						var ins = cframe.Function.Code[currentPtr + strOff + j];
+						if (s == cframe.Function.Strings[ins.NumVal]) {
+							return (int) (currentPtr + ins.NumValB);
+						}
+					}
+					return defaultPtr;
+				default:
+					return defaultPtr;
 			}
 		}
 
@@ -1357,27 +1452,30 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private void ExecTblInitI(Instruction i)
 		{
-			// stack: tbl - val
-			DynValue val = m_ValueStack.Pop();
-			DynValue tbl = m_ValueStack.Peek();
-
+			// stack: tbl - val,val,val
+			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
-
-			tbl.Table.InitNextArrayKeys(val, i.NumVal != 0);
+			for (int j = i.NumVal - 1; j >= 0; j--) {
+				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
+			}
+			m_ValueStack.RemoveLast(i.NumVal);
 		}
 
-		private void ExecTblInitN()
+		private void ExecTblInitN(Instruction i)
 		{
 			// stack: tbl - key - val
-			DynValue val = m_ValueStack.Pop();
-			DynValue key = m_ValueStack.Pop();
-			DynValue tbl = m_ValueStack.Peek();
-
+			DynValue tbl = m_ValueStack.Peek(i.NumVal);
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
+			if (i.NumVal % 2 != 0)
+				throw new InternalErrorException("Incorrect count in TblInitN: {0}", i.NumVal);
+			for (int j = i.NumVal - 1; j >= 0; j -= 2) {
+				tbl.Table.Set(m_ValueStack.Peek(j), m_ValueStack.Peek(j - 1).ToScalar());
+			}
+			m_ValueStack.RemoveLast(i.NumVal);
 
-			tbl.Table.Set(key, val.ToScalar());
 		}
 
 		private int ExecIndexSet(Instruction i, int instructionPtr)

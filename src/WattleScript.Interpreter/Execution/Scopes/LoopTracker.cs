@@ -8,6 +8,7 @@ namespace WattleScript.Interpreter.Execution
 		void CompileBreak(FunctionBuilder bc);
 		void CompileContinue(FunctionBuilder bc);
 		bool IsBoundary();
+		bool IsSwitch();
 	}
 
 
