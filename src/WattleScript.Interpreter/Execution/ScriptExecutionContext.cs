@@ -149,7 +149,7 @@ namespace WattleScript.Interpreter
 			{
 				while (true)
 				{
-					DynValue ret = func.Callback.Invoke(this, args, false);
+					DynValue ret = func.Callback.Invoke(this, args, DynValue.Nil, false);
 
 					if (ret.Type == DataType.YieldRequest)
 					{

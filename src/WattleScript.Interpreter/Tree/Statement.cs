@@ -189,6 +189,8 @@ namespace WattleScript.Interpreter.Tree
 					return new LabelStatement(lcontext);
 				case TokenType.Goto:
 					return new GotoStatement(lcontext);
+				case TokenType.Switch:
+					return new SwitchStatement(lcontext);
 				case TokenType.SemiColon:
 					lcontext.Lexer.Next();
 					return new EmptyStatement(lcontext);

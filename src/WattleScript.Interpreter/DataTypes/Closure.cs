@@ -120,6 +120,25 @@ namespace WattleScript.Interpreter
 			return OwnerScript.CallAsync(this, args);
 		}
 
+		public DynValue ThisCall(DynValue self)
+		{
+			return OwnerScript.ThisCall(this, self);
+		}
+		
+		public DynValue ThisCall(params DynValue[] args)
+		{
+			return OwnerScript.ThisCall(this, args);
+		}
+		
+		public Task<DynValue> ThisCallAsync(DynValue self)
+		{
+			return OwnerScript.ThisCallAsync(this, self);
+		}
+		
+		public Task<DynValue> ThisCallAsync(params DynValue[] args)
+		{
+			return OwnerScript.ThisCallAsync(this, args);
+		}
 
 		/// <summary>
 		/// Gets a delegate wrapping calls to this scripted function

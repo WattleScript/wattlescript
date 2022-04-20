@@ -21,11 +21,22 @@ namespace WattleScript.Interpreter.Tree.Statements
 			: base(lcontext)
 		{
 			GotoToken = CheckTokenType(lcontext, TokenType.Goto);
-			Token name = CheckTokenType(lcontext, TokenType.Name);
 
-			SourceRef = GotoToken.GetSourceRef(name);
-
-			Label = name.Text;
+			if (lcontext.Lexer.Current.Type == TokenType.Case)
+			{
+				lcontext.Lexer.Next();
+				SourceRef = GotoToken.GetSourceRef(lcontext.Lexer.Current);
+				var expr = Expression.Expr(lcontext);
+				if (!expr.EvalLiteral(out var value))
+					throw new SyntaxErrorException(GotoToken, "goto case label must be constant");
+				Label = "case " + value.ToDebugPrintString();
+			}
+			else
+			{
+				Token name = CheckTokenType(lcontext, TokenType.Name);
+				SourceRef = GotoToken.GetSourceRef(name);
+				Label = name.Text;
+			}
 		}
 
 		public override void ResolveScope(ScriptLoadingContext lcontext)

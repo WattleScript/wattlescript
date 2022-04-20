@@ -31,6 +31,21 @@ namespace WattleScript.Interpreter.Execution.VM
 		public int NumVal2 => ((int) ((_data >> 39) & 0x1FFF)) - 0xFFF; //13 bits, signed -4095 to 4095
 		public uint NumVal3 => (uint) ((_data >> 52) & 0xFFF); //12 bits, unsigned 0 to 4095
 
+		//NumVal2 + NumVal3
+		public uint NumValB
+		{
+			get
+			{
+				return (uint) (_data >> 39); //25 bits unsigned
+			}
+			set
+			{
+				if (value > 0x2000000) throw new ArgumentOutOfRangeException("NumValB");
+				_data = (_data & ~0xFFFFFF8000000000) |
+				        ((ulong) (uint) value) << 39;
+			}
+		}
+
 		public Instruction(OpCode op)
 		{
 			_data = (ulong) op;
@@ -75,13 +90,17 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (usage != 0)
 				append += GenSpaces();
 
-			if ((usage & ((int)InstructionFieldUsage.NumVal)) != 0)
-				append += " " + NumVal.ToString();
-			if ((usage & ((int)InstructionFieldUsage.NumVal2)) != 0)
-				append += " " + NumVal2.ToString();
-			if ((usage & ((int)InstructionFieldUsage.NumVal3)) != 0)
-				append += " " + NumVal3.ToString();
-
+			if ((usage & ((int) InstructionFieldUsage.NumVal)) != 0)
+				append += " " + NumVal;
+			else if ((usage & ((int) InstructionFieldUsage.NumVal1Hex)) != 0)
+				append += " 0x" + NumVal.ToString("X");
+			if ((usage & ((int) InstructionFieldUsage.NumVal2)) != 0)
+				append += " " + NumVal2;
+			if ((usage & ((int) InstructionFieldUsage.NumVal3)) != 0)
+				append += " " + NumVal3;
+			if ((usage & ((int) InstructionFieldUsage.NumValB)) != 0)
+				append += " " + NumValB;
+			
 			return append;
 		}
 

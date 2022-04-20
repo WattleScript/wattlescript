@@ -147,7 +147,44 @@ namespace WattleScript.Interpreter.Execution.VM
 			ins.NumVal = val;
 			Code[instruction] = ins;
 		}
+		public void SetNumValB(int instruction, uint valB)
+		{
+			var ins = Code[instruction];
+			ins.NumValB = valB;
+			Code[instruction] = ins;
+		}
 
+		public int Emit_Switch(bool nil, bool ctrue, bool cfalse, uint strings, uint numbers)
+		{
+			var numval = (uint) (strings & 0x1FFFFFFF); //29 bits
+			if (nil) numval |= 0x80000000;
+			if (ctrue) numval |= 0x40000000;
+			if (cfalse) numval |= 0x20000000;
+			return AppendInstruction(new Instruction(OpCode.Switch, (int)numval) {NumValB = numbers});
+		}
+
+		public int Emit_SwitchTable()
+		{
+			return AppendInstruction(new Instruction(OpCode.SSpecial));
+		}
+		
+		public int Emit_SwitchTable(string str)
+		{
+			return AppendInstruction(new Instruction(OpCode.SString, StringArg(str)));
+		}
+
+		public int Emit_SwitchTable(double n)
+		{
+			// ReSharper disable once CompareOfFloatsByEqualityOperator
+			if (n == (int) n) {
+				return AppendInstruction(new Instruction(OpCode.SInteger, (int) n));
+			}
+			else {
+				return AppendInstruction(new Instruction(OpCode.SNumber, NumberArg(n)));
+			}
+		}
+		
+		
 		public int Emit_Nop(string comment)
 		{
 			return AppendInstruction(new Instruction(OpCode.Nop));
@@ -353,14 +390,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
-		public int Emit_TblInitN()
+		public int Emit_TblInitN(int count)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitN));
+			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
 		}
 
-		public int Emit_TblInitI(bool lastpos)
+		public int Emit_TblInitI(bool lastpos, int count)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, lastpos ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0));
 		}
 
 		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false)

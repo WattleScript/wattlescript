@@ -48,6 +48,22 @@ namespace WattleScript.Interpreter.Execution.VM
 		JFor,		// Peeks at the top, top-1 and top-2 values of the v-stack which it assumes to be numbers. Then if top-1 is less than zero, checks if top is <= top-2, otherwise it checks that top is >= top-2. Then if the condition is false, it jumps.
 		JtOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If true, it performs a jump, otherwise it removes the topmost value from the v-stack.
 		JfOrPop,	// Peeks at the topmost value of the v-stack as a boolean. If false, it performs a jump, otherwise it removes the topmost value from the v-stack.
+		
+		// This instruction compares the top of the v-stack against the
+		// values in the following jump table.
+		// The 3 high bits of NumVal indicate the presence of nil, true, false
+		// The rest of the bits of NumVal == the count of SString
+		// NumValB contains the combined count of SNumber and SInteger entries
+		// Default case is stored directly after the jump table
+		Switch,
+		// These ops contain jump offsets + data for switch statements, they cannot be
+		// directly executed
+		SString, // NumVal = string table entry, NumValB = offset
+		SNumber, // NumVal = int32, NumValB = offset
+		SInteger, // NumVal = number table entry, NumValB = offset
+		// Encodes jump offsets for fixed position entries in the jump table: nil, true, false
+		// NumVal == 0
+		SSpecial,
 		//
 		StrFormat,  // Format using string.Format
 		// Operators

@@ -109,6 +109,8 @@ namespace WattleScript.Interpreter.Tree
 		ChunkAnnotation,
 		FunctionAnnotation,
 		Directive,
+		Switch,
+		Case
 	}
 
 

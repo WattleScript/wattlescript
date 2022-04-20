@@ -31,7 +31,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 
                 ILoop loop = bc.LoopTracker.Loops.Peek();
 
-                if (loop.IsBoundary())
+                if (loop.IsBoundary() || loop.IsSwitch())
                     throw new SyntaxErrorException(this.Script, m_Ref, "<break> at line {0} not inside a loop", m_Ref.FromLine);
 
                 loop.CompileContinue(bc);
