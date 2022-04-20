@@ -18,7 +18,6 @@ namespace WattleScript.Interpreter.Execution
 		{
 			switch (op)
 			{
-				case OpCode.TblInitN:
 				case OpCode.Scalar:
 				case OpCode.IterUpd:
 				case OpCode.IterPrep:
@@ -45,7 +44,6 @@ namespace WattleScript.Interpreter.Execution
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:
-				case OpCode.TblInitI:
 				case OpCode.ExpTuple:
 				case OpCode.Incr:
 				case OpCode.ToNum:
@@ -53,6 +51,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.MkTuple:
 				case OpCode.CloseUp:
 				case OpCode.StrFormat:
+				case OpCode.TblInitN:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:
@@ -68,6 +67,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.CopyValue:
 				case OpCode.JLclInit:
 				case OpCode.Args:
+				case OpCode.TblInitI:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:

@@ -353,14 +353,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
-		public int Emit_TblInitN()
+		public int Emit_TblInitN(int count)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitN));
+			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
 		}
 
-		public int Emit_TblInitI(bool lastpos)
+		public int Emit_TblInitI(bool lastpos, int count)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, lastpos ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0));
 		}
 
 		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false)

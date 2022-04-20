@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Interop;
+using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Execution.VM
 {
@@ -282,7 +283,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							ExecStoreLcl(i, ref currentFrame);
 							break;
 						case OpCode.TblInitN:
-							ExecTblInitN();
+							ExecTblInitN(i);
 							break;
 						case OpCode.TblInitI:
 							ExecTblInitI(i);
@@ -1387,27 +1388,30 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private void ExecTblInitI(Instruction i)
 		{
-			// stack: tbl - val
-			DynValue val = m_ValueStack.Pop();
-			DynValue tbl = m_ValueStack.Peek();
-
+			// stack: tbl - val,val,val
+			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
-
-			tbl.Table.InitNextArrayKeys(val, i.NumVal != 0);
+			for (int j = i.NumVal - 1; j >= 0; j--) {
+				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
+			}
+			m_ValueStack.RemoveLast(i.NumVal);
 		}
 
-		private void ExecTblInitN()
+		private void ExecTblInitN(Instruction i)
 		{
 			// stack: tbl - key - val
-			DynValue val = m_ValueStack.Pop();
-			DynValue key = m_ValueStack.Pop();
-			DynValue tbl = m_ValueStack.Peek();
-
+			DynValue tbl = m_ValueStack.Peek(i.NumVal);
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
+			if (i.NumVal % 2 != 0)
+				throw new InternalErrorException("Incorrect count in TblInitN: {0}", i.NumVal);
+			for (int j = i.NumVal - 1; j >= 0; j -= 2) {
+				tbl.Table.Set(m_ValueStack.Peek(j), m_ValueStack.Peek(j - 1).ToScalar());
+			}
+			m_ValueStack.RemoveLast(i.NumVal);
 
-			tbl.Table.Set(key, val.ToScalar());
 		}
 
 		private int ExecIndexSet(Instruction i, int instructionPtr)
