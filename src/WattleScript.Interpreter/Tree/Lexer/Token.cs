@@ -7,9 +7,7 @@ namespace WattleScript.Interpreter.Tree
 		public readonly int SourceId;
 		public readonly int FromCol, ToCol, FromLine, ToLine, PrevCol, PrevLine;
 		public readonly TokenType Type;
-
 		public string Text { get; set; }
-		internal string CtxInfo;
 
 		public Token(TokenType type, int sourceId, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol)
 		{
@@ -23,21 +21,6 @@ namespace WattleScript.Interpreter.Tree
 			PrevCol = prevCol;
 			PrevLine = prevLine;
 		}
-		
-		public Token(TokenType type, int sourceId, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol, string ctxInfo)
-		{
-			Type = type;
-
-			SourceId = sourceId;
-			FromLine = fromLine;
-			FromCol = fromCol;
-			ToCol = toCol;
-			ToLine = toLine;
-			PrevCol = prevCol;
-			PrevLine = prevLine;
-			CtxInfo = ctxInfo;
-		}
-
 
 		public override string ToString()
 		{

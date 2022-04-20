@@ -21,7 +21,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
             int i = 0;
             while (lcontext.Lexer.Current.Type != TokenType.String_EndTemplate) {
                 if (lcontext.Lexer.Current.Type == TokenType.Eof) {
-                    throw new SyntaxErrorException(lcontext.Lexer.Current, startToken.CtxInfo == "sb" ? "` expected" : "`` expected")
+                    throw new SyntaxErrorException(lcontext.Lexer.Current, "` expected")
                     {
                         IsPrematureStreamTermination = true
                     };

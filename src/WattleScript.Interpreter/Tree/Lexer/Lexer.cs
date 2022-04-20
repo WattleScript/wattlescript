@@ -525,7 +525,7 @@ namespace WattleScript.Interpreter.Tree
 					return CreateSingleCharToken(TokenType.Brk_Open_Curly, fromLine, fromCol);
 				case '}' when InTemplateString(): {
 					if (ReturnToTemplateString()) {
-						return ReadTemplateString(fromLine, fromCol, false, false, currentTemplateIsSingleBacktick);
+						return ReadTemplateString(fromLine, fromCol, false);
 					}
 					else {
 						return CreateSingleCharToken(TokenType.Brk_Close_Curly, fromLine, fromCol);
@@ -579,16 +579,8 @@ namespace WattleScript.Interpreter.Tree
 				case '`':
 				{
 					char next = CursorCharNext();
-					if (next == '`')
-					{
-						PushTemplateString();
-						currentTemplateIsSingleBacktick = false;
-						return ReadTemplateString(fromLine, fromCol, true, false, false);
-					}
-					
 					PushTemplateString();
-					currentTemplateIsSingleBacktick = true;
-					return ReadTemplateString(fromLine, fromCol, true, true, false);
+					return ReadTemplateString(fromLine, fromCol, true);
 				}
 				case '"':
 				case '\'':
@@ -614,13 +606,12 @@ namespace WattleScript.Interpreter.Tree
 					throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar());
 			}
 		}
-
-		private bool currentTemplateIsSingleBacktick = false;
-		Token ReadTemplateString(int fromLine, int fromCol, bool isStart, bool skipFirst, bool fromBrkCurly)
+		
+		Token ReadTemplateString(int fromLine, int fromCol, bool isStart)
 		{
 			StringBuilder text = new StringBuilder(32);
 			
-			for (char c = skipFirst ? CursorChar() : CursorCharNext(); CursorNotEof(); c = CursorCharNext())
+			for (char c = isStart ? CursorChar() : CursorCharNext(); CursorNotEof(); c = CursorCharNext())
 			{
 				redo_Loop:
 
@@ -653,24 +644,15 @@ namespace WattleScript.Interpreter.Tree
 				else if (c == '{')
 				{
 					CursorCharNext();
-					Token t = CreateToken(TokenType.String_TemplateFragment, fromLine, fromCol, null, skipFirst ? "sb" : "");
+					Token t = CreateToken(TokenType.String_TemplateFragment, fromLine, fromCol);
 					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
 					return t;
 				}
-				else if (c == '`' && CursorMatches("``"))
-				{
-					CursorCharNext();
-					CursorCharNext();
-					PopTemplateString();
-					Token t = CreateToken(isStart ? TokenType.String_Long : TokenType.String_EndTemplate, fromLine, fromCol, skipFirst ? "sb" : "");
-					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
-					return t;
-				}
-				else if (c == '`' && (skipFirst || (fromBrkCurly && currentTemplateIsSingleBacktick)))
+				else if (c == '`')
 				{
 					CursorCharNext();
 					PopTemplateString();
-					Token t = CreateToken(isStart ? TokenType.String_Long : TokenType.String_EndTemplate, fromLine, fromCol, skipFirst ? "sb" : "");
+					Token t = CreateToken(isStart ? TokenType.String_Long : TokenType.String_EndTemplate, fromLine, fromCol);
 					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
 					return t;
 				}
@@ -1043,9 +1025,9 @@ namespace WattleScript.Interpreter.Tree
 		}
 
 
-		private Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null, string ctxInfo = null)
+		private Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null)
 		{
-			Token t = new Token(tokenType, m_SourceId, fromLine, fromCol, m_Line, m_Col, m_PrevLineTo, m_PrevColTo, ctxInfo)
+			Token t = new Token(tokenType, m_SourceId, fromLine, fromCol, m_Line, m_Col, m_PrevLineTo, m_PrevColTo)
 			{
 				Text = text
 				

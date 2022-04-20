@@ -1,2 +1,2 @@
-x = ``unescaped ` in string``
+x = `unescaped \` in string`
 print(x)
