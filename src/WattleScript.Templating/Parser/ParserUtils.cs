@@ -1,4 +1,6 @@
-﻿namespace WattleScript.Templating;
+﻿using System.Runtime.InteropServices;
+
+namespace WattleScript.Templating;
 
 internal partial class Parser
 {
@@ -47,6 +49,15 @@ internal partial class Parser
         
         pos += i;
         c = cc;
+        
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (cc == '\r' && Peek() == '\n')
+            {
+                return Step();
+            }   
+        }
+        
         return cc;
     }
 
@@ -191,5 +202,19 @@ internal partial class Parser
     bool ParsingControlChars()
     {
         return parsingTransitionCharactersEnabled;
+    }
+
+    bool StepEol()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (Peek() == '\n' && LastStoredCharMatches('\r'))
+            {
+                Step();
+                return false;
+            }   
+        }
+
+        return false;
     }
 }

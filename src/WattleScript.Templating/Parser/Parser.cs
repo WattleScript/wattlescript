@@ -286,22 +286,20 @@ internal partial class Parser
                 if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
                 {
                     Step();
+                    continue;
                 }
-                else
-                {
-                    string str = GetCurrentLexeme();
-                    DiscardCurrentLexeme();
-                    started = true;
-                }
-            }
-            else
-            {
-                if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
-                {
-                    break;
-                }   
+
+                string str = GetCurrentLexeme();
+                DiscardCurrentLexeme();
+                started = true;
+                continue;
             }
 
+            if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+            {
+                break;
+            }   
+            
             Step();
         }
 
@@ -390,17 +388,7 @@ internal partial class Parser
 
             chr = Step();
         }
-
-        // if we ended on \r check for \n and consume if matches
-        if (chr == '\r')
-        {
-            chr = Peek();
-            if (chr == '\n')
-            {
-                Step();
-            }   
-        }
-
+        
         AddToken(TokenTypes.Text);
     }
     
@@ -851,6 +839,7 @@ internal partial class Parser
                     {
                         if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
                         {
+                            StepEol();
                             AddToken(TokenTypes.BlockExpr);
                             ParseHtmlTag();
                         }
