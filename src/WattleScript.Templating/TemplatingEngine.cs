@@ -6,6 +6,19 @@ namespace WattleScript.Templating;
 public class TemplatingEngine
 {
     private readonly StringBuilder pooledSb = new StringBuilder();
+    private readonly TemplatingEngineOptions options;
+    private readonly Script script;
+    private StringBuilder stdOut = new StringBuilder();
+    
+    public TemplatingEngine(Script script, TemplatingEngineOptions? options = null)
+    {
+        options ??= TemplatingEngineOptions.Default;
+        this.options = options;
+        this.script = script ?? throw new ArgumentNullException(nameof(script));
+        
+        script.Globals["stdout_line"] = PrintLine;
+        script.Globals["stdout"] = Print;
+    }
     
     string EncodeJsString(string s)
     {
@@ -97,13 +110,18 @@ public class TemplatingEngine
         return tokens;
     }
 
-    public string Debug(Script script, string code, bool optimise)
+    public string Debug(string code)
     {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return "";
+        }
+        
         Parser parser = new Parser(script);
         List<Token> tokens = parser.Parse(code);
         pooledSb.Clear();
         
-        if (optimise)
+        if (options.Optimise)
         {
             tokens = Optimise(tokens);
         }
@@ -117,15 +135,20 @@ public class TemplatingEngine
         return finalText;
     }
     
-    public string Render(Script script, string code, bool optimise)
+    public string Transpile(string code)
     {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return "";
+        }
+        
         Parser parser = new Parser(script);
         List<Token> tokens = parser.Parse(code);
 
         StringBuilder sb = new StringBuilder();
         bool firstClientPending = true;
 
-        if (optimise)
+        if (options.Optimise)
         {
             tokens = Optimise(tokens);
         }
@@ -161,5 +184,34 @@ public class TemplatingEngine
 
         string finalText = sb.ToString();
         return finalText;
+    }
+
+    public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)
+    {
+        stdOut.Clear();
+
+        string transpiledTemplate = Transpile(code);
+        await script.DoStringAsync(transpiledTemplate, globalContext, friendlyCodeName);
+        string htmlText = stdOut.ToString();
+        
+        
+
+        return new RenderResult() {Output = htmlText, Transpiled = transpiledTemplate};
+    }
+    
+    private void PrintLine(Script script, CallbackArguments args)
+    {
+        stdOut.AppendLine(args[0].CastToString());
+    }
+        
+    private void Print(Script script, CallbackArguments args)
+    {
+        stdOut.Append(args[0].CastToString());
+    }
+    
+    public class RenderResult
+    {
+        public string Output { get; init; }
+        public string Transpiled { get; init; }
     }
 }

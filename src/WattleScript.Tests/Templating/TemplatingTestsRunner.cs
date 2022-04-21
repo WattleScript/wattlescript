@@ -26,18 +26,6 @@ public class TemplatingTestsRunner
     
     public async Task RunCore(string path, bool reportErrors = false)
     {
-        StringBuilder stdOut = new StringBuilder();
-        
-        void PrintLine(Script script, CallbackArguments args)
-        {
-            stdOut.AppendLine(args[0].CastToString());
-        }
-        
-        void Print(Script script, CallbackArguments args)
-        {
-            stdOut.Append(args[0].CastToString());
-        }
-        
         string outputPath = path.Replace(".wthtml", ".html");
 
         if (!File.Exists(outputPath))
@@ -50,20 +38,15 @@ public class TemplatingTestsRunner
         string output = await File.ReadAllTextAsync(outputPath);
 
         Script script = new Script(CoreModules.Preset_HardSandbox);
-        script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Options.Syntax = ScriptSyntax.WattleScript;
         script.Options.Directives.Add("using");
+
+        TemplatingEngine tmp = new TemplatingEngine(script);
+        string debugStr = tmp.Debug(code);
+        TemplatingEngine.RenderResult rr = null;
         
-        TemplatingEngine tmp = new TemplatingEngine();
-        string transpiled = tmp.Render(script, code, true);
-
-        string debugStr = tmp.Debug(script, code, true);
-
-        script.Globals["stdout_line"] = PrintLine;
-        script.Globals["stdout"] = Print;
-
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");
@@ -78,16 +61,14 @@ public class TemplatingTestsRunner
         if (reportErrors)
         {
             script.Options.ParserErrorMode = ScriptOptions.ParserErrorModes.Report;
-            await script.DoStringAsync(transpiled);
+            rr = await tmp.Render(code);
             return;
         }
 
         try
         {
-            DynValue dv = script.LoadString(transpiled);
-            await script.CallAsync(dv);
-
-            Assert.AreEqual(output, stdOut.ToString(), $"Test {path} did not pass.");
+            rr = await tmp.Render(code);
+            Assert.AreEqual(output, rr.Output, $"Test {path} did not pass.");
 
             if (path.Contains("invalid"))
             {
@@ -98,7 +79,7 @@ public class TemplatingTestsRunner
         {
             if (e is AssertionException ae)
             {
-                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}\nParsed template:\n{transpiled}");
+                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}\nParsed template:\n{rr?.Transpiled ?? ""}");
                 return;
             }
 
