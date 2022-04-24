@@ -36,19 +36,19 @@ internal partial class Parser
     private int lastCommitedPos;
     private int lastCommitedLine;
     private char c;
-    private string currentLexeme = "";
+    private StringBuilder currentLexeme = new StringBuilder();
     private int line = 1;
     private Script? script;
     private StepModes stepMode = StepModes.CurrentLexeme;
     private bool parsingTransitionCharactersEnabled = true;
+    private Document document;
+    private List<TagHelper>? tagHelpers;
     
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="script">can be null but templating engine won't resolve custom directives</param>
-    public Parser(Script? script)
+    public Parser(Script? script, List<TagHelper>? tagHelpers)
     {
         this.script = script;
+        this.tagHelpers = tagHelpers;
+        document = new Document();
 
         KeywordsMap = new Dictionary<string, Func<bool>?>
         {
@@ -61,10 +61,11 @@ internal partial class Parser
         };
     }
     
-    public List<Token> Parse(string templateSource, bool includeNewlines = false)
+    public List<Token> Parse(string templateSource)
     {
         source = templateSource;
         ParseClient();
+        //Lookahead();
 
         if (IsAtEnd())
         {
@@ -112,6 +113,7 @@ internal partial class Parser
         while (!IsAtEnd())
         {
             Step();
+            
             if (handleStrings && !inMultilineComment)
             {
                 if (c == '\'')
@@ -251,7 +253,7 @@ internal partial class Parser
                 continue;
             }
             
-            if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+            if (IsWhitespaceOrNewline(Peek()))
             {
                 Step();
                 continue;
@@ -407,10 +409,27 @@ internal partial class Parser
                     continue;
                 }
 
-                Step();
+                shouldContinue = LookaheadForHtmlComment(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+
+                if (Peek() == '<' && IsHtmlTagOpeningChar(Peek(2)))
+                {
+                    ParseHtmlTag(null);
+                }
+
+                char c = Step();
+                string str = GetCurrentLexeme();
             }
-            
+
             AddToken(TokenTypes.Text);
+        }
+
+        bool IsHtmlTagOpeningChar(char chr)
+        {
+            return IsAlpha(chr) || chr == '!';
         }
 
         // @* *@
@@ -437,7 +456,9 @@ internal partial class Parser
         {
             if (GetCurrentLexeme().Length > 0)
             {
-                currentLexeme = currentLexeme[..^1];
+                string str = currentLexeme.ToString()[..^1];
+                currentLexeme.Clear();
+                currentLexeme.Append(str);
             }
         }
 
@@ -496,7 +517,7 @@ internal partial class Parser
                 if (currentSide == Sides.Server)
                 {
                     // we don't know enough to decide so we treat it as an annotation in server mode for now
-                    currentLexeme = $"@{GetCurrentLexeme()}";
+                    currentLexeme.Insert(0, "@");
                     return true;
                 }
 
@@ -595,7 +616,8 @@ internal partial class Parser
                 str = str[..^1];
             }
 
-            currentLexeme = str;
+            currentLexeme.Clear();
+            currentLexeme.Append(str);
             AddToken(TokenTypes.ExplicitExpr);
         }
 
@@ -708,13 +730,13 @@ internal partial class Parser
             }
             
             l = GetCurrentLexeme();
-            if (!keepClosingBrk)
+            if (!keepClosingBrk && currentLexeme.Length > 0)
             {
-                currentLexeme = currentLexeme.Substring(0, currentLexeme.Length - 1);
+                RemoveLastCharFromCurrentLexeme();
             }
             AddToken(TokenTypes.BlockExpr);
         }
-
+        
         bool LastStoredCharMatches(params char[] chars)
         {
             if (GetCurrentLexeme().Length < 1)
@@ -722,7 +744,7 @@ internal partial class Parser
                 return false;
             }
             
-            char chr = currentLexeme[..^1][0];
+            char chr = currentLexeme.ToString()[..^1][0];
             return chars.Contains(chr);
         }
         
@@ -733,7 +755,7 @@ internal partial class Parser
                 return false;
             }
             
-            char chr = currentLexeme.Substring(currentLexeme.Length - 1 - n, 1)[0];
+            char chr = currentLexeme.ToString().Substring(currentLexeme.Length - 1 - n, 1)[0];
             return chars.Contains(chr);
         }
         
@@ -771,6 +793,7 @@ internal partial class Parser
 
             void HandleStringSequence(char chr)
             {
+                Step();
                 string str = GetCurrentLexeme();
                 if (LastStoredCharMatches(2, '\\')) // check that string symbol is not escaped
                 {
@@ -790,20 +813,21 @@ internal partial class Parser
                     }
                 }
             }
-            
+
+            bool allowHtml = false;
             while (!IsAtEnd())
             {
                 if (!inMultilineComment)
                 {
-                    if (c == '\'')
+                    if (Peek() == '\'')
                     {
                         HandleStringSequence('\'');
                     }
-                    else if (c == '"')
+                    else if (Peek() == '"')
                     {
                         HandleStringSequence('"');
                     }
-                    else if (c == '`')
+                    else if (Peek() == '`')
                     {
                         HandleStringSequence('`');
                     }
@@ -811,14 +835,14 @@ internal partial class Parser
                 
                 if (!inString)
                 {
-                    if (c == '/' && Peek() == '*')
+                    if (Peek() == '/' && Peek() == '*')
                     {
                         if (!inMultilineComment)
                         {
                             inMultilineComment = true;   
                         }
                     }
-                    else if (c == '*' && Peek() == '/')
+                    else if (Peek() == '*' && Peek() == '/')
                     {
                         if (inMultilineComment)
                         {
@@ -835,13 +859,22 @@ internal partial class Parser
                         continue;
                     }
 
-                    if (Peek() == '<')
+                    cnt = LookaheadForHtmlComment(Sides.Server);
+                    if (cnt)
                     {
-                        if (LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
+                        continue;
+                    }
+                    
+                    if (Peek() == '<' && IsHtmlTagOpeningChar(Peek(2)))
+                    {
+                        if (allowHtml || LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
                         {
                             StepEol();
                             AddToken(TokenTypes.BlockExpr);
-                            ParseHtmlTag();
+                            ParseHtmlTag(null);
+                            
+                            allowHtml = true;
+                            continue;
                         }
                     }
                     else if (Peek() == '{')
@@ -860,99 +893,90 @@ internal partial class Parser
 
                 string str2 = GetCurrentLexeme();
                 char chr = Step();
+                allowHtml = false;
             }
             
             string str = GetCurrentLexeme();
         }
 
-        string ParseHtmlTagNameInBuffer()
+        string ParseHtmlTagName(bool inBuffer)
         {
+            StringBuilder sb = new StringBuilder();
+            
+            if (inBuffer)
+            {
+                ClearBuffer();
+                SetStepMode(StepModes.Buffer);   
+            }
+
+            // Tag name can be provided via a server transition so we have to check for that
+            LookaheadForTransitionClient(Sides.Client);
+            
             // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha, ?]
             if (!(Peek() == '_' || Peek() == '!' || Peek() == '?' || Peek() == '/' || IsAlpha(Peek())))
             {
+                char chr = Peek();
+                string lexeme = GetCurrentLexeme();
+                
                 Throw("First char after < in an opening HTML tag must be _, ! or alpha");
             }
-            
-            // The next few chars represent element's name
-            ClearBuffer();
-            SetStepMode(StepModes.Buffer);
-            
-            while (!IsAtEnd() && (IsAlphaNumeric(Peek()) || Peek() == '/' || Peek() == '!' || Peek() == '?'))
+            else
             {
-                Step();
+                char chr = Step();
+                sb.Append(chr);
+            }
+
+            // The next few chars represent element's name
+            while (!IsAtEnd() && (IsAlphaNumeric(Peek())))
+            {
+                bool shouldContinue = LookaheadForTransitionServerSide();
+                if (shouldContinue)
+                {
+                    continue;
+                }
+                
+                char chr = Step();
+                sb.Append(chr);
             }
 
             if (IsAtEnd())
             {
-                Throw("Unclosed HTML tag at the end of file");
+                //Throw("Unclosed HTML tag at the end of file");
             }
 
-            string tagName = GetBuffer();
+            if (inBuffer)
+            {
+                string tagName = GetBuffer();
             
-            AddBufferToCurrentLexeme();
-            ClearBuffer();
-            SetStepMode(StepModes.CurrentLexeme);
+                AddBufferToCurrentLexeme();
+                ClearBuffer();
+                SetStepMode(StepModes.CurrentLexeme);
             
-            return tagName;
+                return tagName;   
+            }
+
+            return sb.ToString();
         }
 
-        bool ParseHtmlTag()
+        bool LookaheadForClosingTag()
         {
+            return Peek() == '>' || (Peek() == '/' && Peek(2) == '>');
+        }
+        
+        bool ParseHtmlTag(string? parentTagName)
+        {
+            ParseWhitespaceAndNewlines(Sides.Client);
+
+            if (Peek() != '<')
+            {
+                return false;
+            }
+            
             char chr = Step(); // has to be <
-            string tagName = ParseHtmlTagNameInBuffer();
+            string tagName = ParseHtmlTagName(false);
 
-            ParseUntilBalancedChar('<', '>', true, true, true);
-            string tagText = GetCurrentLexeme();
+            ParseWhitespaceAndNewlines(Sides.Client);
 
-            bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
-            bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
-            bool parseContent = !isSelfClosed && !isSelfClosing;
-            
-            if (parseContent)
-            {
-                if (tagText == "<text>") // "<text>" has a special meaning only when exactly matched. Any modification like "<text >" will be rendered as a normal tag
-                {
-                    DiscardCurrentLexeme();
-                }
-                
-                ParseHtmlOrPlaintextUntilClosingTag(tagName);
-                ParseHtmlClosingTag(tagName);
-            }
-            
-            string s = GetCurrentLexeme();
-            AddToken(TokenTypes.Text);
-
-            return true;
-        }
-
-        // parser has to be positioned at opening < of the closing tag
-        void ParseHtmlClosingTag(string openingTagName)
-        {
-            char chr = Step(); // has to be <
-            
-            string str = GetCurrentLexeme();
-            string closingTagName = ParseHtmlTagNameInBuffer();
-
-            ParseUntilBalancedChar('<', '>', true, true, true);
-            str = GetCurrentLexeme();
-
-            if ($"/{openingTagName}" != closingTagName)
-            {
-                // [todo] end tag does not match opening tag
-                // we will be graceful but a warning can be emmited
-            }
-            
-            if (openingTagName == "text" && closingTagName == "/text" && str.Trim() == "</text>")
-            {
-                DiscardCurrentLexeme();
-            }
-        }
-
-        void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName)
-        {
-            int missingBrks = 1;
-            
-            string s = GetCurrentLexeme();
             while (!IsAtEnd())
             {
                 bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
@@ -961,27 +985,268 @@ internal partial class Parser
                     continue;
                 }
                 
-                if (Peek() == '<')
+                bool shouldEnd = LookaheadForAttributeOrClose(tagName, false);
+                if (shouldEnd)
                 {
-                    if (IsAlpha(Peek(2))) // we enter new tag
+                    break;
+                }
+            }
+            
+            return true;
+        }
+        
+        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag)
+        {
+            if (LookaheadForClosingTag())
+            {
+                CloseTag(tagName, startsFromClosingTag);
+                return true;
+            }
+            
+            return ParseAttribute(tagName, startsFromClosingTag);
+        }
+        
+        string ParseAttributeName()
+        {
+            StringBuilder sb = new StringBuilder();
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+
+                if (Peek() == '=' || LookaheadForClosingTag())
+                {
+                    return sb.ToString();
+                }
+
+                sb.Append(Step());
+            }
+
+            return sb.ToString();
+        }
+
+        string ParseAttributeValue()
+        {
+            HtmlAttrEnclosingModes closeMode = HtmlAttrEnclosingModes.None;
+            StringBuilder sb = new StringBuilder();
+            
+            if (Peek() == '\'')
+            {
+                closeMode = HtmlAttrEnclosingModes.SingleQuote;
+                Step();
+            }
+            else if (Peek() == '\"')
+            {
+                closeMode = HtmlAttrEnclosingModes.DoubleQuote;
+                Step();
+            }
+
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+                
+                if (IsWhitespaceOrNewline(Peek()) && closeMode == HtmlAttrEnclosingModes.None)
+                {
+                    return sb.ToString();
+                }
+
+                if (Peek() == '\'' && closeMode == HtmlAttrEnclosingModes.SingleQuote)
+                {
+                    Step();
+                    return sb.ToString();
+                }
+                
+                if (Peek() == '"' && closeMode == HtmlAttrEnclosingModes.DoubleQuote)
+                {
+                    Step();
+                    return sb.ToString();
+                }
+
+                sb.Append(Step());
+            }
+
+            return sb.ToString();
+        }
+           
+        
+        bool ParseAttribute(string tagName, bool startsFromClosingTag)
+        {
+            string name = ParseAttributeName();
+
+            if (Peek() == '=')
+            {
+                Step();
+                string val = ParseAttributeValue();
+            }
+            
+            if (LookaheadForClosingTag())
+            {
+                CloseTag(tagName, startsFromClosingTag);
+                return true;
+            }
+            
+            return false;
+        }
+        
+        bool CloseTag(string tagName, bool startsFromClosingTag)
+        {
+            if (tagName == "html")
+            {
+                string g = "";
+            }
+            
+            if (Peek() == '/' && Peek(2) == '>')
+            {
+                Step();
+                Step();
+            }
+            else if (Peek() == '>')
+            {
+                Step();
+            }
+
+            bool parseContent = false;
+            if (!startsFromClosingTag)
+            {
+                string tagText = GetCurrentLexeme();
+                bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
+                bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
+                parseContent = !isSelfClosed && !isSelfClosing;
+        
+                if (parseContent)
+                {
+                    if (tagText == "<text>") // "<text>" has a special meaning only when exactly matched. Any modification like "<text >" will be rendered as a normal tag
                     {
-                        ParseHtmlTag();
+                        DiscardCurrentLexeme();
+                        ParseHtmlOrPlaintextUntilClosingTag(tagName);
                     }
-                    else if (Peek(2) == '/' && IsAlpha(Peek(3)))
+                    else if (tagName is "script" or "style") // raw text elements
                     {
-                        missingBrks--;
+                        ParsePlaintextUntilClosingTag(tagName);
+                        ParseHtmlClosingTag(tagName);
                     }
-                   
-                    if (missingBrks <= 0)
+                    else
                     {
-                        break;
+                        ParseHtmlOrPlaintextUntilClosingTag(tagName);
                     }
                 }
-                else if (Peek() == '>')
+            }
+
+            string s = GetCurrentLexeme();
+
+            if (s.Contains("</body>"))
+            {
+                string h = "";
+            }
+            
+            if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>")
+            {
+                DiscardCurrentLexeme();
+                return parseContent;
+            }
+            
+            AddToken(TokenTypes.Text);
+            return parseContent;   
+        }
+
+            // parser has to be positioned at opening < of the closing tag
+        string ParseHtmlClosingTag(string openingTagName)
+        {
+            ParseWhitespaceAndNewlines(Sides.Client);
+            if (Peek() != '<')
+            {
+                return "";
+            }
+
+            char chr = Step(); // has to be <
+            string closingTagName = ParseHtmlTagName(false);
+
+            //ParseUntilBalancedChar('<', '>', true, true, true);
+ 
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
                 {
-                    if (IsAlpha(Peek(2)))
+                    continue;
+                }
+                
+                bool shouldEnd = LookaheadForAttributeOrClose(closingTagName, true);
+                if (shouldEnd)
+                {
+                    break;
+                }
+            }
+            
+            if ($"/{openingTagName}" != closingTagName)
+            {
+                // [todo] end tag does not match opening tag
+                // we will be graceful but a warning can be emmited
+            }
+
+            return closingTagName;
+        }
+
+        void ParsePlaintextUntilClosingTag(string openingTagName)
+        {
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+                
+                if (Peek() == '<' && Peek(2) == '/' && PeekRange(3, openingTagName.Length) == openingTagName && IsWhitespaceOrNewline(Peek(4 + openingTagName.Length)))
+                {
+                    break;
+                }
+                
+                Step();
+            }
+        }
+        
+        void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName)
+        {
+            AddToken(TokenTypes.Text);
+            string s = GetCurrentLexeme();
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+
+                shouldContinue = LookaheadForHtmlComment(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+                
+                if (Peek() == '<')
+                {
+                    if (Peek(2) == '/' && IsHtmlTagOpeningChar(Peek(3)))
                     {
-                        missingBrks++;   
+                        string closingName = ParseHtmlClosingTag(openingTagName);
+                        if (string.Equals($"/{openingTagName}", closingName, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            AddToken(TokenTypes.Text);
+                            return;
+                        }
+                    }
+  
+                    if (IsHtmlTagOpeningChar(Peek(2)))
+                    {
+                        ParseHtmlTag(openingTagName);
+                        continue;
                     }
                 }
 
@@ -989,5 +1254,50 @@ internal partial class Parser
             }
 
             s = GetCurrentLexeme();
+        }
+
+        bool LookaheadForHtmlComment(Sides currentSide)
+        {
+            if (Peek() == '<' && Peek(2) == '!')
+            {
+                if (Peek(3) == '-' && Peek(4) == '-')
+                {
+                    ParseHtmlComment(HtmlCommentModes.DoubleHyphen, currentSide);
+                    return true;
+                }
+
+                if (Peek(3) == '[')
+                {
+                    ParseHtmlComment(HtmlCommentModes.Cdata, currentSide);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void ParseHtmlComment(HtmlCommentModes openCommentMode, Sides currentSide)
+        {
+            if (currentSide == Sides.Server)
+            {
+                AddToken(TokenTypes.BlockExpr);
+            }
+            
+            if (openCommentMode == HtmlCommentModes.DoubleHyphen)
+            {
+                StepN(4); // <!--
+            }
+            else if (openCommentMode == HtmlCommentModes.Cdata) // <![
+            {
+                StepN(3);
+            }
+
+            if (Peek() == '-' && Peek(2) == '-' && Peek(3) == '>') // -->
+            {
+                StepN(3);
+                return;
+            }
+
+            Step();
         }
 }

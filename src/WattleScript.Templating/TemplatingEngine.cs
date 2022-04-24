@@ -9,12 +9,14 @@ public class TemplatingEngine
     private readonly TemplatingEngineOptions options;
     private readonly Script script;
     private StringBuilder stdOut = new StringBuilder();
+    private readonly List<TagHelper>? tagHelpers;
     
-    public TemplatingEngine(Script script, TemplatingEngineOptions? options = null)
+    public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
     {
         options ??= TemplatingEngineOptions.Default;
         this.options = options;
         this.script = script ?? throw new ArgumentNullException(nameof(script));
+        this.tagHelpers = tagHelpers;
         
         script.Globals["stdout_line"] = PrintLine;
         script.Globals["stdout"] = Print;
@@ -117,7 +119,7 @@ public class TemplatingEngine
             return "";
         }
         
-        Parser parser = new Parser(script);
+        Parser parser = new Parser(script, tagHelpers);
         List<Token> tokens = parser.Parse(code);
         pooledSb.Clear();
         
@@ -142,7 +144,7 @@ public class TemplatingEngine
             return "";
         }
         
-        Parser parser = new Parser(script);
+        Parser parser = new Parser(script, tagHelpers);
         List<Token> tokens = parser.Parse(code);
 
         StringBuilder sb = new StringBuilder();
@@ -194,8 +196,6 @@ public class TemplatingEngine
         await script.DoStringAsync(transpiledTemplate, globalContext, friendlyCodeName);
         string htmlText = stdOut.ToString();
         
-        
-
         return new RenderResult() {Output = htmlText, Transpiled = transpiledTemplate};
     }
     

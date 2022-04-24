@@ -4,6 +4,19 @@ namespace WattleScript.Templating;
 
 internal partial class Parser
 {
+    internal enum HtmlAttrEnclosingModes
+    {
+        None,
+        SingleQuote,
+        DoubleQuote
+    }
+
+    internal enum HtmlCommentModes
+    {
+        DoubleHyphen, // <!-- html5
+        Cdata // <![ old
+    }
+    
     void ClearPooledBuilder()
     {
         PooledStringBuilder.Clear();
@@ -16,7 +29,7 @@ internal partial class Parser
     
     string GetCurrentLexeme()
     {
-        return currentLexeme;
+        return currentLexeme.ToString();
     }
 
     bool IsAlphaNumeric(char ch)
@@ -33,14 +46,24 @@ internal partial class Parser
     {
         return ch is >= '0' and <= '9';
     }
+
+    bool IsWhitespaceOrNewline(char ch)
+    {
+        return ch is ' ' or '\n' or '\r' or '\t' or '\f';
+    }
     
     char Step(int i = 1)
     {
+        if (pos >= source.Length)
+        {
+            return ' ';
+        }
+        
         char cc = source[pos];
 
         if (stepMode == StepModes.CurrentLexeme)
         {
-            currentLexeme += cc;    
+            currentLexeme.Append(cc);    
         }
         else
         {
@@ -49,8 +72,13 @@ internal partial class Parser
         
         pos += i;
         c = cc;
+
+        if (pos >= source.Length)
+        {
+            pos = source.Length;
+        }
         
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !IsAtEnd())
         {
             if (cc == '\r' && Peek() == '\n')
             {
@@ -80,6 +108,11 @@ internal partial class Parser
         DiscardCurrentLexeme();
     }
 
+    string PeekRange(int from, int length)
+    {
+        return source.Substring(pos + from - 1, length);
+    }
+    
     char Peek(int i = 1)
     {
         if (IsAtEnd())
@@ -145,7 +178,7 @@ internal partial class Parser
 
     bool IsSelfClosingHtmlTag(string htmlTag)
     {
-        return IsSelfClosing(htmlTag.ToLowerInvariant());
+        return IsSelfClosing(htmlTag.ToLowerInvariant().Replace("!", ""));
     }
 
     bool AddToken(TokenTypes type)
@@ -155,7 +188,12 @@ internal partial class Parser
             return false;
         }
 
-        Token token = new Token(type, currentLexeme, lastCommitedLine + 1, line + 1, lastCommitedPos + 1, pos + 1);
+        if (currentLexeme.ToString() == "\r\n</html>")
+        {
+            string str = "";
+        }
+        
+        Token token = new Token(type, GetCurrentLexeme(), lastCommitedLine + 1, line + 1, lastCommitedPos + 1, pos + 1);
         Tokens.Add(token);
         DiscardCurrentLexeme();
 
@@ -166,17 +204,33 @@ internal partial class Parser
 
     void DiscardCurrentLexeme()
     {
-        currentLexeme = "";
+        currentLexeme.Clear();
     }
 
     void AddBufferToCurrentLexeme()
     {
-        currentLexeme += Buffer.ToString();
+        currentLexeme.Append(Buffer);
     }
 
     bool IsSelfClosing(string tagName)
     {
-        return tagName == "area" || tagName == "base" || tagName == "br" || tagName == "col" || tagName == "embed" || tagName == "hr" || tagName == "img" || tagName == "input" || tagName == "keygen" || tagName == "link" || tagName == "menuitem" || tagName == "meta" || tagName == "param" || tagName == "source" || tagName == "track" || tagName == "wbr";
+        return tagName is "area" 
+            or "base" 
+            or "br" 
+            or "col" 
+            or "embed" 
+            or "hr" 
+            or "img" 
+            or "input" 
+            or "keygen" 
+            or "link" 
+            or "menuitem" 
+            or "meta" 
+            or "param" 
+            or "source" 
+            or "track" 
+            or "wbr"
+            or "doctype";
     }
     
     void ClearBuffer()
