@@ -13,8 +13,8 @@ internal partial class Parser
 
     internal enum HtmlCommentModes
     {
-        DoubleHyphen, // <!-- html5
-        Cdata // <![ old
+        DoubleHyphen, // <!-- -->
+        Cdata // <![ can end with ]]> or --> 
     }
     
     void ClearPooledBuilder()

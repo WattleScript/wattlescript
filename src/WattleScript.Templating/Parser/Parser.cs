@@ -1298,6 +1298,12 @@ internal partial class Parser
                 return;
             }
 
+            if (openCommentMode == HtmlCommentModes.Cdata && Peek() == ']' && Peek(2) == ']' && Peek(3) == '>') // ]]>
+            {
+                StepN(3);
+                return;
+            } 
+
             Step();
         }
 }
