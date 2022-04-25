@@ -185,8 +185,10 @@ namespace WattleScript.Interpreter.Tree
 			
 			switch (tkn.Type)
 			{
-				case TokenType.DoubleColon when lcontext.Syntax != ScriptSyntax.WattleScript:
+				case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.Lua:
 					return new LabelStatement(lcontext);
+				case TokenType.Brk_Open_Curly when lcontext.Syntax == ScriptSyntax.WattleScript:
+					return new ScopeStatement(lcontext);
 				case TokenType.Goto:
 					return new GotoStatement(lcontext);
 				case TokenType.Switch:
