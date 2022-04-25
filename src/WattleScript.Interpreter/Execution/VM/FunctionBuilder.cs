@@ -276,28 +276,35 @@ namespace WattleScript.Interpreter.Execution.VM
 			//AppendInstruction(new Instruction() { OpCode = OpCode.Debug, String = str.Substring(0, Math.Min(32, str.Length)) });
 		}
 
-		public int Emit_Enter(RuntimeScopeBlock runtimeScopeBlock)
+		// Skips emitting clean ops that would be interpreted as a nop by the VM
+		// Saves us a little bit of space
+		void PossibleCleanOp(int from, int to)
 		{
-			return AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.From,
-				runtimeScopeBlock.ToInclusive));
+			if (to >= from)
+			{
+				AppendInstruction(new Instruction(OpCode.Clean, from, to));
+			}
 		}
 
-		public int Emit_Leave(RuntimeScopeBlock runtimeScopeBlock)
+		public void Emit_Enter(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.From,
-				runtimeScopeBlock.To));
+			PossibleCleanOp(runtimeScopeBlock.From, runtimeScopeBlock.ToInclusive);
 		}
 
-		public int Emit_Exit(RuntimeScopeBlock runtimeScopeBlock)
+		public void Emit_Leave(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.From,
-				runtimeScopeBlock.ToInclusive));
+			PossibleCleanOp(runtimeScopeBlock.From, runtimeScopeBlock.To);
 		}
 
-		public int Emit_Clean(RuntimeScopeBlock runtimeScopeBlock)
+		public void Emit_Exit(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			return AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.To + 1,
-				runtimeScopeBlock.ToInclusive));
+			PossibleCleanOp(runtimeScopeBlock.From, runtimeScopeBlock.ToInclusive);
+		}
+
+		public void Emit_Clean(RuntimeScopeBlock runtimeScopeBlock)
+		{
+			//This one needs to be a possible nop for Label statements to work correctly
+			AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.To + 1, runtimeScopeBlock.ToInclusive));
 		}
 
 		public int Emit_CloseUp(SymbolRef sym)
