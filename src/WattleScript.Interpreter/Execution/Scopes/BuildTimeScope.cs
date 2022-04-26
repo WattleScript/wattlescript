@@ -98,17 +98,17 @@ namespace WattleScript.Interpreter.Execution
 			return m_Frames.Last().DefineLocal(name);
 		}
 
-		public SymbolRef TryDefineLocal(string name)
+		public SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
 		{
-			return m_Frames.Last().TryDefineLocal(name);
+			return m_Frames.Last().TryDefineLocal(name, out oldLocal);
 		}
 
-		public void BlockResolution(IEnumerable<SymbolRef> locals)
+		public void TemporaryScope(Dictionary<string, SymbolRef> locals)
 		{
-			m_Frames.Last().BlockResolution(locals);
+			m_Frames.Last().TemporaryScope(locals);
 		}
 		
-		public void UnblockResolution() => m_Frames.Last().UnblockResolution();
+		public void ResetTemporaryScope() => m_Frames.Last().ResetTemporaryScope();
 
 
 		public bool CurrentFunctionHasVarArgs()

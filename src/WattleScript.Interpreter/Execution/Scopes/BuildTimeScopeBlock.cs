@@ -34,25 +34,23 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			return block;
 		}
 
-		private HashSet<string> blockedNames = new HashSet<string>();
-		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		private Dictionary<string, SymbolRef> temporaryScope = new Dictionary<string, SymbolRef>();
+		internal void TemporaryScope(Dictionary<string, SymbolRef> scope)
 		{
-			foreach(var l in locals) {
-				if (!m_DefinedNames.ContainsValue(l))
-					throw new InternalErrorException("Tried to block resolution of local outside of block");
-				blockedNames.Add(l.Name);
-			}
+			temporaryScope = scope;
 		}
 
-		internal void UnblockResolution()
+		internal void ResetTemporaryScope()
 		{
-			blockedNames.Clear();
+			temporaryScope = null;
 		}
 		
 
 		internal SymbolRef Find(string name)
 		{
-			if (blockedNames.Contains(name)) return null;
+			if (temporaryScope?.TryGetValue(name, out var sr) ?? false) {
+				return sr;
+			}
 			return m_DefinedNames.GetOrDefault(name);
 		}
 

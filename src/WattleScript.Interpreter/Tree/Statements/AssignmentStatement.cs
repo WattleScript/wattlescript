@@ -69,14 +69,17 @@ namespace WattleScript.Interpreter.Tree.Statements
 
 		}
 
+		private Dictionary<string, SymbolRef> oldScope;
 		public void DefineLocals(ScriptLoadingContext lcontext)
 		{
 			if (localNames != null)
 			{
 				m_LValues = new List<IVariable>();
+				oldScope = new Dictionary<string, SymbolRef>();
 				foreach (string name in localNames)
 				{
-					var localVar = lcontext.Scope.TryDefineLocal(name);
+					var localVar = lcontext.Scope.TryDefineLocal(name, out var oldLocal);
+					oldScope.Add(name, oldLocal);
 					var symbol = new SymbolRefExpression(lcontext, localVar);
 					m_LValues.Add(symbol);
 				}
@@ -86,13 +89,17 @@ namespace WattleScript.Interpreter.Tree.Statements
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
 			foreach(var l in m_LValues)((Expression)l).ResolveScope(lcontext);
-			if (localNames != null) // local definitions can't reference themselves
+			if (localNames != null) 
+				// local definitions can't reference themselves.
+				// To support re-ordering, construct a temporary scope without 
+				// the LValues defined yet. This allows for "local print = print;"
+				// as well as "local item = 'a'; local item = item .. 'b'"
 			{
-				lcontext.Scope.BlockResolution(m_LValues.Select(x => ((SymbolRefExpression)x).Symbol));
+				lcontext.Scope.TemporaryScope(oldScope);
 			}
 			if(m_RValues != null)
 				foreach(var r in m_RValues) r.ResolveScope(lcontext);
-			if(localNames != null) lcontext.Scope.UnblockResolution();
+			if(localNames != null) lcontext.Scope.ResetTemporaryScope();
 		}
 
 

@@ -72,7 +72,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		{
 			lcontext.Scope.PushBlock();
 			m_Names = names
-				.Select(n => lcontext.Scope.TryDefineLocal(n))
+				.Select(n => lcontext.Scope.TryDefineLocal(n, out _))
 				.ToArray();
 
 			m_NameExps = m_Names
