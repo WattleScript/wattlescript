@@ -64,16 +64,16 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			return m_ScopeTreeHead.Define(name);
 		}
 
-		internal void BlockResolution(IEnumerable<SymbolRef> locals)
+		internal void TemporaryScope(Dictionary<string, SymbolRef> locals)
 		{
-			m_ScopeTreeHead.BlockResolution(locals);
+			m_ScopeTreeHead.TemporaryScope(locals);
 		}
 
-		internal void UnblockResolution() => m_ScopeTreeHead.UnblockResolution();
+		internal void ResetTemporaryScope() => m_ScopeTreeHead.ResetTemporaryScope();
 
-		internal SymbolRef TryDefineLocal(string name)
+		internal SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
 		{
-			if (m_ScopeTreeHead.Find(name) != null)
+			if ((oldLocal = m_ScopeTreeHead.Find(name)) != null)
 			{
 				m_ScopeTreeHead.Rename(name);
 			}

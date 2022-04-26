@@ -94,7 +94,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         {
             lcontext.Scope.PushBlock();
             if (isDefLocal) {
-                var lcl = lcontext.Scope.TryDefineLocal(localDefName);
+                var lcl = lcontext.Scope.TryDefineLocal(localDefName, out _);
                 initAssignee = new SymbolRefExpression(lcontext, lcl);
             }
             (initAssignee as Expression)?.ResolveScope(lcontext);
