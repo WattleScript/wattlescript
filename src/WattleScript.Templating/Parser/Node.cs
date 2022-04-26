@@ -28,6 +28,9 @@ internal interface INodeWithChildren
 internal class NodeBase
 {
     public int CharFrom { get; set; }
+    public bool Recovery { get; set; }
+    public int Line { get; set; }
+    public int Col { get; set; }
 }
 
 internal class ServerNode : NodeBase

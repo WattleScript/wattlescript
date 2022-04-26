@@ -69,13 +69,20 @@ internal partial class Parser
         {
             Buffer.Append(cc);
         }
-        
+
+        col += i;
         pos += i;
         c = cc;
 
         if (pos >= source.Length)
         {
             pos = source.Length;
+        }
+
+        if (cc == '\n')
+        {
+            col = 1;
+            line++;
         }
         
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !IsAtEnd())
@@ -211,6 +218,20 @@ internal partial class Parser
     {
         currentLexeme.Append(Buffer);
     }
+
+    void FatalIfInBlock(string message)
+    {
+        Exception e = new Exception(message);
+        
+        if (parsingBlock)
+        {
+            fatalExceptions.Add(e);   
+        }
+        else
+        {
+            recoveredExceptions.Add(e);   
+        }
+    } 
 
     bool IsSelfClosing(string tagName)
     {

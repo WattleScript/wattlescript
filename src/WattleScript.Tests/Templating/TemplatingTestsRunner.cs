@@ -44,7 +44,6 @@ public class TemplatingTestsRunner
         script.Options.Directives.Add("using");
 
         TemplatingEngine tmp = new TemplatingEngine(script);
-        string debugStr = tmp.Debug(code);
         TemplatingEngine.RenderResult rr = null;
         
         if (path.Contains("flaky"))
@@ -70,22 +69,24 @@ public class TemplatingTestsRunner
             rr = await tmp.Render(code);
             Assert.AreEqual(output, rr.Output, $"Test {path} did not pass.");
 
-            if (path.Contains("invalid"))
+            if (path.ToLowerInvariant().Contains("invalid"))
             {
                 Assert.Fail("Expected to crash but 'passed'");
             }
+            
+            string debugStr = tmp.Debug(code);
         }
         catch (Exception e)
         {
+            if (path.ToLowerInvariant().Contains("invalid"))
+            {
+                Assert.Pass($"Crashed as expected: {e.Message}");
+                return;
+            }
+            
             if (e is AssertionException ae)
             {
                 Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}\nParsed template:\n{rr?.Transpiled ?? ""}");
-                return;
-            }
-
-            if (path.Contains("invalid"))
-            {
-                Assert.Pass($"Crashed as expected: {e.Message}");
                 return;
             }
 

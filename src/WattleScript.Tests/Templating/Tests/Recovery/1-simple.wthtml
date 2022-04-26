@@ -1,0 +1,6 @@
+@{
+<div class="w3-center w3-small">
+    <a href="//www.w3schools.com">
+        <i class="fa fa-logo ws-text-green ws-hover-text-green" style="position:relative;font-size:42px!important;"></i>
+</div>
+}

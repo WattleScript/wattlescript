@@ -36,6 +36,7 @@ internal partial class Parser
     private int lastCommitedPos;
     private int lastCommitedLine;
     private char c;
+    private int col;
     private StringBuilder currentLexeme = new StringBuilder();
     private int line = 1;
     private Script? script;
@@ -43,7 +44,11 @@ internal partial class Parser
     private bool parsingTransitionCharactersEnabled = true;
     private Document document;
     private List<TagHelper>? tagHelpers;
-    
+    private Stack<HtmlElement> openElements = new Stack<HtmlElement>();
+    private bool parsingBlock = false;
+    private List<Exception> fatalExceptions = new List<Exception>();
+    private List<Exception> recoveredExceptions = new List<Exception>();
+
     public Parser(Script? script, List<TagHelper>? tagHelpers)
     {
         this.script = script;
@@ -72,7 +77,16 @@ internal partial class Parser
             AddToken(TokenTypes.Eof);
         }
 
+        HandleUnrecoverableErrors();
         return Tokens;
+    }
+
+    void HandleUnrecoverableErrors()
+    {
+        if (fatalExceptions.Count > 0)
+        {
+            throw fatalExceptions[0];
+        }
     }
 
     bool ParseUntilBalancedChar(char startBr, char endBr, bool startsInbalanced, bool handleStrings, bool handleServerComments)
@@ -700,6 +714,7 @@ internal partial class Parser
          */
         void ParseCodeBlock(bool keepOpeningBrk, bool keepClosingBrk)
         {
+            parsingBlock = true;
             bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
             string l = GetCurrentLexeme();
             if (l == "{")
@@ -734,7 +749,9 @@ internal partial class Parser
             {
                 RemoveLastCharFromCurrentLexeme();
             }
+            
             AddToken(TokenTypes.BlockExpr);
+            parsingBlock = false;
         }
         
         bool LastStoredCharMatches(params char[] chars)
@@ -972,9 +989,12 @@ internal partial class Parser
                 return false;
             }
             
-            HtmlElement el = new HtmlElement() {CharFrom = pos};
+            HtmlElement el = new HtmlElement() {CharFrom = pos, Line = line, Col = col};
             char chr = Step(); // has to be <
             string tagName = ParseHtmlTagName(false);
+            el.Name = tagName;
+            openElements.Push(el);
+            
 
             ParseWhitespaceAndNewlines(Sides.Client);
             
@@ -1139,6 +1159,14 @@ internal partial class Parser
                         ParseHtmlOrPlaintextUntilClosingTag(tagName, el);
                     }
                 }
+                else
+                {
+                    HtmlElement ell = openElements.Peek();
+                    if (ell == el)
+                    {
+                        openElements.Pop();
+                    } 
+                }
             }
 
             string s = GetCurrentLexeme();
@@ -1206,9 +1234,12 @@ internal partial class Parser
                     continue;
                 }
                 
-                if (Peek() == '<' && Peek(2) == '/' && PeekRange(3, openingTagName.Length) == openingTagName) // && IsWhitespaceOrNewline(Peek(4 + openingTagName.Length))
+                if (Peek() == '<' && Peek(2) == '/')
                 {
-                    break;
+                    if (PeekRange(3, openingTagName.Length) == openingTagName)
+                    {
+                        break;   
+                    }
                 }
                 
                 Step();
@@ -1232,14 +1263,36 @@ internal partial class Parser
                 {
                     continue;
                 }
+
+                if (el.Recovery)
+                {
+                    AddToken(TokenTypes.Text);
+                    return;
+                }
                 
                 if (Peek() == '<')
                 {
                     if (Peek(2) == '/' && IsHtmlTagOpeningChar(Peek(3)))
                     {
                         string closingName = ParseHtmlClosingTag(openingTagName, el);
+                        HtmlElement openEl = openElements.Peek();
+                        
                         if (string.Equals($"/{openingTagName}", closingName, StringComparison.InvariantCultureIgnoreCase))
                         {
+                            AddToken(TokenTypes.Text);
+                            openElements.Pop();
+                            return;
+                        }
+
+                        if (closingName.StartsWith('/'))
+                        {
+                            // recovery: close entire stack
+                            while (openElements.Count > 0)
+                            {
+                                HtmlElement rel = openElements.Pop();
+                                rel.Recovery = true;
+                            }
+                            
                             AddToken(TokenTypes.Text);
                             return;
                         }
@@ -1253,6 +1306,11 @@ internal partial class Parser
                 }
 
                 Step();
+            }
+
+            if (parsingBlock)
+            {
+                FatalIfInBlock($"Unclosed element {el.Name} at line {el.Line}, {el.Col}. Parser could not recover from this error.");
             }
 
             s = GetCurrentLexeme();
@@ -1280,6 +1338,9 @@ internal partial class Parser
 
         void ParseHtmlComment(HtmlCommentModes openCommentMode, Sides currentSide)
         {
+            int startLine = line;
+            int startCol = col;
+            
             if (currentSide == Sides.Server)
             {
                 AddToken(TokenTypes.BlockExpr);
@@ -1294,18 +1355,26 @@ internal partial class Parser
                 StepN(3);
             }
 
-            if (Peek() == '-' && Peek(2) == '-' && Peek(3) == '>') // -->
+            while (!IsAtEnd())
             {
-                StepN(3);
-                return;
+                if (Peek() == '-' && Peek(2) == '-' && Peek(3) == '>') // -->
+                {
+                    StepN(3);
+                    AddToken(TokenTypes.Text);
+                    return;
+                }
+
+                if (openCommentMode == HtmlCommentModes.Cdata && Peek() == ']' && Peek(2) == ']' && Peek(3) == '>') // ]]>
+                {
+                    StepN(3);
+                    AddToken(TokenTypes.Text);
+                    return;
+                } 
+
+                Step();   
             }
-
-            if (openCommentMode == HtmlCommentModes.Cdata && Peek() == ']' && Peek(2) == ']' && Peek(3) == '>') // ]]>
-            {
-                StepN(3);
-                return;
-            } 
-
-            Step();
+            
+            // [todo] error, unclosed html comment
+            FatalIfInBlock($"Unclosed HTML comment at line {startLine}, {startCol}. Parser could not recover from this error.");
         }
 }
