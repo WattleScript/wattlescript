@@ -27,7 +27,7 @@ internal interface INodeWithChildren
 
 internal class NodeBase
 {
-
+    public int CharFrom { get; set; }
 }
 
 internal class ServerNode : NodeBase

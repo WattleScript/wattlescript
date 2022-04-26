@@ -972,11 +972,12 @@ internal partial class Parser
                 return false;
             }
             
+            HtmlElement el = new HtmlElement() {CharFrom = pos};
             char chr = Step(); // has to be <
             string tagName = ParseHtmlTagName(false);
 
             ParseWhitespaceAndNewlines(Sides.Client);
-
+            
             while (!IsAtEnd())
             {
                 bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
@@ -985,7 +986,7 @@ internal partial class Parser
                     continue;
                 }
                 
-                bool shouldEnd = LookaheadForAttributeOrClose(tagName, false);
+                bool shouldEnd = LookaheadForAttributeOrClose(tagName, false, el);
                 if (shouldEnd)
                 {
                     break;
@@ -995,15 +996,15 @@ internal partial class Parser
             return true;
         }
         
-        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag)
+        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag, HtmlElement el)
         {
             if (LookaheadForClosingTag())
             {
-                CloseTag(tagName, startsFromClosingTag);
+                CloseTag(tagName, startsFromClosingTag, el);
                 return true;
             }
             
-            return ParseAttribute(tagName, startsFromClosingTag);
+            return ParseAttribute(tagName, startsFromClosingTag, el); 
         }
         
         string ParseAttributeName()
@@ -1076,7 +1077,7 @@ internal partial class Parser
         }
            
         
-        bool ParseAttribute(string tagName, bool startsFromClosingTag)
+        bool ParseAttribute(string tagName, bool startsFromClosingTag, HtmlElement el)
         {
             string name = ParseAttributeName();
 
@@ -1088,14 +1089,14 @@ internal partial class Parser
             
             if (LookaheadForClosingTag())
             {
-                CloseTag(tagName, startsFromClosingTag);
+                CloseTag(tagName, startsFromClosingTag, el);
                 return true;
             }
             
             return false;
         }
         
-        bool CloseTag(string tagName, bool startsFromClosingTag)
+        bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement el)
         {
             if (tagName == "html")
             {
@@ -1113,9 +1114,10 @@ internal partial class Parser
             }
 
             bool parseContent = false;
+            string tagText = GetCurrentLexeme();
+            
             if (!startsFromClosingTag)
             {
-                string tagText = GetCurrentLexeme();
                 bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
                 bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
                 parseContent = !isSelfClosed && !isSelfClosing;
@@ -1125,16 +1127,16 @@ internal partial class Parser
                     if (tagText == "<text>") // "<text>" has a special meaning only when exactly matched. Any modification like "<text >" will be rendered as a normal tag
                     {
                         DiscardCurrentLexeme();
-                        ParseHtmlOrPlaintextUntilClosingTag(tagName);
+                        ParseHtmlOrPlaintextUntilClosingTag(tagName, el);
                     }
                     else if (tagName is "script" or "style") // raw text elements
                     {
                         ParsePlaintextUntilClosingTag(tagName);
-                        ParseHtmlClosingTag(tagName);
+                        ParseHtmlClosingTag(tagName, el);
                     }
                     else
                     {
-                        ParseHtmlOrPlaintextUntilClosingTag(tagName);
+                        ParseHtmlOrPlaintextUntilClosingTag(tagName, el);
                     }
                 }
             }
@@ -1146,7 +1148,7 @@ internal partial class Parser
                 string h = "";
             }
             
-            if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>")
+            if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>" && source?.Substring(el.CharFrom, 6) == "<text>") // <text>
             {
                 DiscardCurrentLexeme();
                 return parseContent;
@@ -1157,7 +1159,7 @@ internal partial class Parser
         }
 
             // parser has to be positioned at opening < of the closing tag
-        string ParseHtmlClosingTag(string openingTagName)
+        string ParseHtmlClosingTag(string openingTagName, HtmlElement el)
         {
             ParseWhitespaceAndNewlines(Sides.Client);
             if (Peek() != '<')
@@ -1178,7 +1180,7 @@ internal partial class Parser
                     continue;
                 }
                 
-                bool shouldEnd = LookaheadForAttributeOrClose(closingTagName, true);
+                bool shouldEnd = LookaheadForAttributeOrClose(closingTagName, true, el);
                 if (shouldEnd)
                 {
                     break;
@@ -1213,7 +1215,7 @@ internal partial class Parser
             }
         }
         
-        void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName)
+        void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName, HtmlElement el)
         {
             AddToken(TokenTypes.Text);
             string s = GetCurrentLexeme();
@@ -1235,7 +1237,7 @@ internal partial class Parser
                 {
                     if (Peek(2) == '/' && IsHtmlTagOpeningChar(Peek(3)))
                     {
-                        string closingName = ParseHtmlClosingTag(openingTagName);
+                        string closingName = ParseHtmlClosingTag(openingTagName, el);
                         if (string.Equals($"/{openingTagName}", closingName, StringComparison.InvariantCultureIgnoreCase))
                         {
                             AddToken(TokenTypes.Text);
