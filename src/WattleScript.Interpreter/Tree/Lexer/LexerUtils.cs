@@ -148,6 +148,7 @@ namespace WattleScript.Interpreter.Tree
 			string hexprefix = "";
 			string val = "";
 			bool zmode = false;
+			bool smart_unicode = false;
 
 			foreach (char c in str)
 			{
@@ -228,26 +229,53 @@ namespace WattleScript.Interpreter.Tree
 					}
 					else
 					{
-						if (unicode_state == 1)
+						void EndSequence()
 						{
-							if (c != '{')
-								throw new SyntaxErrorException(token, "'{' expected near '\\u'");
-
-							unicode_state = 2;
-						}
-						else if (unicode_state == 2)
-						{
-							if (c == '}')
+							try
 							{
 								int i = int.Parse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 								sb.Append(ConvertUtf32ToChar(i));
 								unicode_state = 0;
 								val = string.Empty;
 								escape = false;
+								smart_unicode = false;
+							}
+							catch (Exception e)
+							{
+								
+							}
+						}
+						
+						if (unicode_state == 1)
+						{
+							if (c != '{')
+							{
+								//throw new SyntaxErrorException(token, "'{' expected near '\\u'");
+								smart_unicode = true;
+								val += c;
+							}
+							
+							unicode_state = 2;
+						}
+						else if (unicode_state == 2)
+						{
+							if (!smart_unicode && c == '}')
+							{
+								EndSequence();
 							}
 							else if (val.Length >= 8)
 							{
-								throw new SyntaxErrorException(token, "'}' missing, or unicode code point too large after '\\u'");
+								if (smart_unicode)
+								{
+									throw new SyntaxErrorException(token, "Unicode code point too large after '\\u' (max 8 chars)");
+								}
+								
+								throw new SyntaxErrorException(token, "'}' missing, or unicode code point too large after '\\u' (max 8 chars)");
+							}
+							else if (smart_unicode && !CharIsHexDigit(c))
+							{
+								EndSequence();
+								goto redo;
 							}
 							else
 							{
