@@ -78,15 +78,11 @@ namespace WattleScript.Interpreter.Platforms
 				return;
 
 			IsRunningInBrowser = RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
-			
-			IsRunningOnUnity = AppDomain.CurrentDomain
-				.GetAssemblies()
-				.SelectMany(a => a.SafeGetTypes())
-				.Any(t => t.FullName.StartsWith("UnityEngine."));
+
+			IsRunningOnUnity = (Type.GetType("UnityEngine.MonoBehaviour") != null);
 
 			IsRunningOnMono = (Type.GetType("Mono.Runtime") != null);
-			
-			
+
 			IsRunningOnClr4 = true;
 			
 			m_AutoDetectionsDone = true;
