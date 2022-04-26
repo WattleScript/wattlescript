@@ -148,10 +148,12 @@ namespace WattleScript.Interpreter.Tree
 			string hexprefix = "";
 			string val = "";
 			bool zmode = false;
+			bool parsing_unicode_without_brks = false;
 
-			foreach (char c in str)
+			for (int i = 0; i < str.Length; i++)
 			{
-			redo:
+				redo:
+				char c = str[i];
 				if (escape)
 				{
 					if (val.Length == 0 && !hex && unicode_state == 0)
@@ -159,54 +161,79 @@ namespace WattleScript.Interpreter.Tree
 						switch (c)
 						{
 							case 'a':
-								sb.Append('\a'); escape = false; zmode = false;
+								sb.Append('\a');
+								escape = false;
+								zmode = false;
 								break;
 							case '\r':
 								break; // this makes \\r\n -> \\n
 							case '\n':
-								sb.Append('\n'); escape = false;
+								sb.Append('\n');
+								escape = false;
 								break;
 							case 'b':
-								sb.Append('\b'); escape = false;
+								sb.Append('\b');
+								escape = false;
 								break;
 							case 'f':
-								sb.Append('\f'); escape = false;
+								sb.Append('\f');
+								escape = false;
 								break;
 							case 'n':
-								sb.Append('\n'); escape = false;
+								sb.Append('\n');
+								escape = false;
 								break;
 							case 'r':
-								sb.Append('\r'); escape = false;
+								sb.Append('\r');
+								escape = false;
 								break;
 							case 't':
-								sb.Append('\t'); escape = false;
+								sb.Append('\t');
+								escape = false;
 								break;
 							case 'v':
-								sb.Append('\v'); escape = false;
+								sb.Append('\v');
+								escape = false;
 								break;
 							case '\\':
-								sb.Append('\\'); escape = false; zmode = false;
+								sb.Append('\\');
+								escape = false;
+								zmode = false;
 								break;
 							case '"':
-								sb.Append('\"'); escape = false; zmode = false;
+								sb.Append('\"');
+								escape = false;
+								zmode = false;
 								break;
 							case '\'':
-								sb.Append('\''); escape = false; zmode = false;
+								sb.Append('\'');
+								escape = false;
+								zmode = false;
 								break;
 							case '[':
-								sb.Append('['); escape = false; zmode = false;
+								sb.Append('[');
+								escape = false;
+								zmode = false;
 								break;
 							case ']':
-								sb.Append(']'); escape = false; zmode = false;
+								sb.Append(']');
+								escape = false;
+								zmode = false;
 								break;
 							case '{':
-								sb.Append('{'); escape = false; zmode = false;
+								sb.Append('{');
+								escape = false;
+								zmode = false;
 								break;
 							case '}':
-								sb.Append('}'); escape = false; zmode = false;
+								sb.Append('}');
+								escape = false;
+								zmode = false;
 								break;
 							case '`':
-								sb.Append('`'); escape = false; zmode = false;
+								sb.Append('`');
+								escape = false;
+								zmode = false;
 								break;
 							case 'x':
 								hex = true;
@@ -215,11 +242,15 @@ namespace WattleScript.Interpreter.Tree
 								unicode_state = 1;
 								break;
 							case 'z':
-								zmode = true; escape = false;
+								zmode = true;
+								escape = false;
 								break;
 							default:
 							{
-								if (CharIsDigit(c)) { val = val + c; }
+								if (CharIsDigit(c))
+								{
+									val = val + c;
+								}
 								else throw new SyntaxErrorException(token, "invalid escape sequence near '\\{0}'", c);
 
 								break;
@@ -228,26 +259,58 @@ namespace WattleScript.Interpreter.Tree
 					}
 					else
 					{
+						void EndSequence()
+						{
+							try
+							{
+								if (int.TryParse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int parsedVal))
+								{
+									sb.Append(ConvertUtf32ToChar(parsedVal));
+									unicode_state = 0;
+									val = string.Empty;
+									escape = false;
+									parsing_unicode_without_brks = false;
+								}
+								else
+								{
+									throw new SyntaxErrorException(token, $"Parsing unicode sequence failed at index {i}, char '{c}'. {val} could not be parsed to an int.");
+								}
+							}
+							catch (Exception e)
+							{
+								throw new SyntaxErrorException(token, $"Parsing unicode sequence failed at index {i} '{c}'. Native message: {e.Message}");
+							}
+						}
+
 						if (unicode_state == 1)
 						{
 							if (c != '{')
-								throw new SyntaxErrorException(token, "'{' expected near '\\u'");
+							{
+								parsing_unicode_without_brks = true;
+								val += c;
+							}
 
 							unicode_state = 2;
 						}
 						else if (unicode_state == 2)
 						{
-							if (c == '}')
+							if (!parsing_unicode_without_brks && c == '}')
 							{
-								int i = int.Parse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-								sb.Append(ConvertUtf32ToChar(i));
-								unicode_state = 0;
-								val = string.Empty;
-								escape = false;
+								EndSequence();
 							}
 							else if (val.Length >= 8)
 							{
-								throw new SyntaxErrorException(token, "'}' missing, or unicode code point too large after '\\u'");
+								if (parsing_unicode_without_brks)
+								{
+									throw new SyntaxErrorException(token, "Unicode code point too large after '\\u' (max 8 chars)");
+								}
+
+								throw new SyntaxErrorException(token, "'}' missing, or unicode code point too large after '\\u' (max 8 chars)");
+							}
+							else if (parsing_unicode_without_brks && !CharIsHexDigit(c))
+							{
+								EndSequence();
+								goto redo;
 							}
 							else
 							{
@@ -261,10 +324,16 @@ namespace WattleScript.Interpreter.Tree
 								val += c;
 								if (val.Length == 2)
 								{
-									int i = int.Parse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-									sb.Append(ConvertUtf32ToChar(i));
-									zmode = false;
-									escape = false;
+									if (int.TryParse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int parsedVal))
+									{
+										sb.Append(ConvertUtf32ToChar(parsedVal));
+										zmode = false;
+										escape = false;
+									}
+									else
+									{
+										throw new SyntaxErrorException(token, $"Parsing hexadecimal number failed. Parsed value: {val}", hexprefix, val, c);
+									}
 								}
 							}
 							else
@@ -281,18 +350,23 @@ namespace WattleScript.Interpreter.Tree
 
 							if (val.Length == 3 || !CharIsDigit(c))
 							{
-								int i = int.Parse(val, CultureInfo.InvariantCulture);
+								if (int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedVal))
+								{
+									if (parsedVal > 255)
+										throw new SyntaxErrorException(token, "decimal escape too large near '\\{0}'", val);
 
-								if (i > 255)
-									throw new SyntaxErrorException(token, "decimal escape too large near '\\{0}'", val);
+									sb.Append(ConvertUtf32ToChar(parsedVal));
 
-								sb.Append(ConvertUtf32ToChar(i));
+									zmode = false;
+									escape = false;
 
-								zmode = false;
-								escape = false;
-
-								if (!CharIsDigit(c))
-									goto redo;
+									if (!CharIsDigit(c))
+										goto redo;	
+								}
+								else
+								{
+									throw new SyntaxErrorException(token, $"decimal escape parsing failed. {val} could not be parsed to an int");
+								}
 							}
 						}
 					}
@@ -313,6 +387,22 @@ namespace WattleScript.Interpreter.Tree
 							zmode = false;
 						}
 					}
+				}
+			}
+
+			if (parsing_unicode_without_brks)
+			{
+				if (int.TryParse(val, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int parsedVal))
+				{
+					sb.Append(ConvertUtf32ToChar(parsedVal));
+					unicode_state = 0;
+					val = string.Empty;
+					escape = false;
+					parsing_unicode_without_brks = false;
+				}
+				else
+				{
+					throw new SyntaxErrorException(token, $"Parsing unicode sequence failed at index {str.Length - 1}, char '{str[str.Length - 1]}'. {val} could not be parsed to an int.");
 				}
 			}
 
