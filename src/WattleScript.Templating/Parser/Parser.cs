@@ -1206,7 +1206,7 @@ internal partial class Parser
                     continue;
                 }
                 
-                if (Peek() == '<' && Peek(2) == '/' && PeekRange(3, openingTagName.Length) == openingTagName && IsWhitespaceOrNewline(Peek(4 + openingTagName.Length)))
+                if (Peek() == '<' && Peek(2) == '/' && PeekRange(3, openingTagName.Length) == openingTagName) // && IsWhitespaceOrNewline(Peek(4 + openingTagName.Length))
                 {
                     break;
                 }
