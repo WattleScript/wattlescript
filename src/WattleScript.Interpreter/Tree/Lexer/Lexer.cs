@@ -579,15 +579,8 @@ namespace WattleScript.Interpreter.Tree
 				case '`':
 				{
 					char next = CursorCharNext();
-					if (next == '`')
-					{
-						PushTemplateString();
-						return ReadTemplateString(fromLine, fromCol, true);
-					}
-					throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar())
-					{
-						IsPrematureStreamTermination = true
-					};
+					PushTemplateString();
+					return ReadTemplateString(fromLine, fromCol, true);
 				}
 				case '"':
 				case '\'':
@@ -613,13 +606,12 @@ namespace WattleScript.Interpreter.Tree
 					throw new SyntaxErrorException(CreateToken(TokenType.Invalid, fromLine, fromCol), "unexpected symbol near '{0}'", CursorChar());
 			}
 		}
-
-
+		
 		Token ReadTemplateString(int fromLine, int fromCol, bool isStart)
 		{
 			StringBuilder text = new StringBuilder(32);
 			
-			for (char c = CursorCharNext(); CursorNotEof(); c = CursorCharNext())
+			for (char c = isStart ? CursorChar() : CursorCharNext(); CursorNotEof(); c = CursorCharNext())
 			{
 				redo_Loop:
 
@@ -656,9 +648,8 @@ namespace WattleScript.Interpreter.Tree
 					t.Text = LexerUtils.UnescapeLuaString(t, text.ToString());
 					return t;
 				}
-				else if (c == '`' && CursorMatches("``"))
+				else if (c == '`')
 				{
-					CursorCharNext();
 					CursorCharNext();
 					PopTemplateString();
 					Token t = CreateToken(isStart ? TokenType.String_Long : TokenType.String_EndTemplate, fromLine, fromCol);
@@ -1039,6 +1030,7 @@ namespace WattleScript.Interpreter.Tree
 			Token t = new Token(tokenType, m_SourceId, fromLine, fromCol, m_Line, m_Col, m_PrevLineTo, m_PrevColTo)
 			{
 				Text = text
+				
 			};
 			m_PrevLineTo = m_Line;
 			m_PrevColTo = m_Col;
