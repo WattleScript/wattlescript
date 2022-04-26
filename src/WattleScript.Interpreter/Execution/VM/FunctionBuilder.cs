@@ -276,11 +276,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			//AppendInstruction(new Instruction() { OpCode = OpCode.Debug, String = str.Substring(0, Math.Min(32, str.Length)) });
 		}
 
-		//TODO: We should be handling clean ops better. This micro-optimisation should not be needed
+		// Skips emitting clean ops that would be interpreted as a nop by the VM
+		// Saves us a little bit of space
 		void PossibleCleanOp(int from, int to)
 		{
 			if (to >= from)
+			{
 				AppendInstruction(new Instruction(OpCode.Clean, from, to));
+			}
 		}
 
 		public void Emit_Enter(RuntimeScopeBlock runtimeScopeBlock)
@@ -300,7 +303,8 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public void Emit_Clean(RuntimeScopeBlock runtimeScopeBlock)
 		{
-			PossibleCleanOp(runtimeScopeBlock.To + 1, runtimeScopeBlock.ToInclusive);
+			//This one needs to be a possible nop for Label statements to work correctly
+			AppendInstruction(new Instruction(OpCode.Clean, runtimeScopeBlock.To + 1, runtimeScopeBlock.ToInclusive));
 		}
 
 		public int Emit_CloseUp(SymbolRef sym)
