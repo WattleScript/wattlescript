@@ -37,6 +37,9 @@ internal partial class Parser
     private int lastCommitedLine;
     private char c;
     private int col;
+    private int storedLine;
+    private int storedCol;
+    private char storedC;
     private StringBuilder currentLexeme = new StringBuilder();
     private int line = 1;
     private Script? script;
@@ -44,7 +47,7 @@ internal partial class Parser
     private bool parsingTransitionCharactersEnabled = true;
     private Document document;
     private List<TagHelper>? tagHelpers;
-    private Stack<HtmlElement> openElements = new Stack<HtmlElement>();
+    private List<HtmlElement?> openElements = new List<HtmlElement?>();
     private bool parsingBlock = false;
     private List<Exception> fatalExceptions = new List<Exception>();
     private List<Exception> recoveredExceptions = new List<Exception>();
@@ -826,7 +829,8 @@ internal partial class Parser
                 {
                     if (stringChar == chr)
                     {
-                        inString = false;   
+                        inString = false;
+                        AddToken(TokenTypes.BlockExpr);
                     }
                 }
             }
@@ -882,15 +886,25 @@ internal partial class Parser
                         continue;
                     }
                     
-                    if (Peek() == '<' && IsHtmlTagOpeningChar(Peek(2)))
+                    if (Peek() == '<')
                     {
-                        if (allowHtml || LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
+                        if (IsHtmlTagOpeningChar(Peek(2)))
                         {
-                            StepEol();
-                            AddToken(TokenTypes.BlockExpr);
-                            ParseHtmlTag(null);
+                            if (allowHtml || LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
+                            {
+                                StepEol();
+                                string ss = GetCurrentLexeme();
+                                AddTokenSplitRightTrim(TokenTypes.BlockExpr, TokenTypes.Text);
+                                ParseHtmlTag(null);
                             
-                            allowHtml = true;
+                                allowHtml = true;
+                                continue;
+                            }   
+                        }
+                        else if (Peek(2) == '/')
+                        {
+                            // closing tag without opening is fatal
+                            ParseHtmlClosingTag("", null, false);
                             continue;
                         }
                     }
@@ -916,14 +930,19 @@ internal partial class Parser
             string str = GetCurrentLexeme();
         }
 
-        string ParseHtmlTagName(bool inBuffer)
+        string ParseHtmlTagName(bool inBuffer, int offset = 1)
         {
             StringBuilder sb = new StringBuilder();
             
             if (inBuffer)
             {
-                ClearBuffer();
+                ClearBuffer(true);
                 SetStepMode(StepModes.Buffer);   
+            }
+
+            if (offset > 1 && inBuffer)
+            {
+                pos += offset - 1;
             }
 
             // Tag name can be provided via a server transition so we have to check for that
@@ -935,7 +954,7 @@ internal partial class Parser
                 char chr = Peek();
                 string lexeme = GetCurrentLexeme();
                 
-                Throw("First char after < in an opening HTML tag must be _, ! or alpha");
+                Throw("First char after < in an  HTML tag must be _, !, / or alpha");
             }
             else
             {
@@ -944,7 +963,7 @@ internal partial class Parser
             }
 
             // The next few chars represent element's name
-            while (!IsAtEnd() && (IsAlphaNumeric(Peek())))
+            while (!IsAtEnd() && IsHtmlTagChar(Peek()))
             {
                 bool shouldContinue = LookaheadForTransitionServerSide();
                 if (shouldContinue)
@@ -966,7 +985,7 @@ internal partial class Parser
                 string tagName = GetBuffer();
             
                 AddBufferToCurrentLexeme();
-                ClearBuffer();
+                ClearBuffer(false);
                 SetStepMode(StepModes.CurrentLexeme);
             
                 return tagName;   
@@ -1016,7 +1035,7 @@ internal partial class Parser
             return true;
         }
         
-        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag, HtmlElement el)
+        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag, HtmlElement? el)
         {
             if (LookaheadForClosingTag())
             {
@@ -1116,7 +1135,7 @@ internal partial class Parser
             return false;
         }
         
-        bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement el)
+        bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement? el)
         {
             if (tagName == "html")
             {
@@ -1135,13 +1154,15 @@ internal partial class Parser
 
             bool parseContent = false;
             string tagText = GetCurrentLexeme();
-            
+
             if (!startsFromClosingTag)
             {
                 bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
                 bool isSelfClosed = CurrentLexemeIsSelfClosedHtmlTag();
-                parseContent = !isSelfClosed && !isSelfClosing;
-        
+                bool startsWithSlash = tagName.StartsWith('/');
+                
+                parseContent = !isSelfClosed && !isSelfClosing && !startsWithSlash;
+
                 if (parseContent)
                 {
                     if (tagText == "<text>") // "<text>" has a special meaning only when exactly matched. Any modification like "<text >" will be rendered as a normal tag
@@ -1152,7 +1173,7 @@ internal partial class Parser
                     else if (tagName is "script" or "style") // raw text elements
                     {
                         ParsePlaintextUntilClosingTag(tagName);
-                        ParseHtmlClosingTag(tagName, el);
+                        ParseHtmlClosingTag(tagName, el, false);
                     }
                     else
                     {
@@ -1161,7 +1182,7 @@ internal partial class Parser
                 }
                 else
                 {
-                    HtmlElement ell = openElements.Peek();
+                    HtmlElement? ell = openElements.Peek();
                     if (ell == el)
                     {
                         openElements.Pop();
@@ -1176,7 +1197,7 @@ internal partial class Parser
                 string h = "";
             }
             
-            if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>" && source?.Substring(el.CharFrom, 6) == "<text>") // <text>
+            if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>" && el != null && source?.Substring(el.CharFrom, 6) == "<text>") // <text>
             {
                 DiscardCurrentLexeme();
                 return parseContent;
@@ -1187,7 +1208,7 @@ internal partial class Parser
         }
 
             // parser has to be positioned at opening < of the closing tag
-        string ParseHtmlClosingTag(string openingTagName, HtmlElement el)
+        string ParseHtmlClosingTag(string openingTagName, HtmlElement? el, bool inBuffer)
         {
             ParseWhitespaceAndNewlines(Sides.Client);
             if (Peek() != '<')
@@ -1196,7 +1217,7 @@ internal partial class Parser
             }
 
             char chr = Step(); // has to be <
-            string closingTagName = ParseHtmlTagName(false);
+            string closingTagName = ParseHtmlTagName(inBuffer);
 
             //ParseUntilBalancedChar('<', '>', true, true, true);
  
@@ -1274,28 +1295,48 @@ internal partial class Parser
                 {
                     if (Peek(2) == '/' && IsHtmlTagOpeningChar(Peek(3)))
                     {
-                        string closingName = ParseHtmlClosingTag(openingTagName, el);
-                        HtmlElement openEl = openElements.Peek();
+                        string str = GetCurrentLexeme();
+                        AddToken(TokenTypes.Text);
                         
-                        if (string.Equals($"/{openingTagName}", closingName, StringComparison.InvariantCultureIgnoreCase))
+                        string closingNameLookahead = ParseHtmlTagName(true, 3); // skip </ and parse name in buffer
+                        DiscardCurrentLexeme(); // parsed name is added to lexeme, discard
+                        
+                        HtmlElement? openEl = openElements.Peek();
+                        
+                        if (string.Equals(openingTagName, closingNameLookahead, StringComparison.InvariantCultureIgnoreCase))
                         {
+                            str = GetCurrentLexeme();
+                            
+                            string closingNameParsed = ParseHtmlClosingTag(openingTagName, el, false);
                             AddToken(TokenTypes.Text);
                             openElements.Pop();
                             return;
                         }
-
-                        if (closingName.StartsWith('/'))
+                        
+                        // recovery: close top item on stack
+                        if (openElements.Count > 0)
                         {
-                            // recovery: close entire stack
-                            while (openElements.Count > 0)
+                            // [todo]
+                            // here two actions can take place based on the context
+                            // 1) peeked element is superfluous and doesn't have an opening element -> <div></option></div>
+                            // 2) peeked element encloses another element that is already in opened elements -> <div><a></a></div>
+                            if (openElements.FirstOrDefault(x => string.Equals(x?.Name, closingNameLookahead, StringComparison.InvariantCultureIgnoreCase)) == null)
                             {
-                                HtmlElement rel = openElements.Pop();
-                                rel.Recovery = true;
+                                ParseHtmlTag(openingTagName);   
                             }
-                            
-                            AddToken(TokenTypes.Text);
-                            return;
+                            else
+                            {
+                                HtmlElement? rel = openElements.Pop();
+                                if (rel != null)
+                                {
+                                    rel.Recovery = true;   
+                                }
+                            }
                         }
+                        
+                        string lex = GetCurrentLexeme();
+                        AddToken(TokenTypes.Text);
+                        return;
                     }
   
                     if (IsHtmlTagOpeningChar(Peek(2)))

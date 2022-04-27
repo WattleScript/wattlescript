@@ -37,6 +37,11 @@ internal partial class Parser
         return IsDigit(ch) || IsAlpha(ch);
     }
 
+    bool IsHtmlTagChar(char ch)
+    {
+        return IsAlphaNumeric(ch) || ch == ':' || ch == '-';
+    }
+
     bool IsAlpha(char ch)
     {
         return char.IsLetter(ch) || ch is '_';
@@ -69,7 +74,7 @@ internal partial class Parser
         {
             Buffer.Append(cc);
         }
-
+        
         col += i;
         pos += i;
         c = cc;
@@ -100,18 +105,26 @@ internal partial class Parser
     void StorePos()
     {
         storedPos = pos;
+        storedCol = col;
+        storedLine = line;
     }
 
     void RestorePos()
     {
         pos = storedPos;
-        if (pos >= source.Length)
+        if (source != null && pos >= source.Length)
         {
             pos = source.Length - 1;
         }
         
         storedPos = 0;
-        c = source[pos];
+        if (source != null)
+        {
+            c = source[pos];
+        }
+        
+        col = storedCol;
+        line = storedLine;
         DiscardCurrentLexeme();
     }
 
@@ -188,6 +201,37 @@ internal partial class Parser
         return IsSelfClosing(htmlTag.ToLowerInvariant().Replace("!", ""));
     }
 
+    bool AddTokenSplitRightTrim(TokenTypes lhsType, TokenTypes rhsType)
+    {
+        string str = GetCurrentLexeme();
+        string lhs = str.TrimEnd();
+        
+        int dif = str.Length - lhs.Length;
+        bool any = false;
+        
+        if (lhs.Length > 0)
+        {
+            currentLexeme.Clear();
+            currentLexeme.Append(lhs);
+            any = AddToken(lhsType);   
+        }
+
+        if (dif > 0)
+        {
+            string rhs = str.Substring(str.Length - dif);
+            currentLexeme.Clear();
+            currentLexeme.Append(rhs);
+            bool any2 = AddToken(rhsType);
+
+            if (!any)
+            {
+                any = any2;
+            }
+        }
+
+        return any;
+    }
+    
     bool AddToken(TokenTypes type)
     {
         if (currentLexeme.Length == 0)
@@ -254,9 +298,24 @@ internal partial class Parser
             or "doctype";
     }
     
-    void ClearBuffer()
+    void ClearBuffer(bool start)
     {
         Buffer.Clear();
+
+        if (start)
+        {
+            storedCol = col;
+            storedLine = line;
+            storedC = c;
+            storedPos = pos;
+        }
+        else
+        {
+            col = storedCol;
+            line = storedLine;
+            c = storedC;
+            pos = storedPos;
+        }
     }
 
     void SetStepMode(StepModes mode)
@@ -291,5 +350,10 @@ internal partial class Parser
         }
 
         return false;
+    }
+
+    void DiscardTokensAfter(int n)
+    {
+        Tokens = Tokens.GetRange(0, n);
     }
 }
