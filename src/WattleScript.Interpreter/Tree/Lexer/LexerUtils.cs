@@ -150,8 +150,7 @@ namespace WattleScript.Interpreter.Tree
 			bool zmode = false;
 			bool parsing_unicode_without_brks = false;
 			bool second_sequence = false;
-			int unicode_sequence_max_digits = 4;
-			
+
 			int SafeHexParse(string n)
 			{
 				if (int.TryParse(n, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int parsedVal))
@@ -162,9 +161,9 @@ namespace WattleScript.Interpreter.Tree
 				return -1;
 			}
 			
-			void HandleUnicode(int index, char c)
+			void HandleUnicode(int index, char c, bool surrogates)
 			{
-				if (unicode_sequence_max_digits == 8)
+				if (surrogates)
 				{
 					if (val.Length != 8)
 					{
@@ -328,7 +327,7 @@ namespace WattleScript.Interpreter.Tree
 						{
 							if (!parsing_unicode_without_brks && c == '}')
 							{
-								HandleUnicode(i, c);
+								HandleUnicode(i, c, false);
 							}
 							else if (val.Length > 8)
 							{
@@ -339,25 +338,36 @@ namespace WattleScript.Interpreter.Tree
 
 								throw new SyntaxErrorException(token, "'}' missing, or unicode code point too large after '\\u' (max 8 chars)");
 							}
-							else if (parsing_unicode_without_brks && !CharIsHexDigit(c) || val.Length >= unicode_sequence_max_digits) // \uABCD. If more than 4 hex digits are required, two sequences are expected \uABCD\uEFHG 
+							else if (parsing_unicode_without_brks && !CharIsHexDigit(c) || val.Length >= 4) // \uABCD. If more than 4 hex digits are required, two sequences are expected \uABCD\uEFHG 
 							{
-								if (c == '\\' && !second_sequence && str.Length > i + 1 && str[i + 1] == 'u') // peek \u
+								if (c == '\\' && !second_sequence && str.Length > i + 5 && str[i + 1] == 'u') // peek \uXXXX
 								{
 									// 1. peeked sequence is a part of the current sequence if the current sequence is \uD800-\uDBFF (high surrogate)
-									int currentPair = SafeHexParse(val);
+									int currentSequence = SafeHexParse(val);
 
-									if (currentPair == -1 || !(currentPair >= 0xD800 && currentPair <= 0xDBFF))
+									if (currentSequence == -1 || !(currentSequence >= 0xD800 && currentSequence <= 0xDBFF))
 									{
 										goto parseAsSingleSequence;
 									}
+									
+									// 2. peeked sequence also has to be a low surrogate \uDC00-\uDFFF
+									string low = str.Substring(i + 2, 4);
+									int lowSequence = SafeHexParse(low);
 
-									unicode_sequence_max_digits <<= 1;
-									i++;
+									if (lowSequence == -1 || !(lowSequence >= 0xDC00 && lowSequence <= 0xDFFF))
+									{
+										goto parseAsSingleSequence;
+									}
+									
+									val += low;
+									HandleUnicode(i, c, true);
+
+									i += 5;
 									continue;
 								}
 								
 								parseAsSingleSequence:
-								HandleUnicode(i, c);
+								HandleUnicode(i, c, false);
 								goto redo;
 							}
 							else
@@ -440,7 +450,7 @@ namespace WattleScript.Interpreter.Tree
 
 			if (parsing_unicode_without_brks)
 			{
-				HandleUnicode(str.Length - 1, str[str.Length - 1]);
+				HandleUnicode(str.Length - 1, str[str.Length - 1], false);
 			}
 
 			if (escape && !hex && val.Length > 0)
