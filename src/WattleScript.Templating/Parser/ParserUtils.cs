@@ -16,6 +16,12 @@ internal partial class Parser
         DoubleHyphen, // <!-- -->
         Cdata // <![ can end with ]]> or --> 
     }
+
+    internal enum HtmlTagParsingModes
+    {
+        Native,
+        TagHelper
+    }
     
     void ClearPooledBuilder()
     {

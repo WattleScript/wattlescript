@@ -10,17 +10,39 @@ public class TemplatingEngine
     private readonly TemplatingEngineOptions options;
     private readonly Script script;
     private StringBuilder stdOut = new StringBuilder();
-    private readonly List<TagHelper> tagHelpers;
-    
+    internal StringBuilder stdOutTagHelper = new StringBuilder();
+    public readonly List<TagHelper> tagHelpers;
+    internal Dictionary<string, TagHelper> tagHelpersMap = new Dictionary<string, TagHelper>();
+    internal readonly Script tagHelpersScript;
+
     public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
     {
         options ??= TemplatingEngineOptions.Default;
         this.options = options;
         this.script = script ?? throw new ArgumentNullException(nameof(script));
         this.tagHelpers = tagHelpers ?? new List<TagHelper>();
+
+        foreach (TagHelper th in this.tagHelpers)
+        {
+            if (tagHelpersMap.ContainsKey(th.Name.ToLowerInvariant()))
+            {
+                // [todo] err, tag helper duplicate name
+            }
+
+            tagHelpersMap.TryAdd(th.Name.ToLowerInvariant(), th);
+        }
         
         script.Globals["stdout_line"] = PrintLine;
         script.Globals["stdout"] = Print;
+
+        tagHelpersScript = new Script(CoreModules.Preset_HardSandbox);
+        tagHelpersScript.Options.IndexTablesFrom = 0;
+        tagHelpersScript.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
+        tagHelpersScript.Options.Syntax = ScriptSyntax.WattleScript;
+        tagHelpersScript.Options.Directives.Add("using");
+        
+        tagHelpersScript.Globals["stdout_line"] = PrintTaghelper;
+        tagHelpersScript.Globals["stdout"] = PrintTaghelper;
     }
     
     string EncodeJsString(string s)
@@ -120,7 +142,7 @@ public class TemplatingEngine
             return "";
         }
         
-        Parser parser = new Parser(script, tagHelpers);
+        Parser parser = new Parser(this, script);
         List<Token> tokens = parser.Parse(code);
         pooledSb.Clear();
         
@@ -145,7 +167,7 @@ public class TemplatingEngine
             return "";
         }
         
-        Parser parser = new Parser(script, tagHelpers);
+        Parser parser = new Parser(this, script);
         List<Token> tokens = parser.Parse(code);
 
         StringBuilder sb = new StringBuilder();
@@ -206,10 +228,51 @@ public class TemplatingEngine
 
         IReadOnlyList<Annotation>? annots = dv.Function.Annotations;
 
-        //Table ctx = new Table(script);
-        //await renderFn.Function.CallAsync(ctx);
+        if (annots == null)
+        {
+            // [todo] err, mandatory annot "name" not found
+            return;
+        }
+        
+        Annotation? nameAnnot = annots.FirstOrDefault(x => x.Name == "name");
 
-        //tagHelpers.Add(new TagHelper());
+        if (nameAnnot == null)
+        {
+            // [todo] err, mandatory annot "name" not found
+            return;
+        }
+
+        if (nameAnnot.Value.Type != DataType.Table)
+        {
+            // [todo] err, annot not valid, possibly wrong annot mode is used
+            return;
+        }
+        
+        Table tbl = nameAnnot.Value.Table;
+
+        if (tbl.Length < 1)
+        {
+            // [todo] err, annot "name" is empty
+            return;
+        }
+
+        DynValue nameDv = tbl.Values.First();
+
+        if (nameDv.Type != DataType.String)
+        {
+            // [todo] err, annot "name" is something else than string
+            return;
+        }
+
+        string name = nameDv.String;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            // [todo] err, annot "name" is empty
+            return;
+        }
+        
+        tagHelpers.Add(new TagHelper(nameDv.String, transpiledTemplate));
     }
 
     public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)
@@ -231,6 +294,11 @@ public class TemplatingEngine
     private void Print(Script script, CallbackArguments args)
     {
         stdOut.Append(args[0].CastToString());
+    }
+    
+    private void PrintTaghelper(Script script, CallbackArguments args)
+    {
+        stdOutTagHelper.Append(args[0].CastToString());
     }
     
     public class RenderResult

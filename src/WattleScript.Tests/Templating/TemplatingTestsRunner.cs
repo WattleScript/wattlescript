@@ -14,17 +14,37 @@ namespace WattleScript.Interpreter.Tests.Templating;
 public class TemplatingTestsRunner
 {
     private const string ROOT_FOLDER = "Templating/Tests";
-
+    private static Filter filter = Filter.Tests;
+    private List<TagHelper> tagHelpers = new List<TagHelper>();
+    
+    enum Filter
+    {
+        Tests,
+        TagDefinitions
+    }
+    
     static string[] GetTestCases()
     {
         string[] files = Directory.GetFiles(ROOT_FOLDER, "*.wthtml*", SearchOption.AllDirectories);
-        return files;
+
+        if (filter == Filter.TagDefinitions)
+        {
+            return files.Where(x => x.Contains("TagDefinitions")).ToArray();
+        }
+
+        if (filter == Filter.Tests)
+        {
+            return files.Where(x => !x.Contains("TagDefinitions")).ToArray();
+        }
+        
+        return Array.Empty<string>();
     }
 
     [OneTimeSetUp]
     public async Task Init()
     {
-        foreach (string path in GetTestCases().Where(x => x.Contains("TagDefinitions")))
+        filter = Filter.TagDefinitions;
+        foreach (string path in GetTestCases())
         {
             string code = await File.ReadAllTextAsync(path);
             
@@ -35,16 +55,19 @@ public class TemplatingTestsRunner
             script.Options.Directives.Add("using");
 
             TemplatingEngine tmp = new TemplatingEngine(script);
-
+            
             try
             {
                 await tmp.ParseTagHelper(code);
+                tagHelpers.AddRange(tmp.tagHelpers);
             }
             catch (Exception e)
             {
                 Assert.Fail($"Error parsing tag helper definition\nPath: {path}\nMessage: {e.Message}\nStacktrace: {e.StackTrace}");
             }
         }
+
+        filter = Filter.Tests;
     }
     
     [Test, TestCaseSource(nameof(GetTestCases))]
@@ -57,12 +80,6 @@ public class TemplatingTestsRunner
     {
         string outputPath = path.Replace(".wthtml", ".html");
 
-        if (outputPath.Contains("TagDefinitions"))
-        {
-            Assert.Pass($"Tag definition (test skipped)");
-            return;
-        }
-        
         if (!File.Exists(outputPath))
         {
             Assert.Inconclusive($"Missing output file for test {path}");
@@ -78,7 +95,7 @@ public class TemplatingTestsRunner
         script.Options.Syntax = ScriptSyntax.WattleScript;
         script.Options.Directives.Add("using");
 
-        TemplatingEngine tmp = new TemplatingEngine(script);
+        TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers);
         TemplatingEngine.RenderResult rr = null;
         
         if (path.Contains("flaky"))

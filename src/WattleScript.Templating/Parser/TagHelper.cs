@@ -3,10 +3,12 @@
 public class TagHelper
 {
     public string Name { get; set; }
+    public string Template { get; set; }
 
-    public TagHelper(string name)
+    public TagHelper(string name, string template)
     {
         Name = name;
+        Template = template;
     }
 }
 

@@ -46,16 +46,18 @@ internal partial class Parser
     private StepModes stepMode = StepModes.CurrentLexeme;
     private bool parsingTransitionCharactersEnabled = true;
     private Document document;
-    private List<TagHelper>? tagHelpers;
     private List<HtmlElement?> openElements = new List<HtmlElement?>();
     private bool parsingBlock = false;
     private List<Exception> fatalExceptions = new List<Exception>();
     private List<Exception> recoveredExceptions = new List<Exception>();
+    private TemplatingEngine engine;
+    private HtmlTagParsingModes tagParsingMode = HtmlTagParsingModes.Native;
+    private int tagHelperContentStartStored = 0;
 
-    public Parser(Script? script, List<TagHelper>? tagHelpers)
+    public Parser(TemplatingEngine engine, Script? script)
     {
+        this.engine = engine;
         this.script = script;
-        this.tagHelpers = tagHelpers;
         document = new Document();
 
         KeywordsMap = new Dictionary<string, Func<bool>?>
@@ -1002,7 +1004,8 @@ internal partial class Parser
         bool ParseHtmlTag(string? parentTagName)
         {
             ParseWhitespaceAndNewlines(Sides.Client);
-
+            AddToken(TokenTypes.Text);
+            
             if (Peek() != '<')
             {
                 return false;
@@ -1014,9 +1017,13 @@ internal partial class Parser
             el.Name = tagName;
             openElements.Push(el);
             
-
-            ParseWhitespaceAndNewlines(Sides.Client);
+            if (engine.tagHelpersMap.ContainsKey(tagName.ToLowerInvariant()))
+            {
+                return ParseTagHelper(el);
+            }
             
+            ParseWhitespaceAndNewlines(Sides.Client);
+
             while (!IsAtEnd())
             {
                 bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
@@ -1031,6 +1038,49 @@ internal partial class Parser
                     break;
                 }
             }
+            
+            return true;
+        }
+
+        bool ParseTagHelper(HtmlElement el)
+        {
+            // parser is located after name in a tag
+            /*
+             * 1. we parse opening tag as normal, 
+             */
+            DiscardCurrentLexeme();
+
+            tagParsingMode = HtmlTagParsingModes.TagHelper;
+            
+            ParseWhitespaceAndNewlines(Sides.Client);
+            while (!IsAtEnd())
+            {
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+                
+                bool shouldEnd = LookaheadForAttributeOrClose(el.Name, false, el);
+                if (shouldEnd)
+                {
+                    break;
+                }
+            }
+            
+            TagHelper helper = engine.tagHelpersMap[el.Name.ToLowerInvariant()];
+
+            Table ctxTable = new Table(engine.tagHelpersScript);
+            ctxTable.Set(0, "test");
+                
+            engine.tagHelpersScript.DoString(helper.Template);
+            engine.tagHelpersScript.Globals.Get("Render").Function.Call(ctxTable);
+                
+            string tagOutput = engine.stdOutTagHelper.ToString();
+            currentLexeme.Append(tagOutput);
+
+            AddToken(TokenTypes.Text);
+            tagParsingMode = HtmlTagParsingModes.Native;
             
             return true;
         }
@@ -1155,6 +1205,11 @@ internal partial class Parser
             bool parseContent = false;
             string tagText = GetCurrentLexeme();
 
+            if (tagParsingMode == HtmlTagParsingModes.TagHelper)
+            {
+                tagHelperContentStartStored = pos;
+            }
+
             if (!startsFromClosingTag)
             {
                 bool isSelfClosing = IsSelfClosingHtmlTag(tagName);
@@ -1202,8 +1257,16 @@ internal partial class Parser
                 DiscardCurrentLexeme();
                 return parseContent;
             }
+
+            if (tagParsingMode == HtmlTagParsingModes.Native)
+            {
+                AddToken(TokenTypes.Text);   
+            }
+            else
+            {
+                DiscardCurrentLexeme();
+            }
             
-            AddToken(TokenTypes.Text);
             return parseContent;   
         }
 
