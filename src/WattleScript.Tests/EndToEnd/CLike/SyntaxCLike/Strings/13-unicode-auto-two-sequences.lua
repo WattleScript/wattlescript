@@ -1,2 +1,2 @@
-x = 'music \uD834\uDD1E!'
-print(x);
+x = 'music \uD834\uDD1E'
+print(x); 
