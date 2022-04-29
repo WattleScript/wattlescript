@@ -1,0 +1,7 @@
+@{
+    @@name("my-tag")
+    
+    function Render(context) {
+        <div>My tag!</div>
+    }
+}

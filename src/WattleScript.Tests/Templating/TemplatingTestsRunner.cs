@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -8,6 +9,8 @@ using WattleScript.Templating;
 
 namespace WattleScript.Interpreter.Tests.Templating;
 
+[TestFixture]
+[Parallelizable(ParallelScope.All)]
 public class TemplatingTestsRunner
 {
     private const string ROOT_FOLDER = "Templating/Tests";
@@ -16,6 +19,32 @@ public class TemplatingTestsRunner
     {
         string[] files = Directory.GetFiles(ROOT_FOLDER, "*.wthtml*", SearchOption.AllDirectories);
         return files;
+    }
+
+    [OneTimeSetUp]
+    public async Task Init()
+    {
+        foreach (string path in GetTestCases().Where(x => x.Contains("TagDefinitions")))
+        {
+            string code = await File.ReadAllTextAsync(path);
+            
+            Script script = new Script(CoreModules.Preset_HardSandbox);
+            script.Options.IndexTablesFrom = 0;
+            script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
+            script.Options.Syntax = ScriptSyntax.WattleScript;
+            script.Options.Directives.Add("using");
+
+            TemplatingEngine tmp = new TemplatingEngine(script);
+
+            try
+            {
+                await tmp.ParseTagHelper(code);
+            }
+            catch (Exception e)
+            {
+                Assert.Fail($"Error parsing tag helper definition\nPath: {path}\nMessage: {e.Message}\nStacktrace: {e.StackTrace}");
+            }
+        }
     }
     
     [Test, TestCaseSource(nameof(GetTestCases))]
@@ -28,6 +57,12 @@ public class TemplatingTestsRunner
     {
         string outputPath = path.Replace(".wthtml", ".html");
 
+        if (outputPath.Contains("TagDefinitions"))
+        {
+            Assert.Pass($"Tag definition (test skipped)");
+            return;
+        }
+        
         if (!File.Exists(outputPath))
         {
             Assert.Inconclusive($"Missing output file for test {path}");

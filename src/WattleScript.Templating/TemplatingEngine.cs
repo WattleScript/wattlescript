@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using WattleScript.Interpreter;
+using WattleScript.Interpreter.Execution.VM;
 
 namespace WattleScript.Templating;
 
@@ -9,14 +10,14 @@ public class TemplatingEngine
     private readonly TemplatingEngineOptions options;
     private readonly Script script;
     private StringBuilder stdOut = new StringBuilder();
-    private readonly List<TagHelper>? tagHelpers;
+    private readonly List<TagHelper> tagHelpers;
     
     public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
     {
         options ??= TemplatingEngineOptions.Default;
         this.options = options;
         this.script = script ?? throw new ArgumentNullException(nameof(script));
-        this.tagHelpers = tagHelpers;
+        this.tagHelpers = tagHelpers ?? new List<TagHelper>();
         
         script.Globals["stdout_line"] = PrintLine;
         script.Globals["stdout"] = Print;
@@ -136,7 +137,7 @@ public class TemplatingEngine
         string finalText = pooledSb.ToString();
         return finalText;
     }
-    
+
     public string Transpile(string code)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -186,6 +187,29 @@ public class TemplatingEngine
 
         string finalText = sb.ToString();
         return finalText;
+    }
+
+    public async Task ParseTagHelper(string code)
+    {
+        stdOut.Clear();
+
+        string transpiledTemplate = Transpile(code);
+        DynValue dv = script.LoadString(transpiledTemplate);
+
+        FunctionProto? renderFn = dv.Function.Function.Functions.FirstOrDefault(x => x.Name == "Render");
+
+        if (renderFn == null)
+        {
+            // [todo] err, mandatory Render() not found
+            return;
+        }
+
+        IReadOnlyList<Annotation>? annots = dv.Function.Annotations;
+
+        //Table ctx = new Table(script);
+        //await renderFn.Function.CallAsync(ctx);
+
+        //tagHelpers.Add(new TagHelper());
     }
 
     public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)

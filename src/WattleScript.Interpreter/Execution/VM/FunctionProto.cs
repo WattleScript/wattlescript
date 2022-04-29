@@ -4,18 +4,18 @@ using WattleScript.Interpreter.Debugging;
 namespace WattleScript.Interpreter.Execution.VM
 {
     [Flags]
-    enum FunctionFlags
+    internal enum FunctionFlags
     {
         None = 0x0,
         IsChunk = 0x1,
         TakesSelf = 0x2,
         ImplicitThis = 0x4
     }
-    class FunctionProto
+    public class FunctionProto
     {
         //Function Data
         public string Name;
-        public FunctionFlags Flags;
+        internal FunctionFlags Flags;
         public SymbolRef[] Locals;
         public SymbolRef[] Upvalues;
         public Annotation[] Annotations;
@@ -25,7 +25,7 @@ namespace WattleScript.Interpreter.Execution.VM
         public string[] Strings;
         public double[] Numbers;
         //Source Code
-        public Instruction[] Code;
+        internal Instruction[] Code;
         public SourceRef[] SourceRefs;
     }
 }

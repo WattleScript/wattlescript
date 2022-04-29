@@ -3,6 +3,11 @@
 public class TagHelper
 {
     public string Name { get; set; }
+
+    public TagHelper(string name)
+    {
+        Name = name;
+    }
 }
 
 public class TagHelperAttribute
