@@ -52,7 +52,6 @@ internal partial class Parser
     private List<Exception> recoveredExceptions = new List<Exception>();
     private TemplatingEngine engine;
     private HtmlTagParsingModes tagParsingMode = HtmlTagParsingModes.Native;
-    private int tagHelperContentStartStored = 0;
 
     public Parser(TemplatingEngine engine, Script? script)
     {
@@ -1067,12 +1066,15 @@ internal partial class Parser
                     break;
                 }
             }
-            
+
             TagHelper helper = engine.tagHelpersMap[el.Name.ToLowerInvariant()];
+            int contentFrom = el.ContentFrom;
+            int contentTo = el.ContentTo;
+            string contentStr = contentTo > 0 ? source.Substring(contentFrom, contentTo - contentFrom) : "";
 
             Table ctxTable = new Table(engine.tagHelpersScript);
-            ctxTable.Set(0, "test");
-                
+            ctxTable.Set(0, contentStr);
+            
             engine.tagHelpersScript.DoString(helper.Template);
             engine.tagHelpersScript.Globals.Get("Render").Function.Call(ctxTable);
                 
@@ -1205,9 +1207,17 @@ internal partial class Parser
             bool parseContent = false;
             string tagText = GetCurrentLexeme();
 
+            if (el != null)
+            {
+                if (!startsFromClosingTag)
+                {
+                    el.ContentFrom = pos;
+                }
+            }
+            
             if (tagParsingMode == HtmlTagParsingModes.TagHelper)
             {
-                tagHelperContentStartStored = pos;
+                DiscardCurrentLexeme();
             }
 
             if (!startsFromClosingTag)
@@ -1368,6 +1378,7 @@ internal partial class Parser
                         
                         if (string.Equals(openingTagName, closingNameLookahead, StringComparison.InvariantCultureIgnoreCase))
                         {
+                            el.ContentTo = pos;
                             str = GetCurrentLexeme();
                             
                             string closingNameParsed = ParseHtmlClosingTag(openingTagName, el, false);

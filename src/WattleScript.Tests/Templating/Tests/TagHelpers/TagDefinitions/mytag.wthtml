@@ -1,7 +1,7 @@
 @{
     @@name("my-tag")
     
-    function Render(context) {
+    function Render(ctx) {
         <div>My tag!</div>
     }
 }

@@ -240,6 +240,11 @@ internal partial class Parser
     
     bool AddToken(TokenTypes type)
     {
+        if (tagParsingMode == HtmlTagParsingModes.TagHelper)
+        {
+            return false;
+        }
+        
         if (currentLexeme.Length == 0)
         {
             return false;

@@ -1,0 +1,7 @@
+@{
+    @@name("content-tag")
+    
+    function Render(ctx) {
+        <div class="content-tag">@ctx[0]</div>
+    }
+}

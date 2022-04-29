@@ -1,4 +1,6 @@
-﻿namespace WattleScript.Templating;
+﻿using WattleScript.Interpreter;
+
+namespace WattleScript.Templating;
 
 internal partial class Parser
 {
@@ -39,6 +41,24 @@ internal partial class Parser
     bool ParseKeywordSwitch()
     {
         return ParseGenericBrkKeywordWithBlock("switch");
+    }
+    
+    // tagContent
+    // parser has to be positioned after "tagContent"
+    bool ParseKeywordTagContent()
+    {
+        if (script != null)
+        {
+            DynValue dv = engine.tagHelpersScript.Globals.Get("__templatingEngineTagContent");
+            if (dv.IsNil())
+            {
+                return false;
+            }
+            
+            
+        }
+
+        return true;
     }
     
     // do {} while ()

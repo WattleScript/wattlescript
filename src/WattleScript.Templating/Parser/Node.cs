@@ -31,6 +31,8 @@ internal class NodeBase
     public bool Recovery { get; set; }
     public int Line { get; set; }
     public int Col { get; set; }
+    public int ContentFrom { get; set; }
+    public int ContentTo { get; set; }
 }
 
 internal class ServerNode : NodeBase
