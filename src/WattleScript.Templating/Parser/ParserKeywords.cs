@@ -42,25 +42,7 @@ internal partial class Parser
     {
         return ParseGenericBrkKeywordWithBlock("switch");
     }
-    
-    // tagContent
-    // parser has to be positioned after "tagContent"
-    bool ParseKeywordTagContent()
-    {
-        if (script != null)
-        {
-            DynValue dv = engine.tagHelpersScript.Globals.Get("__templatingEngineTagContent");
-            if (dv.IsNil())
-            {
-                return false;
-            }
-            
-            
-        }
 
-        return true;
-    }
-    
     // do {} while ()
     // parser has to be positioned after "do", either at opening { or at a whitespace preceding it
     bool ParseKeywordDo()

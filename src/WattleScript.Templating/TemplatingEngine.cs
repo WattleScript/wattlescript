@@ -8,12 +8,11 @@ public class TemplatingEngine
 {
     private readonly StringBuilder pooledSb = new StringBuilder();
     private readonly TemplatingEngineOptions options;
-    private readonly Script script;
+    internal readonly Script script;
     private StringBuilder stdOut = new StringBuilder();
     internal StringBuilder stdOutTagHelper = new StringBuilder();
     public readonly List<TagHelper> tagHelpers;
     internal Dictionary<string, TagHelper> tagHelpersMap = new Dictionary<string, TagHelper>();
-    internal readonly Script tagHelpersScript;
 
     public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
     {
@@ -34,15 +33,23 @@ public class TemplatingEngine
         
         script.Globals["stdout_line"] = PrintLine;
         script.Globals["stdout"] = Print;
+        script.Globals["render_tag_content"] = RenderTagContent;
+    }
 
-        tagHelpersScript = new Script(CoreModules.Preset_HardSandbox);
-        tagHelpersScript.Options.IndexTablesFrom = 0;
-        tagHelpersScript.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-        tagHelpersScript.Options.Syntax = ScriptSyntax.WattleScript;
-        tagHelpersScript.Options.Directives.Add("using");
+    DynValue RenderTagContent(Script s, CallbackArguments args)
+    {
+        if (args.Count > 0)
+        {
+            DynValue arg = args[0];
+            string str = arg.String;
+            
+            script.DoString(str);
+
+            string output = stdOutTagHelper.ToString();
+            return DynValue.NewString(output);
+        }
         
-        tagHelpersScript.Globals["stdout_line"] = PrintTaghelper;
-        tagHelpersScript.Globals["stdout"] = PrintTaghelper;
+        return DynValue.Nil;
     }
     
     string EncodeJsString(string s)
@@ -170,6 +177,12 @@ public class TemplatingEngine
         Parser parser = new Parser(this, script);
         List<Token> tokens = parser.Parse(code);
 
+        string str = Transform(tokens);
+        return str;
+    }
+
+    internal string Transform(List<Token> tokens)
+    {
         StringBuilder sb = new StringBuilder();
         bool firstClientPending = true;
 
@@ -291,16 +304,16 @@ public class TemplatingEngine
         stdOut.AppendLine(args[0].CastToString());
     }
         
-    private void Print(Script script, CallbackArguments args)
+    public void Print(Script script, CallbackArguments args)
     {
         stdOut.Append(args[0].CastToString());
     }
     
-    private void PrintTaghelper(Script script, CallbackArguments args)
+    public void PrintTaghelper(Script script, CallbackArguments args)
     {
         stdOutTagHelper.Append(args[0].CastToString());
     }
-    
+
     public class RenderResult
     {
         public string Output { get; init; }

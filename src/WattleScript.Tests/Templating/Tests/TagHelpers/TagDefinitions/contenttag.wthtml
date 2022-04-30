@@ -2,6 +2,6 @@
     @@name("content-tag")
     
     function Render(ctx) {
-        <div class="content-tag">@ctx[0]</div>
+        <div class="content-tag">@render_tag_content(ctx[0])</div>
     }
 }

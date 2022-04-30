@@ -1072,18 +1072,32 @@ internal partial class Parser
             int contentTo = el.ContentTo;
             string contentStr = contentTo > 0 ? source.Substring(contentFrom, contentTo - contentFrom) : "";
 
-            Table ctxTable = new Table(engine.tagHelpersScript);
-            ctxTable.Set(0, contentStr);
+            Table ctxTable = new Table(engine.script);
+            ctxTable.Set(0, new TemplatingEngine(script).Transpile(contentStr));
+
+            script.Globals["stdout"] = engine.PrintTaghelper;
+            engine.stdOutTagHelper.Clear();
             
-            engine.tagHelpersScript.DoString(helper.Template);
-            engine.tagHelpersScript.Globals.Get("Render").Function.Call(ctxTable);
+            // 2. before resolving tag helper, we need to resolve the part of template currently transpiled
+            string pendingTemplate = engine.Transform(Tokens);
+            
+            DynValue pVal = engine.script.LoadString(pendingTemplate);
+            engine.script.Call(pVal);
+            
+            Tokens.Clear();
+            
+            engine.script.DoString(helper.Template);
+            engine.script.Globals.Get("Render").Function.Call(ctxTable);
                 
             string tagOutput = engine.stdOutTagHelper.ToString();
+            
+            script.Globals["stdout"] = engine.Print;
+            
             currentLexeme.Append(tagOutput);
 
             AddToken(TokenTypes.Text);
             tagParsingMode = HtmlTagParsingModes.Native;
-            
+
             return true;
         }
         
@@ -1380,7 +1394,12 @@ internal partial class Parser
                         {
                             el.ContentTo = pos;
                             str = GetCurrentLexeme();
-                            
+
+                            if (tagParsingMode == HtmlTagParsingModes.TagHelper)
+                            {
+                                StorePos();
+                            }
+
                             string closingNameParsed = ParseHtmlClosingTag(openingTagName, el, false);
                             AddToken(TokenTypes.Text);
                             openElements.Pop();
