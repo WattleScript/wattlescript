@@ -137,10 +137,13 @@ internal partial class Parser
                 if (c == '\'')
                 {
                     HandleStringSequence('\'');
+                    continue;
                 }
-                else if (c == '"')
+                
+                if (c == '"')
                 {
                     HandleStringSequence('"');
+                    continue;
                 }
             }
 
@@ -814,9 +817,10 @@ internal partial class Parser
 
             void HandleStringSequence(char chr)
             {
-                Step();
+                char stepC = Step();
                 string str = GetCurrentLexeme();
-                if (LastStoredCharMatches(2, '\\')) // check that string symbol is not escaped
+                
+                if (LastStoredCharMatches(1, '\\')) // check that string symbol is not escaped
                 {
                     return;
                 }
@@ -844,14 +848,19 @@ internal partial class Parser
                     if (Peek() == '\'')
                     {
                         HandleStringSequence('\'');
+                        continue;
                     }
-                    else if (Peek() == '"')
+                    
+                    if (Peek() == '"')
                     {
                         HandleStringSequence('"');
+                        continue;
                     }
-                    else if (Peek() == '`')
+                    
+                    if (Peek() == '`')
                     {
                         HandleStringSequence('`');
+                        continue;
                     }
                 }
                 
@@ -1073,7 +1082,12 @@ internal partial class Parser
             string contentStr = contentTo > 0 ? source.Substring(contentFrom, contentTo - contentFrom) : "";
 
             Table ctxTable = new Table(engine.script);
-            ctxTable.Set(0, new TemplatingEngine(script).Transpile(contentStr));
+            ctxTable.Set("content", DynValue.NewString(new TemplatingEngine(script).Transpile(contentStr)));
+
+            Table attrTable = new Table(engine.script);
+            
+            
+            ctxTable.Set("attributes", DynValue.NewTable(attrTable));
 
             script.Globals["stdout"] = engine.PrintTaghelper;
             engine.stdOutTagHelper.Clear();
@@ -1190,6 +1204,7 @@ internal partial class Parser
             {
                 Step();
                 string val = ParseAttributeValue();
+                el.Attributes.Add(new HtmlAttribute(name, val, HtmlAttribute.HtmlAttributeQuoteType.Double));
             }
             
             if (LookaheadForClosingTag())

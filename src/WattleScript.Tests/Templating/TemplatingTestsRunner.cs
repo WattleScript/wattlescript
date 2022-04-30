@@ -13,6 +13,8 @@ namespace WattleScript.Interpreter.Tests.Templating;
 [Parallelizable(ParallelScope.All)]
 public class TemplatingTestsRunner
 {
+    private const bool COMPILE_TAG_HELPERS = true;
+    
     private const string ROOT_FOLDER = "Templating/Tests";
     private static Filter filter = Filter.Tests;
     private List<TagHelper> tagHelpers = new List<TagHelper>();
@@ -43,6 +45,11 @@ public class TemplatingTestsRunner
     [OneTimeSetUp]
     public async Task Init()
     {
+        if (!COMPILE_TAG_HELPERS)
+        {
+            return;
+        }
+        
         filter = Filter.TagDefinitions;
         foreach (string path in GetTestCases())
         {

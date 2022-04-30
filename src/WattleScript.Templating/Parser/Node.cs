@@ -69,7 +69,7 @@ internal class HtmlElement : NodeBase, INodeWithChildren
     }
 
     public HtmlElement Parent { get; set; }
-    public List<HtmlAttribute> Attributes { get; set; }
+    public List<HtmlAttribute> Attributes { get; set; } = new List<HtmlAttribute>();
     public string Name { get; set; }
     public ClosingType Closing { get; set; }
     public bool ForceNativeTag { get; set; }
@@ -93,4 +93,11 @@ internal class HtmlAttribute
     public string Name { get; set; }
     public string Value { get; set; }
     public HtmlAttributeQuoteType QuoteType { get; set; }
+
+    internal HtmlAttribute(string name, string value, HtmlAttributeQuoteType quoteType)
+    {
+        Name = name;
+        Value = value;
+        QuoteType = quoteType;
+    }
 }

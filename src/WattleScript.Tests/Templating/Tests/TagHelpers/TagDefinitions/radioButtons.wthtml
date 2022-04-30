@@ -1,7 +1,10 @@
 @{
-    @@name("content-tag")
+    @@name("radio-buttons")
     
     function Render(ctx) {
+    
+        x = "";
+    
         <div class="content-tag">@render_tag_content(ctx["content"])</div>
     }
 }
