@@ -3,8 +3,8 @@
     
     function Render(ctx) {
     
-        x = "";
+        var name = ctx["attributes"]["name"];
     
-        <div class="content-tag">@render_tag_content(ctx["content"])</div>
+        <div class="radio-buttons" data-name="@name">@render_tag_content(ctx["content"])</div>
     }
 }

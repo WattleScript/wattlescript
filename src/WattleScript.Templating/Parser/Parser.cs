@@ -1085,7 +1085,10 @@ internal partial class Parser
             ctxTable.Set("content", DynValue.NewString(new TemplatingEngine(script).Transpile(contentStr)));
 
             Table attrTable = new Table(engine.script);
-            
+            foreach (HtmlAttribute attr in el.Attributes)
+            {
+                attrTable.Set(attr.Name, DynValue.NewString(attr.Value));
+            }
             
             ctxTable.Set("attributes", DynValue.NewTable(attrTable));
 
