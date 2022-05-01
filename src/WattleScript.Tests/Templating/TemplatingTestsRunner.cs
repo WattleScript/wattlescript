@@ -86,6 +86,7 @@ public class TemplatingTestsRunner
     public async Task RunCore(string path, bool reportErrors = false)
     {
         string outputPath = path.Replace(".wthtml", ".html");
+        bool throwOnAe = true;
 
         if (!File.Exists(outputPath))
         {
@@ -126,17 +127,31 @@ public class TemplatingTestsRunner
         try
         {
             rr = await tmp.Render(code);
-            Assert.AreEqual(output, rr.Output, $"Test {path} did not pass.");
+
+            if (string.Equals(output, rr.Output))
+            {
+                Assert.Pass();
+            }
+            else
+            {
+                throwOnAe = false;
+                Assert.Fail($"Test failed. Output and expected HTML are not equal.\n---------------------- Expected ----------------------\n{output}\n---------------------- But was------------------------\n{rr.Output}\n------------------------------------------------------\n");
+            }
 
             if (path.ToLowerInvariant().Contains("invalid"))
             {
                 Assert.Fail("Expected to crash but 'passed'");
             }
             
-            string debugStr = tmp.Debug(code);
+            //string debugStr = tmp.Debug(code);
         }
         catch (Exception e)
         {
+            if (e is SuccessException)
+            {
+                return;
+            }
+            
             if (path.ToLowerInvariant().Contains("invalid"))
             {
                 Assert.Pass($"Crashed as expected: {e.Message}");
@@ -145,7 +160,7 @@ public class TemplatingTestsRunner
             
             if (e is AssertionException ae)
             {
-                Assert.Fail($"Test {path} did not pass.\nMessage: {ae.Message}\n{ae.StackTrace}\nParsed template:\n{rr?.Transpiled ?? ""}");
+                Assert.Fail($"---------------------- Parsed template ----------------------\n{rr?.Transpiled ?? ""}\n---------------------- Stacktrace ----------------------\n{ae.StackTrace}\n");
                 return;
             }
 

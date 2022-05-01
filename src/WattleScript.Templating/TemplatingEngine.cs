@@ -13,6 +13,24 @@ public class TemplatingEngine
     internal StringBuilder stdOutTagHelper = new StringBuilder();
     public readonly List<TagHelper> tagHelpers;
     internal Dictionary<string, TagHelper> tagHelpersMap = new Dictionary<string, TagHelper>();
+    internal StringBuilder stdOutTagHelperTmp = new StringBuilder();
+    private Parser parser;
+    private Table? tagHelpersSharedTbl = null;
+
+    public TemplatingEngine(TemplatingEngine parent, Table? tbl)
+    {
+        options = parent.options;
+        script = parent.script;
+        tagHelpers = parent.tagHelpers;
+
+        stdOut = parent.stdOut;
+        stdOutTagHelper = parent.stdOutTagHelper;
+        stdOutTagHelperTmp = parent.stdOutTagHelperTmp;
+
+        tagHelpersSharedTbl = tbl;
+        
+        SharedSetup();
+    }
 
     public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
     {
@@ -21,7 +39,25 @@ public class TemplatingEngine
         this.script = script ?? throw new ArgumentNullException(nameof(script));
         this.tagHelpers = tagHelpers ?? new List<TagHelper>();
 
-        foreach (TagHelper th in this.tagHelpers)
+        SharedSetup();
+    }
+
+    void SharedSetup()
+    {
+        MapTagHelpers();
+        SetSpecials();
+    }
+
+    void SetSpecials()
+    {
+        script.Globals["stdout_line"] = PrintLine;
+        script.Globals["stdout"] = Print;
+        script.Globals["render_tag_content"] = RenderTagContent;
+    }
+
+    void MapTagHelpers()
+    {
+        foreach (TagHelper th in tagHelpers)
         {
             if (tagHelpersMap.ContainsKey(th.Name.ToLowerInvariant()))
             {
@@ -30,22 +66,32 @@ public class TemplatingEngine
 
             tagHelpersMap.TryAdd(th.Name.ToLowerInvariant(), th);
         }
-        
-        script.Globals["stdout_line"] = PrintLine;
-        script.Globals["stdout"] = Print;
-        script.Globals["render_tag_content"] = RenderTagContent;
     }
 
     DynValue RenderTagContent(Script s, CallbackArguments args)
     {
         if (args.Count > 0)
         {
+            Table? tbl= null;
+            
+            if (parser != null)
+            {
+                tbl = script.Globals.Get("__tagData").Table;
+                parser.tagHelpersSharedTable = tbl;
+            }
+            
             DynValue arg = args[0];
             string str = arg.String;
-            
-            script.DoString(str);
+            string transpiled = new TemplatingEngine(this, tbl).Transpile(str);
 
-            string output = stdOutTagHelper.ToString();
+            stdOutTagHelperTmp.Clear();
+            script.Globals["stdout"] = PrintTaghelperTmp;
+            script.DoString(transpiled);
+
+            string output = stdOutTagHelperTmp.ToString();
+            stdOutTagHelper.Append(output);
+            
+            script.Globals["stdout"] = Print;
             return DynValue.NewString(output);
         }
         
@@ -149,8 +195,8 @@ public class TemplatingEngine
             return "";
         }
         
-        Parser parser = new Parser(this, script);
-        List<Token> tokens = parser.Parse(code);
+        parser = new Parser(this, script, tagHelpersSharedTbl);
+        List<Token> tokens = parser.Parse(code, "");
         pooledSb.Clear();
         
         if (options.Optimise)
@@ -167,15 +213,15 @@ public class TemplatingEngine
         return finalText;
     }
 
-    public string Transpile(string code)
+    public string Transpile(string code, string friendlyName = "")
     {
         if (string.IsNullOrWhiteSpace(code))
         {
             return "";
         }
         
-        Parser parser = new Parser(this, script);
-        List<Token> tokens = parser.Parse(code);
+        parser = new Parser(this, script, tagHelpersSharedTbl);
+        List<Token> tokens = parser.Parse(code, friendlyName);
 
         string str = Transform(tokens);
         return str;
@@ -228,7 +274,7 @@ public class TemplatingEngine
     {
         stdOut.Clear();
 
-        string transpiledTemplate = Transpile(code);
+        string transpiledTemplate = Transpile(code, "tagHelperDefinition");
         DynValue dv = script.LoadString(transpiledTemplate);
 
         FunctionProto? renderFn = dv.Function.Function.Functions.FirstOrDefault(x => x.Name == "Render");
@@ -311,7 +357,14 @@ public class TemplatingEngine
     
     public void PrintTaghelper(Script script, CallbackArguments args)
     {
-        stdOutTagHelper.Append(args[0].CastToString());
+        string str = args[0].CastToString();
+        stdOutTagHelper.Append(str);
+    }
+    
+    public void PrintTaghelperTmp(Script script, CallbackArguments args)
+    {
+        string str = args[0].CastToString();
+        stdOutTagHelperTmp.Append(str);
     }
 
     public class RenderResult

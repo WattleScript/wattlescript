@@ -1,0 +1,7 @@
+@{
+    @@name("ignore")
+    
+    function Render(ctx) {
+        
+    }
+}

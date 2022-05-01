@@ -1,0 +1,11 @@
+@{
+    @@name("radio-button")
+    
+    function Render(ctx) {
+    
+        var name = ctx["data"]["radio-name"];
+    
+    <input class="radio-button" name="@name" value="@ctx["attributes"]["value"]"/>
+    <label>@render_tag_content(ctx["content"])</label>
+    }
+}

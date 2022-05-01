@@ -52,11 +52,14 @@ internal partial class Parser
     private List<Exception> recoveredExceptions = new List<Exception>();
     private TemplatingEngine engine;
     private HtmlTagParsingModes tagParsingMode = HtmlTagParsingModes.Native;
+    internal Table tagHelpersSharedTable;
+    private string friendlyName;
 
-    public Parser(TemplatingEngine engine, Script? script)
+    public Parser(TemplatingEngine engine, Script? script, Table? tagHelpersSharedTable)
     {
         this.engine = engine;
         this.script = script;
+        this.tagHelpersSharedTable = tagHelpersSharedTable ?? new Table(this.script);
         document = new Document();
 
         KeywordsMap = new Dictionary<string, Func<bool>?>
@@ -70,9 +73,10 @@ internal partial class Parser
         };
     }
     
-    public List<Token> Parse(string templateSource)
+    public List<Token> Parse(string templateSource, string friendlyName)
     {
         source = templateSource;
+        this.friendlyName = friendlyName;
         ParseClient();
         //Lookahead();
 
@@ -1024,8 +1028,13 @@ internal partial class Parser
             string tagName = ParseHtmlTagName(false);
             el.Name = tagName;
             openElements.Push(el);
+
+            if (friendlyName != "tagHelperDefinition")
+            {
+                
+            }
             
-            if (engine.tagHelpersMap.ContainsKey(tagName.ToLowerInvariant()))
+            if (tagParsingMode == HtmlTagParsingModes.Native && engine.tagHelpersMap.ContainsKey(tagName.ToLowerInvariant()))
             {
                 return ParseTagHelper(el);
             }
@@ -1040,7 +1049,7 @@ internal partial class Parser
                     continue;
                 }
                 
-                bool shouldEnd = LookaheadForAttributeOrClose(tagName, false, el);
+                bool shouldEnd = LookaheadForAttributeOrClose(tagName, false, el, true);
                 if (shouldEnd)
                 {
                     break;
@@ -1050,16 +1059,30 @@ internal partial class Parser
             return true;
         }
 
+        int ScanForElementClosingTag(HtmlElement el)
+        {
+            ParseHtmlOrPlaintextUntilClosingTag(el.Name, el);
+
+            return el.ContentTo;
+        }
+
         bool ParseTagHelper(HtmlElement el)
         {
             // parser is located after name in a tag
             /*
              * 1. we parse opening tag as normal, 
              */
+
+            if (friendlyName != "tagHelperDefinition")
+            {
+                string str = GetCurrentLexeme();
+            }
+            
             DiscardCurrentLexeme();
 
             tagParsingMode = HtmlTagParsingModes.TagHelper;
-            
+
+            // 1. parse until end of opening tag-helper tag
             ParseWhitespaceAndNewlines(Sides.Client);
             while (!IsAtEnd())
             {
@@ -1069,20 +1092,31 @@ internal partial class Parser
                     continue;
                 }
                 
-                bool shouldEnd = LookaheadForAttributeOrClose(el.Name, false, el);
+                bool shouldEnd = LookaheadForAttributeOrClose(el.Name, false, el, false);
                 if (shouldEnd)
                 {
                     break;
                 }
             }
+            
+            // 2. if tag-helper is not self closing, scan for end of its content
+            //if (el.Closing != HtmlElement.ClosingType.SelfClosing)
+            {
+                el.ContentTo = ScanForElementClosingTag(el);   
+            }
+
+            DynValue tagHelpersDataDv = DynValue.NewTable(tagHelpersSharedTable);
+            
+            Table ctxTable = new Table(engine.script);
+            ctxTable.Set("data", tagHelpersDataDv);
 
             TagHelper helper = engine.tagHelpersMap[el.Name.ToLowerInvariant()];
             int contentFrom = el.ContentFrom;
             int contentTo = el.ContentTo;
             string contentStr = contentTo > 0 ? source.Substring(contentFrom, contentTo - contentFrom) : "";
-
-            Table ctxTable = new Table(engine.script);
-            ctxTable.Set("content", DynValue.NewString(new TemplatingEngine(script).Transpile(contentStr)));
+            
+            engine.script.Globals.Set("__tagData", tagHelpersDataDv);
+            ctxTable.Set("content", DynValue.NewString(contentStr));
 
             Table attrTable = new Table(engine.script);
             foreach (HtmlAttribute attr in el.Attributes)
@@ -1092,10 +1126,10 @@ internal partial class Parser
             
             ctxTable.Set("attributes", DynValue.NewTable(attrTable));
 
-            script.Globals["stdout"] = engine.PrintTaghelper;
-            engine.stdOutTagHelper.Clear();
+            //engine.script.Globals["stdout"] = engine.PrintTaghelperTmp;
+            //engine.stdOutTagHelperTmp.Clear();
             
-            // 2. before resolving tag helper, we need to resolve the part of template currently transpiled
+            // 3. before resolving tag helper, we need to resolve the part of template currently transpiled
             string pendingTemplate = engine.Transform(Tokens);
             
             DynValue pVal = engine.script.LoadString(pendingTemplate);
@@ -1103,30 +1137,35 @@ internal partial class Parser
             
             Tokens.Clear();
             
+            
             engine.script.DoString(helper.Template);
             engine.script.Globals.Get("Render").Function.Call(ctxTable);
                 
             string tagOutput = engine.stdOutTagHelper.ToString();
             
-            script.Globals["stdout"] = engine.Print;
+            engine.script.Globals["stdout"] = engine.Print;
             
-            currentLexeme.Append(tagOutput);
-
-            AddToken(TokenTypes.Text);
+            // tag output is already in stdout
+            //currentLexeme.Append(tagOutput);
+            //AddToken(TokenTypes.Text);
+            
             tagParsingMode = HtmlTagParsingModes.Native;
+
+            // 4. continue from the content
+            //ParseHtmlOrPlaintextUntilClosingTag(el.Name, el);
 
             return true;
         }
         
-        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag, HtmlElement? el)
+        bool LookaheadForAttributeOrClose(string tagName, bool startsFromClosingTag, HtmlElement? el, bool parseContent)
         {
             if (LookaheadForClosingTag())
             {
-                CloseTag(tagName, startsFromClosingTag, el);
+                CloseTag(tagName, startsFromClosingTag, el, parseContent);
                 return true;
             }
             
-            return ParseAttribute(tagName, startsFromClosingTag, el); 
+            return ParseAttribute(tagName, startsFromClosingTag, el, parseContent); 
         }
         
         string ParseAttributeName()
@@ -1199,7 +1238,7 @@ internal partial class Parser
         }
            
         
-        bool ParseAttribute(string tagName, bool startsFromClosingTag, HtmlElement el)
+        bool ParseAttribute(string tagName, bool startsFromClosingTag, HtmlElement el, bool parseTagContent)
         {
             string name = ParseAttributeName();
 
@@ -1212,14 +1251,14 @@ internal partial class Parser
             
             if (LookaheadForClosingTag())
             {
-                CloseTag(tagName, startsFromClosingTag, el);
+                CloseTag(tagName, startsFromClosingTag, el, parseTagContent);
                 return true;
             }
             
             return false;
         }
         
-        bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement? el)
+        bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement? el, bool parseTagContent)
         {
             if (tagName == "html")
             {
@@ -1230,6 +1269,11 @@ internal partial class Parser
             {
                 Step();
                 Step();
+
+                if (el != null)
+                {
+                    el.Closing = HtmlElement.ClosingType.SelfClosing;   
+                }
             }
             else if (Peek() == '>')
             {
@@ -1250,6 +1294,11 @@ internal partial class Parser
             if (tagParsingMode == HtmlTagParsingModes.TagHelper)
             {
                 DiscardCurrentLexeme();
+            }
+            
+            if (!parseTagContent)
+            {
+                return true;
             }
 
             if (!startsFromClosingTag)
@@ -1334,7 +1383,7 @@ internal partial class Parser
                     continue;
                 }
                 
-                bool shouldEnd = LookaheadForAttributeOrClose(closingTagName, true, el);
+                bool shouldEnd = LookaheadForAttributeOrClose(closingTagName, true, el, true);
                 if (shouldEnd)
                 {
                     break;

@@ -4,6 +4,7 @@
     function Render(ctx) {
     
         var name = ctx["attributes"]["name"];
+        ctx["data"]["radio-name"] = name;
     
         <div class="radio-buttons" data-name="@name">@render_tag_content(ctx["content"])</div>
     }

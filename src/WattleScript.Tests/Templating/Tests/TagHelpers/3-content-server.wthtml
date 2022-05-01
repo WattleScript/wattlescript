@@ -5,5 +5,4 @@
     @{
         i = 10
     }
-</content-tag>
-<div>i: @i</div>
+</content-tag><div>i: @i</div>
