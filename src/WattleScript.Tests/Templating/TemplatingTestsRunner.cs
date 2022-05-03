@@ -25,6 +25,28 @@ public class TemplatingTestsRunner
         TagDefinitions
     }
     
+    static int strDifIndex(string s1, string s2)
+    {
+        int index = 0;
+        int min = Math.Min(s1.Length, s2.Length);
+        
+        while (index < min && s1[index] == s2[index])
+        {
+            index++;
+        }
+
+        return index == min && s1.Length == s2.Length ? -1 : index;
+    }
+
+    static string strSnippet(string str, int pivot, int n)
+    {
+        int nR = Math.Min(str.Length - pivot, n);
+        int nL = pivot - n > 0 ? pivot - n : 0;
+        int tL = pivot - n > 0 ? n : n - pivot;
+
+        return $"{str.Substring(nL, tL)}{str.Substring(pivot, nR)}";
+    }
+    
     static string[] GetTestCases()
     {
         string[] files = Directory.GetFiles(ROOT_FOLDER, "*.wthtml*", SearchOption.AllDirectories);
@@ -135,7 +157,11 @@ public class TemplatingTestsRunner
             else
             {
                 throwOnAe = false;
-                Assert.Fail($"Test failed. Output and expected HTML are not equal.\n---------------------- Expected ----------------------\n{output}\n---------------------- But was------------------------\n{rr.Output}\n------------------------------------------------------\n");
+                int difIndex = strDifIndex(output, rr.Output);
+                string diffSnippet = strSnippet(rr.Output, difIndex, 50);
+                string expectedSnippet = strSnippet(output, difIndex, 50);
+                
+                Assert.Fail($"Test failed. Output and expected HTML are not equal.\nFirst difference at index: {difIndex}\nOutput near diff: {diffSnippet}\nExpected near diff: {expectedSnippet}\n---------------------- Expected ----------------------\n{output}\n---------------------- But was------------------------\n{rr.Output}\n------------------------------------------------------\n");
             }
 
             if (path.ToLowerInvariant().Contains("invalid"))

@@ -70,6 +70,8 @@ internal partial class Parser
             { "do", ParseKeywordDo },
             { "function", ParseKeywordFunction },
             { "switch", ParseKeywordSwitch },
+            { "else", ParseKeywordInvalidElse },
+            { "elseif", ParseKeywordInvalidElseIf },
         };
     }
     

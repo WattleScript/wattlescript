@@ -4,6 +4,20 @@ namespace WattleScript.Templating;
 
 internal partial class Parser
 {
+    // @else {}
+    // parser has to be positioned after else
+    bool ParseKeywordInvalidElse()
+    {
+        return Throw("Found \"@else\". Please remove the leading @. Keywords else, elseif shouldn't be prefixed with @.");
+    }
+    
+    // @elseif {}
+    // parser has to be positioned after elseif
+    bool ParseKeywordInvalidElseIf()
+    {
+        return Throw("Found \"@elseif\". Please remove the leading @. Keywords else, elseif shouldn't be prefixed with @.");
+    }
+    
     // if (expr) {}
     // parser has to be positioned after if, either at opening ( or at whitespace before it
     bool ParseKeywordIf()
