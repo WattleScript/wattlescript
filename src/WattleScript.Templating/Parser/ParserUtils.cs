@@ -6,6 +6,7 @@ internal partial class Parser
 {
     internal enum HtmlAttrEnclosingModes
     {
+        Unknown,
         None,
         SingleQuote,
         DoubleQuote

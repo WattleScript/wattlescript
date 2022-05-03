@@ -1,0 +1,12 @@
+@{
+    @@name("self-closing")
+    
+    function Render(ctx) {
+      
+        var n1 = ctx["attributes"]["n1"];
+        var n2 = ctx["attributes"]["n2"];
+        var n3 = ctx["attributes"]["n3"];
+    
+        <div>@n1</div><div>@n2</div><div>@n3</div>
+    }
+}

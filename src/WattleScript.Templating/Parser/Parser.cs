@@ -1100,9 +1100,9 @@ internal partial class Parser
                     break;
                 }
             }
-            
+
             // 2. if tag-helper is not self closing, scan for end of its content
-            //if (el.Closing != HtmlElement.ClosingType.SelfClosing)
+            if (el.Closing != HtmlElement.ClosingType.SelfClosing)
             {
                 el.ContentTo = ScanForElementClosingTag(el);   
             }
@@ -1126,7 +1126,8 @@ internal partial class Parser
                 attrTable.Set(attr.Name, DynValue.NewString(attr.Value));
             }
             
-            ctxTable.Set("attributes", DynValue.NewTable(attrTable));
+            DynValue fAttrTable = DynValue.NewTable(attrTable);
+            ctxTable.Set("attributes", fAttrTable);
 
             //engine.script.Globals["stdout"] = engine.PrintTaghelperTmp;
             //engine.stdOutTagHelperTmp.Clear();
@@ -1172,6 +1173,8 @@ internal partial class Parser
         
         string ParseAttributeName()
         {
+            ParseWhitespaceAndNewlines(Sides.Client);
+            
             StringBuilder sb = new StringBuilder();
             while (!IsAtEnd())
             {
@@ -1192,7 +1195,7 @@ internal partial class Parser
             return sb.ToString();
         }
 
-        string ParseAttributeValue()
+        Tuple<string, HtmlAttrEnclosingModes> ParseAttributeValue()
         {
             HtmlAttrEnclosingModes closeMode = HtmlAttrEnclosingModes.None;
             StringBuilder sb = new StringBuilder();
@@ -1218,25 +1221,25 @@ internal partial class Parser
                 
                 if (IsWhitespaceOrNewline(Peek()) && closeMode == HtmlAttrEnclosingModes.None)
                 {
-                    return sb.ToString();
+                    return new Tuple<string, HtmlAttrEnclosingModes>(sb.ToString(), HtmlAttrEnclosingModes.None);
                 }
 
                 if (Peek() == '\'' && closeMode == HtmlAttrEnclosingModes.SingleQuote)
                 {
                     Step();
-                    return sb.ToString();
+                    return new Tuple<string, HtmlAttrEnclosingModes>(sb.ToString(), HtmlAttrEnclosingModes.SingleQuote);
                 }
                 
                 if (Peek() == '"' && closeMode == HtmlAttrEnclosingModes.DoubleQuote)
                 {
                     Step();
-                    return sb.ToString();
+                    return new Tuple<string, HtmlAttrEnclosingModes>(sb.ToString(), HtmlAttrEnclosingModes.DoubleQuote);
                 }
 
                 sb.Append(Step());
             }
 
-            return sb.ToString();
+            return new Tuple<string, HtmlAttrEnclosingModes>(sb.ToString(), HtmlAttrEnclosingModes.Unknown);
         }
            
         
@@ -1247,8 +1250,8 @@ internal partial class Parser
             if (Peek() == '=')
             {
                 Step();
-                string val = ParseAttributeValue();
-                el.Attributes.Add(new HtmlAttribute(name, val, HtmlAttribute.HtmlAttributeQuoteType.Double));
+                Tuple<string, HtmlAttrEnclosingModes> val = ParseAttributeValue();
+                el.Attributes.Add(new HtmlAttribute(name, val.Item1, val.Item2));
             }
             
             if (LookaheadForClosingTag())
@@ -1280,6 +1283,11 @@ internal partial class Parser
             else if (Peek() == '>')
             {
                 Step();
+
+                if (el != null)
+                {
+                    el.Closing = HtmlElement.ClosingType.EndTag;
+                }
             }
 
             bool parseContent = false;

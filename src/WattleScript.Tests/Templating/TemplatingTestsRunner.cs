@@ -44,6 +44,7 @@ public class TemplatingTestsRunner
         int nL = pivot - n > 0 ? pivot - n : 0;
         int tL = pivot - n > 0 ? n : n - pivot;
 
+        return "";
         return $"{str.Substring(nL, tL)}{str.Substring(pivot, nR)}";
     }
     
@@ -148,6 +149,8 @@ public class TemplatingTestsRunner
 
         try
         {
+            //string debugStr = tmp.Debug(code);
+            
             rr = await tmp.Render(code);
 
             if (string.Equals(output, rr.Output))
@@ -169,7 +172,6 @@ public class TemplatingTestsRunner
                 Assert.Fail("Expected to crash but 'passed'");
             }
             
-            //string debugStr = tmp.Debug(code);
         }
         catch (Exception e)
         {

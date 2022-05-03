@@ -63,6 +63,7 @@ internal class HtmlElement : NodeBase, INodeWithChildren
 {
     internal enum ClosingType
     {
+        Unknown,
         SelfClosing,
         ImplicitSelfClosing,
         EndTag
@@ -83,18 +84,11 @@ internal class HtmlElement : NodeBase, INodeWithChildren
 
 internal class HtmlAttribute
 {
-    internal enum HtmlAttributeQuoteType
-    {
-        None,
-        Single,
-        Double
-    }
-    
     public string Name { get; set; }
     public string Value { get; set; }
-    public HtmlAttributeQuoteType QuoteType { get; set; }
+    public Parser.HtmlAttrEnclosingModes QuoteType { get; set; }
 
-    internal HtmlAttribute(string name, string value, HtmlAttributeQuoteType quoteType)
+    internal HtmlAttribute(string name, string value, Parser.HtmlAttrEnclosingModes quoteType)
     {
         Name = name;
         Value = value;
