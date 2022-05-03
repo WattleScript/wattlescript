@@ -133,7 +133,7 @@ namespace WattleScript.Interpreter.Tree
 
 			if (isPrimary && T.IsBinaryOperator())
 			{
-				object chain = BinaryOperatorExpression.BeginOperatorChain();
+				BinaryOperatorExpression.LinkedList chain = BinaryOperatorExpression.BeginOperatorChain();
 
 				BinaryOperatorExpression.AddExpressionToChain(chain, e);
 				bool forceReturnTernary = false;

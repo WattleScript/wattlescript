@@ -42,33 +42,44 @@ namespace WattleScript.Interpreter.Tree.Expressions
 	/// </summary>
 	class BinaryOperatorExpression : Expression
 	{
-		class Node
+		internal class Node
 		{
 			public Expression Expr;
 			public Operator Op;
 			public Node Prev;
 			public Node Next;
+			
+			public Node GetLast()
+			{
+				return Next?.GetLast() ?? this;
+			}
 		}
 
-		class LinkedList
+		internal class LinkedList
 		{
 			public Node Nodes;
 			public Node Last;
 			public Operator OperatorMask;
 		}
 
-		const Operator POWER = Operator.Power;
-		const Operator MUL_DIV_MOD = Operator.Mul | Operator.Div | Operator.Mod;
-		const Operator ADD_SUB = Operator.Add | Operator.Sub | Operator.AddConcat;
-		const Operator STRCAT = Operator.StrConcat;
-		const Operator COMPARES = Operator.Less | Operator.Greater | Operator.GreaterOrEqual | Operator.LessOrEqual | Operator.Equal | Operator.NotEqual;
-		const Operator LOGIC_AND = Operator.And;
-		const Operator LOGIC_OR = Operator.Or;
-		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
-		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
-		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
+		private enum Associativity
+		{
+			Left,
+			Right
+		}
 
-		public static object BeginOperatorChain()
+		private const Operator POWER = Operator.Power;
+		private const Operator MUL_DIV_MOD = Operator.Mul | Operator.Div | Operator.Mod;
+		private const Operator ADD_SUB = Operator.Add | Operator.Sub | Operator.AddConcat;
+		private const Operator STRCAT = Operator.StrConcat;
+		private const Operator COMPARES = Operator.Less | Operator.Greater | Operator.GreaterOrEqual | Operator.LessOrEqual | Operator.Equal | Operator.NotEqual;
+		private const Operator LOGIC_AND = Operator.And;
+		private const Operator LOGIC_OR = Operator.Or;
+		private const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
+		private const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
+		private const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
+
+		public static LinkedList BeginOperatorChain()
 		{
 			return new LinkedList();
 		}
@@ -79,8 +90,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			Node node = new Node() { Expr = exp };
 			AddNode(list, node);
 		}
-
-
+		
 		public static void AddOperatorToChain(object chain, Token op)
 		{
 			LinkedList list = (LinkedList)chain;
@@ -97,8 +107,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			return new BinaryOperatorExpression(op1, op2, Operator.Power, lcontext);
 		}
-
-
+		
 		private static void AddNode(LinkedList list, Node node)
 		{
 			list.OperatorMask |= node.Op;
@@ -114,55 +123,53 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				list.Last = node;
 			}
 		}
-
-
+		
 		/// <summary>
 		/// Creates a sub tree of binary expressions
 		/// </summary>
 		private static Expression CreateSubTree(LinkedList list, ScriptLoadingContext lcontext)
 		{
 			Operator opfound = list.OperatorMask;
-
 			Node nodes = list.Nodes;
 
 			if ((opfound & POWER) != 0)
-				nodes = PrioritizeRightAssociative(nodes, lcontext, POWER);
+				nodes = PrioritizeAssociative(Associativity.Right, nodes, lcontext, POWER);
 
 			if ((opfound & MUL_DIV_MOD) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, MUL_DIV_MOD);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, MUL_DIV_MOD);
 
 			if ((opfound & ADD_SUB) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, ADD_SUB);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, ADD_SUB);
 
 			if ((opfound & STRCAT) != 0)
-				nodes = PrioritizeRightAssociative(nodes, lcontext, STRCAT);
+				nodes = PrioritizeAssociative(Associativity.Right, nodes, lcontext, STRCAT);
 
 			if ((opfound & SHIFTS) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, SHIFTS);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, SHIFTS);
 
 			if ((opfound & COMPARES) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, COMPARES);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, COMPARES);
 
 			if ((opfound & Operator.BitAnd) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitAnd);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, Operator.BitAnd);
 			
 			if ((opfound & Operator.BitXor) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitXor);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, Operator.BitXor);
 			
 			if ((opfound & Operator.BitOr) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, Operator.BitOr);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, Operator.BitOr);
 
 			if ((opfound & LOGIC_AND) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, LOGIC_AND);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, LOGIC_AND);
 
 			if ((opfound & LOGIC_OR) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, LOGIC_OR);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, LOGIC_OR);
 
 			if ((opfound & NIL_COAL_ASSIGN) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, NIL_COAL_ASSIGN);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, NIL_COAL_ASSIGN);
 			
 			if ((opfound & NIL_COAL_INVERSE) != 0)
-				nodes = PrioritizeLeftAssociative(nodes, lcontext, NIL_COAL_INVERSE);
+				nodes = PrioritizeAssociative(Associativity.Left, nodes, lcontext, NIL_COAL_INVERSE);
 
 			if (nodes.Next != null || nodes.Prev != null)
 				throw new InternalErrorException("Expression reduction didn't work! - 1");
@@ -172,63 +179,30 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return nodes.Expr;
 		}
 
-		private static Node PrioritizeLeftAssociative(Node nodes, ScriptLoadingContext lcontext, Operator operatorsToFind)
+		private static Node PrioritizeAssociative(Associativity side, Node node, ScriptLoadingContext lcontext, Operator operatorsToFind)
 		{
-			for (Node N = nodes; N != null; N = N.Next)
+			for (Node n = side == Associativity.Left ? node : node.GetLast(); n != null; n = side == Associativity.Left ? n.Next : n.Prev)
 			{
-				Operator o = N.Op;
-
-				if ((o & operatorsToFind) != 0)
+				if ((n.Op & operatorsToFind) != 0)
 				{
-					N.Op = Operator.NotAnOperator;
-					N.Expr = new BinaryOperatorExpression(N.Prev.Expr, N.Next.Expr, o, lcontext);
-					N.Prev = N.Prev.Prev;
-					N.Next = N.Next.Next;
+					Operator prevOp = n.Op;
+					n.Op = Operator.NotAnOperator;
+					n.Expr = new BinaryOperatorExpression(n.Prev.Expr, n.Next.Expr, prevOp, lcontext);
+					n.Prev = n.Prev.Prev;
+					n.Next = n.Next.Next;
 
-					if (N.Next != null)
-						N.Next.Prev = N;
+					if (n.Next != null)
+						n.Next.Prev = n;
 
-					if (N.Prev != null)
-						N.Prev.Next = N;
+					if (n.Prev != null)
+						n.Prev.Next = n;
 					else
-						nodes = N;
+						node = n;
 				}
 			}
 
-			return nodes;
+			return node;
 		}
-
-		private static Node PrioritizeRightAssociative(Node nodes, ScriptLoadingContext lcontext, Operator operatorsToFind)
-		{
-			Node last;
-			for (last = nodes; last.Next != null; last = last.Next)
-			{
-			}
-
-			for (Node N = last; N != null; N = N.Prev)
-			{
-				Operator o = N.Op;
-
-				if ((o & operatorsToFind) != 0)
-				{
-					N.Op = Operator.NotAnOperator;
-					N.Expr = new BinaryOperatorExpression(N.Prev.Expr, N.Next.Expr, o, lcontext);
-					N.Prev = N.Prev.Prev;
-					N.Next = N.Next.Next;
-
-					if (N.Next != null)
-						N.Next.Prev = N;
-
-					if (N.Prev != null)
-						N.Prev.Next = N;
-					else
-						nodes = N;
-				}
-			}
-
-			return nodes;
-		}
-
 
 		private static Operator ParseBinaryOperator(Token token)
 		{
@@ -285,13 +259,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 		}
 
-
-
-
-		Expression m_Exp1, m_Exp2;
-		Operator m_Operator;
-
-
+		readonly Expression m_Exp1;
+		readonly Expression m_Exp2;
+		readonly Operator m_Operator;
 
 		private BinaryOperatorExpression(Expression exp1, Expression exp2, Operator op, ScriptLoadingContext lcontext)
 			: base (lcontext)
@@ -305,9 +275,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		private static bool ShouldInvertBoolean(Operator op)
 		{
-			return (op == Operator.NotEqual)
-				|| (op == Operator.GreaterOrEqual)
-				|| (op == Operator.Greater);
+			return op == Operator.NotEqual
+				|| op == Operator.GreaterOrEqual
+				|| op == Operator.Greater;
 		}
 
 		public static OpCode OperatorToOpCode(Operator op)
@@ -365,34 +335,30 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_Exp1.ResolveScope(lcontext);
 			m_Exp2.ResolveScope(lcontext);
 		}
-
-
-		public override void Compile(Execution.VM.FunctionBuilder bc)
+		
+		public override void Compile(FunctionBuilder bc)
 		{
 			m_Exp1.CompilePossibleLiteral(bc);
 
-			if (m_Operator == Operator.Or)
+			switch (m_Operator)
 			{
-				int i = bc.Emit_Jump(OpCode.JtOrPop, -1);
-				m_Exp2.CompilePossibleLiteral(bc);
-				bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
-				return;
+				case Operator.Or:
+				{
+					int i = bc.Emit_Jump(OpCode.JtOrPop, -1);
+					m_Exp2.CompilePossibleLiteral(bc);
+					bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
+					return;
+				}
+				case Operator.And:
+				{
+					int i = bc.Emit_Jump(OpCode.JfOrPop, -1);
+					m_Exp2.CompilePossibleLiteral(bc);
+					bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
+					return;
+				}
 			}
 
-			if (m_Operator == Operator.And)
-			{
-				int i = bc.Emit_Jump(OpCode.JfOrPop, -1);
-				m_Exp2.CompilePossibleLiteral(bc);
-				bc.SetNumVal(i, bc.GetJumpPointForNextInstruction());
-				return;
-			}
-
-
-			if (m_Exp2 != null)
-			{
-				m_Exp2.CompilePossibleLiteral(bc);
-			}
-
+			m_Exp2?.CompilePossibleLiteral(bc);
 			bc.Emit_Operator(OperatorToOpCode(m_Operator));
 
 			if (ShouldInvertBoolean(m_Operator))
@@ -404,66 +370,64 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			dv = DynValue.Nil;
 			if (!m_Exp1.EvalLiteral(out var v1))
 				return false;
-			bool t1Neg = m_Exp1 is UnaryOperatorExpression uo &&
-			             uo.IsNegativeNumber;
+			bool t1Neg = m_Exp1 is UnaryOperatorExpression uo && uo.IsNegativeNumber;
 			v1 = v1.ToScalar();
 			if (!m_Exp2.EvalLiteral(out var v2))
 				return false;
 			v2 = v2.ToScalar();
-			if (m_Operator == Operator.NilCoalescing)
+			
+			switch (m_Operator)
 			{
-				if (v1.IsNil()) dv = v2;
-				else dv = v1;
-				return true;
-			}
-			if (m_Operator == Operator.NilCoalescingInverse)
-			{
-				if (v1.IsNotNil()) dv = v2;
-				else dv = v1;
-				return true;
-			}
-			if (m_Operator == Operator.Or)
-			{
-				if (v1.CastToBool())
+				case Operator.NilCoalescing:
+					dv = v1.IsNil() ? v2 : v1;
+					return true;
+				case Operator.NilCoalescingInverse:
+					dv = v1.IsNotNil() ? v2 : v1;
+					return true;
+				case Operator.Or:
+					dv = v1.CastToBool() ? v1 : v2;
+					break;
+				case Operator.And when !v1.CastToBool():
 					dv = v1;
-				else 
+					break;
+				case Operator.And:
 					dv = v2;
-			}
-			else if (m_Operator == Operator.And)
-			{
-				if (!v1.CastToBool())
-					dv = v1;
-				else
-					dv = v2;
-			}
-			else if ((m_Operator & COMPARES) != 0)
-			{
-				if (v1.Type == DataType.Number && v2.Type == DataType.Number ||
-				    v1.Type == DataType.String && v2.Type == DataType.String)
-					dv = DynValue.NewBoolean(EvalComparison(v1, v2, m_Operator));
-				else
-					return false;
-			}
-			else if (m_Operator == Operator.StrConcat)
-			{
-				string s1 = v1.CastToString();
-				string s2 = v2.CastToString();
+					break;
+				default:
+				{
+					if ((m_Operator & COMPARES) != 0)
+					{
+						if (v1.Type == DataType.Number && v2.Type == DataType.Number ||
+						    v1.Type == DataType.String && v2.Type == DataType.String)
+							dv = DynValue.NewBoolean(EvalComparison(v1, v2, m_Operator));
+						else
+							return false;
+					}
+					else if (m_Operator == Operator.StrConcat)
+					{
+						string s1 = v1.CastToString();
+						string s2 = v2.CastToString();
 
-				if (s1 == null || s2 == null)
-					return false;
+						if (s1 == null || s2 == null)
+							return false;
 
-				dv = DynValue.NewString(s1 + s2);
+						dv = DynValue.NewString(s1 + s2);
+					}
+					else
+					{
+						//Check correct casts
+						double? nd1 = v1.CastToNumber();
+						double? nd2 = v2.CastToNumber();
+						if (nd1 == null || nd2 == null)
+							return false;	
+						//Literal evaluation
+						dv = DynValue.NewNumber(EvalArithmetic(v1, v2, t1Neg));
+					}
+
+					break;
+				}
 			}
-			else
-			{
-				//Check correct casts
-				double? nd1 = v1.CastToNumber();
-				double? nd2 = v2.CastToNumber();
-				if (nd1 == null || nd2 == null)
-					return false;	
-				//Literal evaluation
-				dv = DynValue.NewNumber(EvalArithmetic(v1, v2, t1Neg));
-			}
+
 			return true;
 		}
 
@@ -471,30 +435,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			DynValue v1 = m_Exp1.Eval(context).ToScalar();
 
-			if (m_Operator == Operator.NilCoalescing)
+			switch (m_Operator)
 			{
-				if (v1.IsNil()) return m_Exp2.Eval(context);
-				return v1;
-			}
-			if (m_Operator == Operator.NilCoalescingInverse)
-			{
-				if (v1.IsNotNil()) return m_Exp2.Eval(context);
-				return v1;
-			}
-			if (m_Operator == Operator.Or)
-			{
-				if (v1.CastToBool())
-					return v1;
-				else
-					return m_Exp2.Eval(context).ToScalar();
-			}
-
-			if (m_Operator == Operator.And)
-			{
-				if (!v1.CastToBool())
-					return v1;
-				else
-					return m_Exp2.Eval(context).ToScalar();
+				case Operator.NilCoalescing:
+					return v1.IsNil() ? m_Exp2.Eval(context) : v1;
+				case Operator.NilCoalescingInverse:
+					return v1.IsNotNil() ? m_Exp2.Eval(context) : v1;
+				case Operator.Or:
+					return v1.CastToBool() ? v1 : m_Exp2.Eval(context).ToScalar();
+				case Operator.And:
+					return !v1.CastToBool() ? v1 : m_Exp2.Eval(context).ToScalar();
 			}
 
 			DynValue v2 = m_Exp2.Eval(context).ToScalar();
@@ -503,7 +453,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			{
 				return DynValue.NewBoolean(EvalComparison(v1, v2, m_Operator));				
 			}
-			else if (m_Operator == Operator.StrConcat)
+			
+			if (m_Operator == Operator.StrConcat)
 			{
 				string s1 = v1.CastToString();
 				string s2 = v2.CastToString();
@@ -513,10 +464,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 				return DynValue.NewString(s1 + s2);
 			}
-			else
-			{
-				return DynValue.NewNumber(EvalArithmetic(v1, v2));
-			}
+
+			return DynValue.NewNumber(EvalArithmetic(v1, v2));
 		}
 
 		private double EvalArithmetic(DynValue v1, DynValue v2, bool t1Neg = false)
@@ -554,7 +503,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				case Operator.Div:
 					return d1 / d2;
 				case Operator.Mod:
-					return (d1) - Math.Floor((d1) / (d2)) * (d2);
+					return d1 - Math.Floor(d1 / d2) * d2;
 				case Operator.Power:
 					var res = Math.Pow(t1Neg ? -d1 : d1, d2);
 					return t1Neg ? -res : res;
@@ -568,48 +517,26 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			switch (op)
 			{
 				case Operator.Less:
-					if (l.Type == DataType.Number && r.Type == DataType.Number)
+					return l.Type switch
 					{
-						return (l.Number < r.Number);
-					}
-					else if (l.Type == DataType.String && r.Type == DataType.String)
-					{
-						return (l.String.CompareTo(r.String) < 0);
-					}
-					else
-					{
-						throw new DynamicExpressionException("Attempt to compare non-numbers, non-strings.");
-					}
+						DataType.Number when r.Type == DataType.Number => l.Number < r.Number,
+						DataType.String when r.Type == DataType.String => string.Compare(l.String, r.String, StringComparison.Ordinal) < 0,
+						_ => throw new DynamicExpressionException("Attempt to compare non-numbers, non-strings.")
+					};
 				case Operator.LessOrEqual:
-					if (l.Type == DataType.Number && r.Type == DataType.Number)
+					return l.Type switch
 					{
-						return (l.Number <= r.Number);
-					}
-					else if (l.Type == DataType.String && r.Type == DataType.String)
-					{
-						return (l.String.CompareTo(r.String) <= 0);
-					}
-					else
-					{
-						throw new DynamicExpressionException("Attempt to compare non-numbers, non-strings.");
-					}
+						DataType.Number when r.Type == DataType.Number => l.Number <= r.Number,
+						DataType.String when r.Type == DataType.String => string.Compare(l.String, r.String, StringComparison.Ordinal) <= 0,
+						_ => throw new DynamicExpressionException("Attempt to compare non-numbers, non-strings.")
+					};
 				case Operator.Equal:
-					if (object.ReferenceEquals(r, l))
+					if (r.Type != l.Type)
 					{
-						return true;
+						return (l.Type == DataType.Nil && r.Type == DataType.Void)
+						       || (l.Type == DataType.Void && r.Type == DataType.Nil);
 					}
-					else if (r.Type != l.Type)
-					{
-						if ((l.Type == DataType.Nil && r.Type == DataType.Void)
-							|| (l.Type == DataType.Void && r.Type == DataType.Nil))
-							return true;
-						else
-							return false;
-					}
-					else
-					{
-						return r.Equals(l);
-					}
+					return r.Equals(l);
 				case Operator.Greater:
 					return !EvalComparison(l, r, Operator.LessOrEqual);
 				case Operator.GreaterOrEqual:
