@@ -259,7 +259,7 @@ namespace WattleScript.Interpreter.Tree
 				if (lcontext.Lexer.Current.Type == TokenType.Number)
 					lcontext.Lexer.Next();
 				else return false;
-				if (lcontext.Lexer.Current.Type == TokenType.Op_Concat)
+				if (lcontext.Lexer.Current.Type == TokenType.Op_Concat || lcontext.Lexer.Current.Type == TokenType.Op_ExclusiveRange)
 					lcontext.Lexer.Next();
 				else return false;
 				return lcontext.Lexer.Current.Type == TokenType.Number;
@@ -312,7 +312,7 @@ namespace WattleScript.Interpreter.Tree
 					lcontext.Lexer.RestorePos();
 					lcontext.Lexer.Next();
 					return new ForLoopStatement(lcontext, name, forTkn, true);
-				case TokenType.Op_Assignment when !paren:
+				case TokenType.Op_Assignment:
 					return new ForLoopStatement(lcontext, name, forTkn, false);
 				default:
 				{

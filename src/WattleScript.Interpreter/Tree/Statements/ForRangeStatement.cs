@@ -22,10 +22,10 @@ namespace WattleScript.Interpreter.Tree.Statements
         {
             CheckTokenType(lcontext, TokenType.In);
             var startNumber = CheckTokenType(lcontext, TokenType.Number).GetNumberValue();
-            CheckTokenType(lcontext, TokenType.Op_Concat);
+            Token rangeOp = CheckTokenType(lcontext, TokenType.Op_Concat, TokenType.Op_ExclusiveRange);
             var endNumber = CheckTokenType(lcontext, TokenType.Number).GetNumberValue();
             m_Start = new LiteralExpression(lcontext, DynValue.NewNumber(startNumber));
-            m_End = new LiteralExpression(lcontext, DynValue.NewNumber(endNumber));
+            m_End = new LiteralExpression(lcontext, DynValue.NewNumber(rangeOp.Type == TokenType.Op_ExclusiveRange ? endNumber - 1 : endNumber));
             m_Step = new LiteralExpression(lcontext, DynValue.NewNumber(startNumber > endNumber ? -1 : 1));
             if (paren) CheckTokenType(lcontext, TokenType.Brk_Close_Round);
             this.nameToken = nameToken;

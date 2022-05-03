@@ -373,15 +373,19 @@ namespace WattleScript.Interpreter.Tree
 							if (m_Syntax == ScriptSyntax.WattleScript)
 							{
 								next = CursorCharNext();
-								if (next == '.') {
-									CursorCharNext();
-									return CreateToken(TokenType.VarArgs, fromLine, fromCol, "...");
-								} else if (next == '=') {
-									CursorCharNext();
-									return CreateToken(TokenType.Op_ConcatEq, fromLine, fromCol, "..=");
-								}
-								else {
-									return CreateToken(TokenType.Op_Concat, fromLine, fromCol, "..");
+								switch (next)
+								{
+									case '.':
+										CursorCharNext();
+										return CreateToken(TokenType.VarArgs, fromLine, fromCol, "...");
+									case '=':
+										CursorCharNext();
+										return CreateToken(TokenType.Op_ConcatEq, fromLine, fromCol, "..=");
+									case '<':
+										CursorCharNext();
+										return CreateToken(TokenType.Op_ExclusiveRange, fromLine, fromCol, "..<");
+									default:
+										return CreateToken(TokenType.Op_Concat, fromLine, fromCol, "..");
 								}
 							}
 							else {
