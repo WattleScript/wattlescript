@@ -68,7 +68,9 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// A request to await a task
 		/// </summary>
-		AwaitRequest
+		AwaitRequest,
+		
+		Range
 	}
 
 	/// <summary>

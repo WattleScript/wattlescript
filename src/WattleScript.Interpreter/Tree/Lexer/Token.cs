@@ -144,6 +144,10 @@ namespace WattleScript.Interpreter.Tree
 				case TokenType.Op_LShift:
 				case TokenType.Op_RShiftArithmetic:
 				case TokenType.Op_RShiftLogical:
+				case TokenType.Op_InclusiveRange:
+				case TokenType.Op_LeftExclusiveRange:
+				case TokenType.Op_RightExclusiveRange:
+				case TokenType.Op_ExclusiveRange:
 					return true;
 				default:
 					return false;

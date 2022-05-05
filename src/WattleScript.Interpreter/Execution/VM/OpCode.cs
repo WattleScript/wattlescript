@@ -15,13 +15,14 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushNil,	// Pushes nil to the v-stack
 		PushTrue,	// Pushes true to the v-stack
 		PushFalse,	// Pushes false to the v-stack
-		PushInt, // Pushes an integer to the v-stack
+		PushInt,    // Pushes an integer to the v-stack
 		PushNumber, // Pushes a number to the v-stack
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
 		NewTable,	// Creates a new empty table on the stack
 		TblInitN,	// Initializes a table named entry
 		TblInitI,	// Initializes a table positional entry
+		NewRange,   // Creates a range from NumVal1, NumVal2 (NumVal3 = 0) or v-stack (NumVal3 = 1)
 
 		StoreLcl, Local,
 		StoreUpv, Upvalue,
@@ -110,7 +111,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		NilCoalescingInverse,
 
 		JLclInit, // Inits a param value if a default one is specified and not provided at callsite.
-		
+
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

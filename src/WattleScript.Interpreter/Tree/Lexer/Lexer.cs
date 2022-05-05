@@ -328,6 +328,26 @@ namespace WattleScript.Interpreter.Tree
 				case '>' when m_Syntax == ScriptSyntax.WattleScript:
 				{
 					char next = CursorCharNext();
+
+					if (next == '.')
+					{
+						next = CursorCharNext();
+
+						if (next == '.')
+						{
+							next = CursorCharNext();
+
+							Token t = next == '<' ? CreateToken(TokenType.Op_ExclusiveRange, fromLine, fromCol, ">..<") : CreateToken(TokenType.Op_LeftExclusiveRange, fromLine, fromCol, ">..");
+
+							if (t.Type == TokenType.Op_ExclusiveRange)
+							{
+								CursorCharNext();
+							}
+							
+							return t;
+						}
+					}
+					
 					if (next == '>')
 					{
 						next = CursorCharNext();
@@ -354,7 +374,9 @@ namespace WattleScript.Interpreter.Tree
 				case '<' when m_Syntax != ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_LessThan, TokenType.Op_LessThanEqual, fromLine, fromCol);
 				case '>' when m_Syntax != ScriptSyntax.WattleScript:
+				{
 					return PotentiallyDoubleCharOperator('=', TokenType.Op_GreaterThan, TokenType.Op_GreaterThanEqual, fromLine, fromCol);
+				}
 				case '!' when m_Syntax == ScriptSyntax.WattleScript:
 					return PotentiallyDoubleCharOperator('=', TokenType.Not, TokenType.Op_NotEqual, fromLine, fromCol);
 				case '~' when m_Syntax == ScriptSyntax.WattleScript:
@@ -373,15 +395,20 @@ namespace WattleScript.Interpreter.Tree
 							if (m_Syntax == ScriptSyntax.WattleScript)
 							{
 								next = CursorCharNext();
-								if (next == '.') {
-									CursorCharNext();
-									return CreateToken(TokenType.VarArgs, fromLine, fromCol, "...");
-								} else if (next == '=') {
-									CursorCharNext();
-									return CreateToken(TokenType.Op_ConcatEq, fromLine, fromCol, "..=");
-								}
-								else {
-									return CreateToken(TokenType.Op_Concat, fromLine, fromCol, "..");
+
+								switch (next)
+								{
+									case '.':
+										CursorCharNext();
+										return CreateToken(TokenType.VarArgs, fromLine, fromCol, "...");
+									case '=':
+										CursorCharNext();
+										return CreateToken(TokenType.Op_ConcatEq, fromLine, fromCol, "..=");
+									case '<':
+										CursorCharNext();
+										return CreateToken(TokenType.Op_RightExclusiveRange, fromLine, fromCol, "..<");
+									default:
+										return CreateToken(TokenType.Op_InclusiveRange, fromLine, fromCol, "..");
 								}
 							}
 							else {

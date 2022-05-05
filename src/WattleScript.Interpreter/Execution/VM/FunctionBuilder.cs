@@ -235,6 +235,10 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 				case DataType.String:
 					return AppendInstruction(new Instruction(OpCode.PushString, StringArg(value.String)));
+				case DataType.Range:
+				{
+					return AppendInstruction(new Instruction(OpCode.NewRange, value.Range.From, value.Range.To));
+				}
 			}
 			throw new InvalidOperationException(value.Type.ToString());
 		}
@@ -256,14 +260,18 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public int Emit_Operator(OpCode opcode)
 		{
-			var i = AppendInstruction(new Instruction(opcode));
+			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode);
+			int i = AppendInstruction(instr);
 			
-			if (opcode == OpCode.LessEq)
-				AppendInstruction(new Instruction(OpCode.CNot));
-
-			if (opcode == OpCode.Eq || opcode == OpCode.Less)
+			switch (opcode)
 			{
-				AppendInstruction(new Instruction(OpCode.ToBool));
+				case OpCode.LessEq:
+					AppendInstruction(new Instruction(OpCode.CNot));
+					break;
+				case OpCode.Eq:
+				case OpCode.Less:
+					AppendInstruction(new Instruction(OpCode.ToBool));
+					break;
 			}
 
 			return i;
