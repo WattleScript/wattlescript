@@ -230,20 +230,34 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             TestScript.Run(@"
             var tbl = { 
                 str = 'hello',
-                func2 = (x) => {   
-                    assert.areequal(nil, this);
+                func1 = (x) => {   
+                    assert.areequal('hello', this?.str, 'func1 - arrow lambda');
+                    assert.areequal(7, x);
+                },
+                func2 = function(x) {
+                    assert.areequal('hello', this?.str, 'func2');
                     assert.areequal(7, x);
                 }
             }
-            function tbl:hello(num) {
-                assert.areequal('hello', this?.str)
+            function tbl:func3(num) {
+                assert.areequal('hello', this?.str, 'tbl:func3')
                 assert.areequal(7, num);
             }
-            tbl.hello(7);
-            tbl::hello(7);
-            tbl.func2(7);
+            function tbl.func4(num) {
+                assert.areequal('hello', this?.str, 'tbl.func4')
+                assert.areequal(7, num);
+            }       
+            local function func5(num) {
+                assert.areequal(nil, this?.str, 'func5 - NOT table')
+                assert.areequal(7, num);
+            }         
+            tbl.func5 = func5; //'this' does not carry over, it is decided at the definition time
 
-
+            tbl.func1(7);
+            tbl::func2(7);
+            tbl.func3(7);
+            tbl.func4(7);
+            tbl.func5(7);
             table.insert(tbl, 1, 'goodbye');
             assert.areequal('goodbye', tbl[1]);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);

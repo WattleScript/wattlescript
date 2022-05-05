@@ -98,7 +98,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			CheckTokenTypeEx(lcontext, TokenType.Op_Assignment, TokenType.Colon);
 
-			Expression value = Expr(lcontext);
+			Expression value = Expr(lcontext, lcontext.Syntax == ScriptSyntax.WattleScript);
 
 			m_CtorArgs.Add(new KeyValuePair<Expression, Expression>(key, value));
 		}
@@ -110,7 +110,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			CheckTokenTypeEx(lcontext, TokenType.Op_Assignment, TokenType.Colon);
 
-			Expression value = Expr(lcontext);
+			Expression value = Expr(lcontext, lcontext.Syntax == ScriptSyntax.WattleScript);
 
 			m_CtorArgs.Add(new KeyValuePair<Expression, Expression>(key, value));
 		}
@@ -118,7 +118,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		private void ArrayField(ScriptLoadingContext lcontext)
 		{
-			Expression e = Expr(lcontext);
+			Expression e = Expr(lcontext, lcontext.Syntax == ScriptSyntax.WattleScript);
 			m_PositionalValues.Add(e);
 		}
 

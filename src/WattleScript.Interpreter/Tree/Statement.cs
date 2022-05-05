@@ -237,7 +237,7 @@ namespace WattleScript.Interpreter.Tree
 						}
 						lcontext.Lexer.RestorePos();
 						//Regular expression
-						Expression exp = Expression.PrimaryExp(lcontext);
+						Expression exp = Expression.PrimaryExp(lcontext, false);
 						FunctionCallExpression fnexp = exp as FunctionCallExpression;
 						if (fnexp != null)
 							return new FunctionCallStatement(lcontext, fnexp);

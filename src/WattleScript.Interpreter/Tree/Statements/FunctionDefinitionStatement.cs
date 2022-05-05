@@ -116,7 +116,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			{
 				selfType = SelfType.Implicit;
 			}
-
+			
 			m_FuncDef = new FunctionDefinitionExpression(lcontext, selfType, false);
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
