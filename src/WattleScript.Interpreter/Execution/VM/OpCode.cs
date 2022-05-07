@@ -22,7 +22,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		NewTable,	// Creates a new empty table on the stack
 		TblInitN,	// Initializes a table named entry
 		TblInitI,	// Initializes a table positional entry
-		NewRange,   // Creates a range from NumVal1, NumVal2 (NumVal3 = 0) or v-stack (NumVal3 = 1)
+		NewRange,   // Creates a range from v-stack
 
 		StoreLcl, Local,
 		StoreUpv, Upvalue,

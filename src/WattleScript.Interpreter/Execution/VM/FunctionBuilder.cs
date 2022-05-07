@@ -237,7 +237,9 @@ namespace WattleScript.Interpreter.Execution.VM
 					return AppendInstruction(new Instruction(OpCode.PushString, StringArg(value.String)));
 				case DataType.Range:
 				{
-					return AppendInstruction(new Instruction(OpCode.NewRange, value.Range.From, value.Range.To));
+					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.From));
+					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.To));
+					return AppendInstruction(new Instruction(OpCode.NewRange, 0, 0, 1));
 				}
 			}
 			throw new InvalidOperationException(value.Type.ToString());

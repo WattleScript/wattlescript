@@ -1479,17 +1479,10 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecNewRange(Instruction i)
 		{
-			if (i.NumVal3 == 1) // 0 = from NumVal, NumVal2, 1 = from v-stack
-			{
-				DynValue toDv = m_ValueStack.Pop().ToScalar();
-				DynValue fromDv = m_ValueStack.Pop().ToScalar();
+			DynValue toDv = m_ValueStack.Pop().ToScalar();
+			DynValue fromDv = m_ValueStack.Pop().ToScalar();
 				
-				m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, fromDv.CastToInt() ?? 0, toDv.CastToInt() ?? 0)));	
-			}
-			else
-			{
-				m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, i.NumVal, i.NumVal2)));	
-			}
+			m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, fromDv.CastToInt() ?? 0, toDv.CastToInt() ?? 0)));
 		}
 		
 		private void ExecTblInitN(Instruction i)
