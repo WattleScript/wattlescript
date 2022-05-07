@@ -804,6 +804,20 @@ return getnumber();
             ");
         }
         
-       
+        [Test]
+        public void RangeGet()
+        {
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+            
+            DynValue dv = sc.DoString(@"
+                r1 = 1>..<10
+                return r1
+            ");
+            
+            Assert.AreEqual(2, dv.Range.From);
+            Assert.AreEqual(9, dv.Range.To);
+        }
     }
 }

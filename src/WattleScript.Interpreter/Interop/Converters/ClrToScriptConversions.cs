@@ -137,8 +137,8 @@ namespace WattleScript.Interpreter.Interop.Converters
 
 			switch (obj)
 			{
-				case Delegate @delegate:
-					return DynValue.NewCallback(CallbackFunction.FromDelegate(script, @delegate));
+				case Delegate del:
+					return DynValue.NewCallback(CallbackFunction.FromDelegate(script, del));
 				case MethodInfo {IsStatic: true} mi:
 					return DynValue.NewCallback(CallbackFunction.FromMethodInfo(script, mi));
 				case IList list:
