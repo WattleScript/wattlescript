@@ -785,6 +785,24 @@ return getnumber();
 ").Number);
         }
         
+        [Test]
+        public void RangeDefinition()
+        {
+            UserData.RegisterType<LuaAssertApi>();
+            
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+
+            Range r1 = new Range(sc, 5, 10);
+            sc.Globals["r1"] = r1;
+            
+            sc.Globals["assert"] = new LuaAssertApi();
+            sc.DoString(@"
+                assert.areequal(5, r1.from)
+                assert.areequal(10, r1.to)
+            ");
+        }
         
        
     }

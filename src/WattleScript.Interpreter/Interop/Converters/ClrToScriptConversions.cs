@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -45,50 +46,55 @@ namespace WattleScript.Interpreter.Interop.Converters
 		/// </summary>
 		internal static DynValue TryObjectToSimpleDynValue(Script script, object obj)
 		{
-			if (obj == null)
-				return DynValue.Nil;
+			switch (obj)
+			{
+				case null:
+					return DynValue.Nil;
+				case DynValue value:
+					return value;
+			}
 
-			if (obj is DynValue)
-				return (DynValue)obj;
-
-
-			var converter = Script.GlobalOptions.CustomConverters.GetClrToScriptCustomConversion(obj.GetType());
+			Func<Script, object, DynValue> converter = Script.GlobalOptions.CustomConverters.GetClrToScriptCustomConversion(obj.GetType());
 			if (converter != null)
 			{
-				var v = converter(script, obj);
+				DynValue v = converter(script, obj);
 				if (v.IsNotNil())
 					return v;
 			}
 
 			Type t = obj.GetType();
 
-			if (obj is bool)
-				return DynValue.NewBoolean((bool)obj);
-
-			if (obj is string || obj is StringBuilder || obj is char)
-				return DynValue.NewString(obj.ToString());
-
-			if (obj is Closure)
-				return DynValue.NewClosure((Closure)obj);
+			switch (obj)
+			{
+				case bool b:
+					return DynValue.NewBoolean(b);
+				case string _:
+				case StringBuilder _:
+				case char _:
+					return DynValue.NewString(obj.ToString());
+				case Closure closure:
+					return DynValue.NewClosure(closure);
+			}
 
 			if (NumericConversions.NumericTypes.Contains(t))
 				return DynValue.NewNumber(NumericConversions.TypeToDouble(t, obj));
 
-			if (obj is Table)
-				return DynValue.NewTable((Table)obj);
-
-			if (obj is CallbackFunction)
-				return DynValue.NewCallback((CallbackFunction)obj);
-
-			if (obj is Delegate)
+			switch (obj)
 			{
-				Delegate d = (Delegate)obj;
-				
-				MethodInfo mi = d.Method;
-
-
-				if (CallbackFunction.CheckCallbackSignature(mi, false))
-					return DynValue.NewCallback((Func<ScriptExecutionContext, CallbackArguments, DynValue>)d);
+				case Table table:
+					return DynValue.NewTable(table);
+				case CallbackFunction function:
+					return DynValue.NewCallback(function);
+				case Delegate del:
+				{
+					MethodInfo mi = del.Method;
+					
+					if (CallbackFunction.CheckCallbackSignature(mi, false))
+						return DynValue.NewCallback((Func<ScriptExecutionContext, CallbackArguments, DynValue>)del);
+					break;
+				}
+				case Range range:
+					return DynValue.NewRange(range);
 			}
 
 			return DynValue.Nil;
@@ -100,10 +106,16 @@ namespace WattleScript.Interpreter.Interop.Converters
 		/// </summary>
 		internal static DynValue ObjectToDynValue(Script script, object obj)
 		{
-			if(obj == null) return DynValue.Nil;
-			if (obj is DynValue _dyn) return _dyn;
-			if (obj is Task task) return ObjectToDynValue(script, new TaskWrapper(task));
-				
+			switch (obj)
+			{
+				case null:
+					return DynValue.Nil;
+				case DynValue dyn:
+					return dyn;
+				case Task task:
+					return ObjectToDynValue(script, new TaskWrapper(task));
+			}
+
 			DynValue v = TryObjectToSimpleDynValue(script, obj);
 
 			if (v.IsNotNil()) return v;
@@ -111,44 +123,39 @@ namespace WattleScript.Interpreter.Interop.Converters
 			v = UserData.Create(obj);
 			if (v.IsNotNil()) return v;
 
-			if (obj is Type)
-				v = UserData.CreateStatic(obj as Type);
-
-			// unregistered enums go as integers
-			if (obj is Enum)
-				return DynValue.NewNumber(NumericConversions.TypeToDouble(Enum.GetUnderlyingType(obj.GetType()), obj));
+			switch (obj)
+			{
+				case Type type:
+					v = UserData.CreateStatic(type);
+					break;
+				// unregistered enums go as integers
+				case Enum _:
+					return DynValue.NewNumber(NumericConversions.TypeToDouble(Enum.GetUnderlyingType(obj.GetType()), obj));
+			}
 
 			if (v.IsNotNil()) return v;
 
-			if (obj is Delegate)
-				return DynValue.NewCallback(CallbackFunction.FromDelegate(script, (Delegate)obj));
-
-			if (obj is MethodInfo)
+			switch (obj)
 			{
-				MethodInfo mi = (MethodInfo)obj;
-
-				if (mi.IsStatic)
-				{
+				case Delegate @delegate:
+					return DynValue.NewCallback(CallbackFunction.FromDelegate(script, @delegate));
+				case MethodInfo {IsStatic: true} mi:
 					return DynValue.NewCallback(CallbackFunction.FromMethodInfo(script, mi));
+				case IList list:
+				{
+					Table t = TableConversions.ConvertIListToTable(script, list);
+					return DynValue.NewTable(t);
+				}
+				case IDictionary dictionary:
+				{
+					Table t = TableConversions.ConvertIDictionaryToTable(script, dictionary);
+					return DynValue.NewTable(t);
 				}
 			}
 
-			if (obj is System.Collections.IList)
-			{
-				Table t = TableConversions.ConvertIListToTable(script, (System.Collections.IList)obj);
-				return DynValue.NewTable(t);
-			}
-
-			if (obj is System.Collections.IDictionary)
-			{
-				Table t = TableConversions.ConvertIDictionaryToTable(script, (System.Collections.IDictionary)obj);
-				return DynValue.NewTable(t);
-			}
-
-			var enumerator = EnumerationToDynValue(script, obj);
+			DynValue enumerator = EnumerationToDynValue(script, obj);
 			if (enumerator.IsNotNil()) return enumerator;
-
-
+			
 			throw ScriptRuntimeException.ConvertObjectFailed(obj);
 		}
 
