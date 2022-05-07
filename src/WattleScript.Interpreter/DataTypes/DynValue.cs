@@ -433,9 +433,8 @@ namespace WattleScript.Interpreter
 
 				string typeString = this.Type.ToLuaTypeString();
 
-				if (m_Object is UserData)
+				if (m_Object is UserData ud)
 				{
-					UserData ud = (UserData)m_Object;
 					string str = ud.Descriptor.AsString(ud.Object);
 					if (str != null)
 						return str;

@@ -5,18 +5,16 @@ namespace WattleScript.Interpreter
 {
     public class Range : RefIdObject
     {
-        public enum RangeClosingTypes
-        {
-            Inclusive,
-            LeftExclusive,
-            RightExclusive,
-            Exclusive
-        }
-        
+        /// <summary>
+        /// Inclusive start
+        /// </summary>
         public int From { get; set; }
-        public int To { get; set; }
-        public RangeClosingTypes ClosingType { get; set; } = RangeClosingTypes.Inclusive;
         
+        /// <summary>
+        /// Inclusive end
+        /// </summary>
+        public int To { get; set; }
+
         public Script OwnerScript { get; }
 
         public Range(Script ownerScript, int from, int to)
@@ -25,7 +23,12 @@ namespace WattleScript.Interpreter
             From = from;
             To = to;
         }
-        
+
+        public override string ToString()
+        {
+            return $"Range ({From} - {To})";
+        }
+
         internal IEnumerable<DynValue> ReversePair
         {
             get

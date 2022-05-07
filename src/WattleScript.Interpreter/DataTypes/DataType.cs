@@ -70,6 +70,9 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		AwaitRequest,
 		
+		/// <summary>
+		/// A range object from..to
+		/// </summary>
 		Range
 	}
 
@@ -171,6 +174,8 @@ namespace WattleScript.Interpreter
 					return "userdata";
 				case DataType.Thread:
 					return "thread";
+				case DataType.Range:
+					return "range";
 				case DataType.Tuple:
 				case DataType.TailCallRequest:
 				case DataType.YieldRequest:
