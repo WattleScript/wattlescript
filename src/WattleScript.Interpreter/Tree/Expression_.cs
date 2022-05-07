@@ -321,8 +321,6 @@ namespace WattleScript.Interpreter.Tree
 			Token T = lcontext.Lexer.Current;
 			switch (T.Type)
 			{
-				//case TokenType.Op_InclusiveRange when lcontext.Syntax == ScriptSyntax.WattleScript:
-				//	return new RangeConstructor(lcontext);
 				case TokenType.String when lcontext.Syntax == ScriptSyntax.WattleScript:
 				case TokenType.String_EndTemplate:
 					return new LiteralExpression(lcontext, T);

@@ -715,8 +715,6 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 			}
 		}
-
-		private int tmpI = 0;
 		
 		private int Internal_ExecCall(bool canAwait, int argsCount, int instructionPtr, CallbackFunction handler = null,
 			CallbackFunction continuation = null, bool thisCall = false, string debugText = null, DynValue unwindHandler = default)

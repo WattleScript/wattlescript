@@ -316,8 +316,6 @@ namespace WattleScript.Interpreter.Tree
 					return new ForLoopStatement(lcontext, name, forTkn, false);
 				default:
 				{
-					//if (CheckRangeFor(lcontext))
-					//	return new ForRangeStatement(lcontext, name, forTkn, paren);
 					return new ForEachLoopStatement(lcontext, name, forTkn, paren);
 				}
 			}
