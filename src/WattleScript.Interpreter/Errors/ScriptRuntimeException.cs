@@ -518,11 +518,12 @@ namespace WattleScript.Interpreter
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
 		/// an attempt to assign an invalid value to a existing range was made
 		/// </summary>
+		/// <param name="range">A range</param>
 		/// <param name="type">Unexpected type casted to string</param>
 		/// <returns></returns>
-		public static ScriptRuntimeException ExistingRangeBadValueAssigned(string type)
+		public static ScriptRuntimeException ExistingRangeBadValueAssigned(Range range, string type)
 		{
-			return new ScriptRuntimeException("bad value assinged to a range property (number expected, got {0})", type);
+			return new ScriptRuntimeException("bad value for range '{0}' (number expected, got {1})", range, type);
 		}
 		
 		/// <summary>

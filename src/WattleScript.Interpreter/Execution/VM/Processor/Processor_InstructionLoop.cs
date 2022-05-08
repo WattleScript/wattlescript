@@ -1224,8 +1224,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private int ExecAddStr(int instructionPtr)
 		{
-			DynValue dvA = m_ValueStack.Peek();
-			DynValue dvB = m_ValueStack.Peek(1);
+			ref DynValue dvA = ref m_ValueStack.Peek();
+			ref DynValue dvB = ref m_ValueStack.Peek(1);
 			DataType dvAType = dvA.Type;
 			DataType dvBType = dvB.Type;
 			
@@ -1577,7 +1577,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						if (valInt == null)
 						{
-							throw ScriptRuntimeException.ExistingRangeBadValueAssigned(value.Type.ToLuaTypeString());
+							throw ScriptRuntimeException.ExistingRangeBadValueAssigned(obj.Range, value.Type.ToLuaTypeString());
 						}
 						
 						switch (idx.String)
