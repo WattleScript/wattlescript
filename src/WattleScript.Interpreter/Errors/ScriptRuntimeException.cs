@@ -501,6 +501,41 @@ namespace WattleScript.Interpreter
 		{
 			return new ScriptRuntimeException("attempt to access instance member {0}.{1} from a static userdata", typeDescr.Name, desc.Name);
 		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid value to a new range was made
+		/// </summary>
+		/// <param name="property">To/From</param>
+		/// <param name="type">Unexpected type casted to string</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException NewRangeBadValue(string property, string type)
+		{
+			return new ScriptRuntimeException("bad value '{0}' for new range (number expected, got {1})", property, type);
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid value to a existing range was made
+		/// </summary>
+		/// <param name="range">A range</param>
+		/// <param name="type">Unexpected type casted to string</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException ExistingRangeBadValueAssigned(Range range, string type)
+		{
+			return new ScriptRuntimeException("bad value for range '{0}' (number expected, got {1})", range, type);
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid property (something other than to/from) to a existing range was made
+		/// </summary>
+		/// <param name="property">Invalid property name</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException ExistingRangeBadPropertyAssigned(string property)
+		{
+			return new ScriptRuntimeException("bad property name on a range (expected 'from' or 'to', got {0})", property);
+		}
 
 		/// <summary>
 		/// Rethrows this instance if 

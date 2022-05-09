@@ -1,3 +1,4 @@
+using System;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -6,6 +7,7 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
+    [Obsolete]
     class ForRangeStatement : Statement, IBlockStatement
     {
         //for' NAME '=' exp ',' exp (',' exp)? 'do' block 'end'

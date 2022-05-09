@@ -315,6 +315,9 @@ namespace WattleScript.Interpreter.Execution.VM
 							if(m_ValueStack[m_ExecutionStack.Peek().BasePointer + i.NumVal2].IsNotNil())
 								instructionPtr = i.NumVal;
 							break;
+						case OpCode.NewRange:
+							ExecNewRange();
+							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
@@ -553,6 +556,13 @@ namespace WattleScript.Interpreter.Execution.VM
 			// 2) if f is a table with no __call metamethod, use a default table iterator
 			if (f.Type != DataType.Function && f.Type != DataType.ClrFunction)
 			{
+				// Ranges have no metamethods, we can forward this to the top
+				if (f.Type == DataType.Range)
+				{
+					m_ValueStack.Push(EnumerableWrapper.ConvertRange(f.Range));
+					return;
+				}
+				
 				DynValue meta = GetMetamethod(f, "__iterator");
 
 				if (!meta.IsNil())
@@ -782,6 +792,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					return Internal_CheckForTailRequests(canAwait, instructionPtr);
 				}
 				case DataType.Function:
+				{
 					m_ValueStack.Push(DynValue.NewNumber(implicitThis ? -argsCount : argsCount));
 					m_ExecutionStack.Push(new CallStackItem()
 					{
@@ -797,6 +808,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						BasePointer = m_ValueStack.Reserve(fn.Function.Function.LocalCount)
 					});
 					return 0;
+				}
 			}
 
 			// fallback to __call metamethod
@@ -1212,15 +1224,19 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private int ExecAddStr(int instructionPtr)
 		{
-			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
-			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			ref DynValue dvA = ref m_ValueStack.Peek();
+			ref DynValue dvB = ref m_ValueStack.Peek(1);
+			DataType dvAType = dvA.Type;
+			DataType dvBType = dvB.Type;
+			
+			if (dvA.TryCastToNumber(out var rn) && dvB.TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
 				return instructionPtr;
 			}
-			if (m_ValueStack.Peek(1).Type == DataType.String ||
-			         m_ValueStack.Peek().Type == DataType.String)
+
+			if (dvAType == DataType.String || dvBType == DataType.String)
 			{
 				int c1 = 0, c2 = 0;
 				if (!ToConcatString(ref m_ValueStack.Peek(), out var rhs, ref c1) ||
@@ -1463,6 +1479,27 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.RemoveLast(i.NumVal);
 		}
 
+		private void ExecNewRange()
+		{
+			DynValue toDv = m_ValueStack.Pop().ToScalar();
+			DynValue fromDv = m_ValueStack.Pop().ToScalar();
+
+			int? fromInt = fromDv.CastToInt();
+			int? toInt = toDv.CastToInt();
+
+			if (fromInt == null)
+			{
+				throw ScriptRuntimeException.NewRangeBadValue("from", fromDv.Type.ToLuaTypeString());
+			}
+			
+			if (toInt == null)
+			{
+				throw ScriptRuntimeException.NewRangeBadValue("to", toDv.Type.ToLuaTypeString());
+			}
+				
+			m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, fromInt.Value, toInt.Value)));
+		}
+		
 		private void ExecTblInitN(Instruction i)
 		{
 			// stack: tbl - key - val
@@ -1490,7 +1527,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
-			var value = GetStoreValue(i);
+			DynValue value = GetStoreValue(i);
 			
 			while (nestedMetaOps > 0)
 			{
@@ -1533,6 +1570,27 @@ namespace WattleScript.Interpreter.Execution.VM
 						}
 
 						return instructionPtr;
+					}
+					case DataType.Range:
+					{
+						int? valInt = value.CastToInt();
+
+						if (valInt == null)
+						{
+							throw ScriptRuntimeException.ExistingRangeBadValueAssigned(obj.Range, value.Type.ToLuaTypeString());
+						}
+						
+						switch (idx.String)
+						{
+							case "to":
+								obj.Range.To = value.CastToInt() ?? 0;
+								return instructionPtr;
+							case "from":
+								obj.Range.From = value.CastToInt() ?? 0;
+								return instructionPtr;
+						}
+
+						throw ScriptRuntimeException.ExistingRangeBadPropertyAssigned(idx.String);
 					}
 					default:
 					{
@@ -1620,6 +1678,22 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						m_ValueStack.Push(v);
 						return instructionPtr;
+					}
+					case DataType.Range:
+					{
+						if (idx.String == "to")
+						{
+							m_ValueStack.Push(DynValue.NewNumber(obj.Range.To));
+							return instructionPtr;
+						}
+						
+						if (idx.String == "from")
+						{
+							m_ValueStack.Push(DynValue.NewNumber(obj.Range.From));
+							return instructionPtr;
+						}
+						
+						throw ScriptRuntimeException.IndexType(obj);
 					}
 					default:
 					{

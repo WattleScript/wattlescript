@@ -110,7 +110,11 @@ namespace WattleScript.Interpreter.Tree
 		FunctionAnnotation,
 		Directive,
 		Switch,
-		Case
+		Case,
+		Op_ExclusiveRange, // >..<
+		Op_InclusiveRange, // ..
+		Op_LeftExclusiveRange, // >..
+		Op_RightExclusiveRange // ..<
 	}
 
 

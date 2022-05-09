@@ -24,7 +24,7 @@ public class CLikeTestRunner
         await RunCore(path);
     }
 
-    [Test, TestCaseSource(nameof(GetTestCases))]
+    //[Test, TestCaseSource(nameof(GetTestCases))]
     public async Task RunReportErrors(string path)
     {
         await RunCore(path, true);

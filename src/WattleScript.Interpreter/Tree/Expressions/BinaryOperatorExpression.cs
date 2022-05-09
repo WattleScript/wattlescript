@@ -6,16 +6,14 @@ using WattleScript.Interpreter.Execution.VM;
 namespace WattleScript.Interpreter.Tree.Expressions
 {
 	[Flags]
-	public enum Operator
+	public enum Operator : ulong
 	{
-		NotAnOperator = 0, 
-			
+		NotAnOperator = 0,
 		Or = 0x1, 
 		And = 0x2,
 		Less = 0x4,
 		Greater = 0x8,
 		LessOrEqual = 0x10,
-
 		GreaterOrEqual = 0x20,
 		NotEqual = 0x40,
 		Equal = 0x80,
@@ -35,6 +33,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		BitRShiftA = 0x400000,
 		BitRShiftL = 0x4800000,
 		NilCoalescingInverse = 0x9000000,
+		InclusiveRange = 0x12000000,
+		LeftExclusiveRange = 0x24000000,
+		RightExclusiveRange = 0x48000000,
+		ExclusiveRange = 0x98000000,
 	}
 	
 	/// <summary>
@@ -67,6 +69,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
 		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
 		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
+		const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
 
 		public static object BeginOperatorChain()
 		{
@@ -133,6 +136,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			if ((opfound & ADD_SUB) != 0)
 				nodes = PrioritizeLeftAssociative(nodes, lcontext, ADD_SUB);
+			
+			if ((opfound & RANGES) != 0)
+				nodes = PrioritizeLeftAssociative(nodes, lcontext, RANGES);
 
 			if ((opfound & STRCAT) != 0)
 				nodes = PrioritizeRightAssociative(nodes, lcontext, STRCAT);
@@ -280,22 +286,30 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return Operator.BitRShiftA;
 				case TokenType.Op_RShiftLogical:
 					return Operator.BitRShiftL;
+				case TokenType.Op_InclusiveRange:
+					return Operator.InclusiveRange;
+				case TokenType.Op_ExclusiveRange:
+					return Operator.ExclusiveRange;
+				case TokenType.Op_LeftExclusiveRange:
+					return Operator.LeftExclusiveRange;
+				case TokenType.Op_RightExclusiveRange:
+					return Operator.RightExclusiveRange;
 				default:
 					throw new InternalErrorException("Unexpected binary operator '{0}'", token.Text);
 			}
 		}
 
 
-
-
-		Expression m_Exp1, m_Exp2;
-		Operator m_Operator;
-
+		private readonly Expression m_Exp1;
+		private readonly Expression m_Exp2;
+		private readonly Operator m_Operator;
+		private readonly ScriptLoadingContext lcontext;
 
 
 		private BinaryOperatorExpression(Expression exp1, Expression exp2, Operator op, ScriptLoadingContext lcontext)
 			: base (lcontext)
 		{
+			this.lcontext = lcontext;
 			m_Exp1 = exp1;
 			m_Exp2 = exp2;
 			m_Operator = op;
@@ -355,6 +369,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return OpCode.BRShiftL;
 				case Operator.NilCoalescingInverse:
 					return OpCode.NilCoalescingInverse;
+				case Operator.InclusiveRange:
+					return OpCode.NewRange;
+				case Operator.ExclusiveRange:
+					return OpCode.NewRange;
+				case Operator.LeftExclusiveRange:
+					return OpCode.NewRange;
+				case Operator.RightExclusiveRange:
+					return OpCode.NewRange;
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
@@ -453,6 +475,32 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return false;
 
 				dv = DynValue.NewString(s1 + s2);
+			}
+			else if (m_Operator == Operator.InclusiveRange || m_Operator == Operator.ExclusiveRange || m_Operator == Operator.LeftExclusiveRange || m_Operator == Operator.RightExclusiveRange)
+			{
+				int? nd1 = v1.CastToInt();
+				int? nd2 = v2.CastToInt();
+				if (nd1 == null || nd2 == null)
+					return false;
+
+				int from = nd1.Value;
+				int to = nd2.Value;
+
+				switch (m_Operator)
+				{
+					case Operator.ExclusiveRange:
+						from++;
+						to--;
+						break;
+					case Operator.LeftExclusiveRange:
+						from++;
+						break;
+					case Operator.RightExclusiveRange:
+						to--;
+						break;
+				}
+				
+				dv = DynValue.NewRange(new Range(lcontext.Script, from, to));
 			}
 			else
 			{

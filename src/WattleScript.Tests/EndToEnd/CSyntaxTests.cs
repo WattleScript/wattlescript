@@ -799,7 +799,66 @@ return getnumber();
 ").Number);
         }
         
+        [Test]
+        public void RangeDefinition()
+        {
+            UserData.RegisterType<LuaAssertApi>();
+            
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+
+            Range r1 = new Range(sc, 5, 10);
+            sc.Globals["r1"] = r1;
+            
+            sc.Globals["assert"] = new LuaAssertApi();
+            sc.DoString(@"
+                assert.areequal(5, r1.from)
+                assert.areequal(10, r1.to)
+            ");
+        }
         
-       
+        [Test]
+        public void RangeGet()
+        {
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+            
+            DynValue dv = sc.DoString(@"
+                r1 = 1>..<10
+                return r1
+            ");
+            
+            Assert.AreEqual(2, dv.Range.From);
+            Assert.AreEqual(9, dv.Range.To);
+        }
+        
+        [Test]
+        public void RangeInOut()
+        {
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+
+            Range RangeTestMethod(Range r1)
+            {
+                Assert.AreEqual(2, r1.From);
+                Assert.AreEqual(4, r1.To);
+
+                return new Range(sc, 3, 5);
+            }
+
+            sc.Globals["rangeInOut"] = RangeTestMethod;
+            
+            DynValue dv = sc.DoString(@"
+                r1 = 2..<5
+                r2 = rangeInOut(r1)
+                return r2;
+            ");
+            
+            Assert.AreEqual(3, dv.Range.From);
+            Assert.AreEqual(5, dv.Range.To);
+        }
     }
 }

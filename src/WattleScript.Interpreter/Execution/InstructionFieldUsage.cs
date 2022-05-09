@@ -77,9 +77,9 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.IndexSet:
 				case OpCode.IndexSetN:
 				case OpCode.IndexSetL:
-					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.StoreLcl:
 				case OpCode.StoreUpv:
+				case OpCode.NewRange:
 					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Index:
 				case OpCode.IndexL:
