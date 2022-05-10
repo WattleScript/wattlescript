@@ -16,12 +16,14 @@ namespace WattleScript.Interpreter.Tree.Statements
 		Expression m_RValues;
 		Statement m_Block;
 		SourceRef m_RefFor, m_RefEnd;
+		private ScriptLoadingContext lcontext;
 
 		private List<string> names;
 
 		public ForEachLoopStatement(ScriptLoadingContext lcontext, Token firstNameToken, Token forToken, bool paren)
 			: base(lcontext)
 		{
+			this.lcontext = lcontext;
 			//	for namelist in explist do block end | 		
 
 			names = new List<string>();
@@ -89,14 +91,20 @@ namespace WattleScript.Interpreter.Tree.Statements
 		public override void Compile(FunctionBuilder bc)
 		{
 			//for var_1, ···, var_n in explist do block end
-
 			bc.PushSourceRef(m_RefFor);
 
 			Loop L = new Loop()
 			{
 				Scope = m_StackFrame
 			};
+			
 			bc.LoopTracker.Loops.Push(L);
+
+			// scan for range loop, if found compile as JFor
+			if (CompilePossibleLiteralRange(L, bc))
+			{
+				return;
+			}
 
 			// get iterator tuple
 			m_RValues.Compile(bc);
@@ -164,6 +172,66 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.PopSourceRef();
 		}
 
+		private bool CompilePossibleLiteralRange(Loop l, FunctionBuilder bc)
+		{
+			if (!(m_RValues is ExprListExpression listExpr)) return false;
+			if (listExpr.expressions.Count != 1) return false;
+			
+			Expression expr = listExpr.expressions[0];
+			
+			if (!(expr is BinaryOperatorExpression {m_Exp1: { }, m_Exp2: { }} binaryExpr)) return false; // binaryExpr has to have both m_Exp1 and m_Exp2 set
+			if ((binaryExpr.m_Operator & BinaryOperatorExpression.RANGES) == 0) return false;
+			
+			binaryExpr.m_Exp2.Compile(bc); // end
 
+			if (binaryExpr.m_Operator == Operator.RightExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // ..<, >..< -> dec top of stack
+			{
+				bc.Emit_Literal(DynValue.MinusOne);
+				bc.Emit_Operator(OpCode.Add);
+			}
+			
+			new LiteralExpression(lcontext, DynValue.One).Compile(bc); // step
+			
+			binaryExpr.m_Exp1.Compile(bc); // start
+							 
+			if (binaryExpr.m_Operator == Operator.LeftExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // >.., >..< -> inc top of stack
+			{
+				bc.Emit_Literal(DynValue.One);
+				bc.Emit_Operator(OpCode.Add);
+			}
+
+			int rangeStart = bc.GetJumpPointForNextInstruction();
+			int rangeJmpEnd = bc.Emit_Jump(OpCode.JFor, -1);
+			bc.Emit_Enter(m_StackFrame);
+							
+			foreach (IVariable t in m_NameExps)
+				t.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+
+			m_Block.Compile(bc);
+							
+			bc.PopSourceRef();
+			bc.PushSourceRef(m_RefEnd);
+							
+			int rangeContinuePoint = bc.GetJumpPointForNextInstruction();
+			bc.Emit_Leave(m_StackFrame);
+			bc.Emit_Incr(1);
+			bc.Emit_Jump(OpCode.Jump, rangeStart);
+
+			bc.LoopTracker.Loops.Pop();
+
+			int exitpoint = bc.GetJumpPointForNextInstruction();
+
+			foreach (int i in l.BreakJumps)
+				bc.SetNumVal(i, exitpoint);
+			foreach (int i in l.ContinueJumps)
+				bc.SetNumVal(i, rangeContinuePoint);
+			
+			bc.SetNumVal(rangeJmpEnd, exitpoint);
+			bc.Emit_Pop(3);
+
+			bc.PopSourceRef();
+
+			return true;
+		}
 	}
 }

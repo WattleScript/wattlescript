@@ -411,14 +411,28 @@ namespace WattleScript.Interpreter
 		/// A preinitialized, readonly instance, equaling False
 		/// </summary>
 		public static DynValue False { get; private set; }
-
+		/// <summary>
+		/// A preinitialized, readonly instance, equaling Number 0
+		/// </summary>
+		internal static DynValue Zero { get; }
+		/// <summary>
+		/// A preinitialized, readonly instance, equaling Number 1
+		/// </summary>
+		internal static DynValue One { get; }
+		/// <summary>
+		/// A preinitialized, readonly instance, equaling Number -1
+		/// </summary>
+		internal static DynValue MinusOne { get; }
 
 		static DynValue()
 		{
-			Nil = new DynValue() { };
-			Void = new DynValue() { m_U64 = TYPE(DataType.Void) };
-			True = DynValue.NewBoolean(true);
-			False = DynValue.NewBoolean(false);
+			Nil = new DynValue { };
+			Void = new DynValue { m_U64 = TYPE(DataType.Void) };
+			True = NewBoolean(true);
+			False = NewBoolean(false);
+			Zero = NewNumber(0);
+			One = NewNumber(1);
+			MinusOne = NewNumber(-1);
 		}
 
 
@@ -693,20 +707,17 @@ namespace WattleScript.Interpreter
 		public bool TryCastToNumber(out double d)
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
-			if (rv.Type == DataType.Number)
+			switch (rv.Type)
 			{
-				d = rv.Number;
-				return true;
-			}
-			else if (rv.Type == DataType.String)
-			{
-				if (ToNumber(rv.String, out d))
-				{
+				case DataType.Number:
+					d = rv.Number;
 					return true;
-				}
+				case DataType.String when ToNumber(rv.String, out d):
+					return true;
+				default:
+					d = 0.0;
+					return false;
 			}
-			d = 0.0;
-			return false;
 		}
 
 		public static bool ToNumber(string str, out int num)

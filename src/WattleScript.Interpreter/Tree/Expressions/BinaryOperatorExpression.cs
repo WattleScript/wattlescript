@@ -69,7 +69,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
 		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
 		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
-		const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
+		internal const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
 
 		public static object BeginOperatorChain()
 		{
@@ -300,9 +300,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		private readonly Expression m_Exp1;
-		private readonly Expression m_Exp2;
-		private readonly Operator m_Operator;
+		internal readonly Expression m_Exp1;
+		internal readonly Expression m_Exp2;
+		internal readonly Operator m_Operator;
 		private readonly ScriptLoadingContext lcontext;
 
 

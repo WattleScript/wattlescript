@@ -84,12 +84,12 @@ namespace WattleScript.Interpreter.CoreLib
 					return DynValue.NewTuple(
 						DynValue.Nil,
 						DynValue.NewString("{0}: No such file or directory.", fileName),
-						DynValue.NewNumber(-1));
+						DynValue.MinusOne);
 				}
 			}
 			catch (Exception ex)
 			{
-				return DynValue.NewTuple(DynValue.Nil, DynValue.NewString(ex.Message), DynValue.NewNumber(-1));
+				return DynValue.NewTuple(DynValue.Nil, DynValue.NewString(ex.Message), DynValue.MinusOne);
 			}
 		}
 
@@ -105,7 +105,7 @@ namespace WattleScript.Interpreter.CoreLib
 				{
 					return DynValue.NewTuple(DynValue.Nil,
 						DynValue.NewString("{0}: No such file or directory.", fileNameOld),
-						DynValue.NewNumber(-1));
+						DynValue.MinusOne);
 				}
 
 				Script.GlobalOptions.Platform.OS_FileMove(fileNameOld, fileNameNew);
@@ -113,7 +113,7 @@ namespace WattleScript.Interpreter.CoreLib
 			}
 			catch (Exception ex)
 			{
-				return DynValue.NewTuple(DynValue.Nil, DynValue.NewString(ex.Message), DynValue.NewNumber(-1));
+				return DynValue.NewTuple(DynValue.Nil, DynValue.NewString(ex.Message), DynValue.MinusOne);
 			}
 		}
 
