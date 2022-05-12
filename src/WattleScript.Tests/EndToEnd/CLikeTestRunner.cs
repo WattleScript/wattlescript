@@ -48,7 +48,9 @@ public class CLikeTestRunner
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-        
+        script.Globals["CurrentLine"] = (ScriptExecutionContext c, CallbackArguments a) => {
+            return c.CallingLocation.FromLine;
+        };
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");
