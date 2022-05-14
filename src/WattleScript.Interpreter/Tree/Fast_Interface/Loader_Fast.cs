@@ -35,27 +35,37 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			}
 		}
 
-		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source)
+		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, string sourceCode = null)
 		{
 			return new ScriptLoadingContext(script)
 			{
 				Source = source,
-				Lexer = new Lexer(source.SourceID, source.Code, true, script.Options.Syntax, script.Options.Directives),
+				Lexer = new Lexer(source.SourceID, sourceCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives),
 				Syntax = script.Options.Syntax
 			};
 		}
 
 		internal static FunctionProto LoadChunk(Script script, SourceCode source)
 		{
-			ScriptLoadingContext lcontext = CreateLoadingContext(script, source);
+			
 	#if !DEBUG_PARSER
 			try
 			{
 	#endif
+				ScriptLoadingContext lcontext;
 				ChunkStatement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
 				{
+					if (script.Options.Syntax == ScriptSyntax.WattleScript)
+					{
+						var preprocess = new Preprocessor(script, source.SourceID, source.Code);
+						lcontext = CreateLoadingContext(script, source, preprocess.Process());
+					}
+					else
+					{
+						lcontext = CreateLoadingContext(script, source);
+					}
 					stat = new ChunkStatement(lcontext);
 					lcontext.Scope = new BuildTimeScope();
 					stat.ResolveScope(lcontext);
