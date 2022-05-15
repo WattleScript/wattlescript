@@ -1483,8 +1483,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			if (i.NumVal3 == 1) // from v-stack
 			{
-				DynValue toDv = m_ValueStack.Pop().ToScalar();
-				DynValue fromDv = m_ValueStack.Pop().ToScalar();
+				DynValue toDv = m_ValueStack.Pop();
+				DynValue fromDv = m_ValueStack.Pop();
 
 				int? fromInt = fromDv.CastToInt();
 				int? toInt = toDv.CastToInt();

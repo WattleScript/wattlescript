@@ -69,7 +69,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
 		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
 		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
-		internal const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
+		const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
 
 		public static object BeginOperatorChain()
 		{
@@ -380,6 +380,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
+		}
+
+		public bool IsRangeCtor()
+		{
+			return m_Exp1 != null && m_Exp2 != null && (m_Operator & RANGES) != 0;
 		}
 
 		public override void ResolveScope(ScriptLoadingContext lcontext)

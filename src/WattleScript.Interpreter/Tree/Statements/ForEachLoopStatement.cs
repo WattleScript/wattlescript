@@ -101,7 +101,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.LoopTracker.Loops.Push(L);
 
 			// scan for range loop, if found compile as JFor
-			if (CompilePossibleLiteralRange(L, bc))
+			if (CompileRangeStatement(L, bc))
 			{
 				return;
 			}
@@ -172,33 +172,38 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.PopSourceRef();
 		}
 
-		private bool CompilePossibleLiteralRange(Loop l, FunctionBuilder bc)
+		private bool CompileRangeStatement(Loop l, FunctionBuilder bc)
 		{
 			if (!(m_RValues is ExprListExpression listExpr)) return false;
 			if (listExpr.expressions.Count != 1) return false;
 			
 			Expression expr = listExpr.expressions[0];
+
+			if (!(expr is BinaryOperatorExpression binaryExpr)) return false;
+			if (!binaryExpr.IsRangeCtor()) return false;
 			
-			if (!(expr is BinaryOperatorExpression {m_Exp1: { }, m_Exp2: { }} binaryExpr)) return false; // binaryExpr has to have both m_Exp1 and m_Exp2 set
-			if ((binaryExpr.m_Operator & BinaryOperatorExpression.RANGES) == 0) return false;
+			if (binaryExpr.m_Operator == Operator.RightExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // ..<, >..< -> sub 1
+			{
+				if (binaryExpr.m_Exp2 is LiteralExpression le2 && le2.Value.Type == DataType.Number)
+				{
+					le2.Value = DynValue.NewNumber(le2.Value.Number - 1);
+				}
+			}
 			
 			binaryExpr.m_Exp2.Compile(bc); // end
-
-			if (binaryExpr.m_Operator == Operator.RightExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // ..<, >..< -> dec top of stack
-			{
-				bc.Emit_Literal(DynValue.MinusOne);
-				bc.Emit_Operator(OpCode.Add);
-			}
 			
 			new LiteralExpression(lcontext, DynValue.One).Compile(bc); // step
 			
-			binaryExpr.m_Exp1.Compile(bc); // start
-							 
-			if (binaryExpr.m_Operator == Operator.LeftExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // >.., >..< -> inc top of stack
+				
+			if (binaryExpr.m_Operator == Operator.LeftExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // >.., >..< -> add 1
 			{
-				bc.Emit_Literal(DynValue.One);
-				bc.Emit_Operator(OpCode.Add);
+				if (binaryExpr.m_Exp1 is LiteralExpression le1 && le1.Value.Type == DataType.Number)
+				{
+					le1.Value = DynValue.NewNumber(le1.Value.Number + 1);
+				}
 			}
+
+			binaryExpr.m_Exp1.Compile(bc); // start
 
 			int rangeStart = bc.GetJumpPointForNextInstruction();
 			int rangeJmpEnd = bc.Emit_Jump(OpCode.JFor, -1);
