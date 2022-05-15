@@ -414,15 +414,6 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// A preinitialized, readonly instance, equaling Number 0
 		/// </summary>
-		internal static DynValue Zero { get; }
-		/// <summary>
-		/// A preinitialized, readonly instance, equaling Number 1
-		/// </summary>
-		internal static DynValue One { get; }
-		/// <summary>
-		/// A preinitialized, readonly instance, equaling Number -1
-		/// </summary>
-		internal static DynValue MinusOne { get; }
 
 		static DynValue()
 		{
@@ -430,9 +421,6 @@ namespace WattleScript.Interpreter
 			Void = new DynValue { m_U64 = TYPE(DataType.Void) };
 			True = NewBoolean(true);
 			False = NewBoolean(false);
-			Zero = NewNumber(0);
-			One = NewNumber(1);
-			MinusOne = NewNumber(-1);
 		}
 
 

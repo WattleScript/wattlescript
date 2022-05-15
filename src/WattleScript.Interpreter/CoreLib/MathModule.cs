@@ -187,7 +187,7 @@ namespace WattleScript.Interpreter.CoreLib
 
 			if (mantissa == 0) 
 			{
-				return DynValue.NewTuple(DynValue.Zero, DynValue.Zero);
+				return DynValue.NewTuple(DynValue.NewNumber(0), DynValue.NewNumber(0));
 			}
 
 			/* Normalize */

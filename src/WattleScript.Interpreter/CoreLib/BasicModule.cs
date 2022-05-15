@@ -91,7 +91,7 @@ namespace WattleScript.Interpreter.CoreLib
 
             		if (level.IsNil())
             		{
-                		level = DynValue.One; // Default
+                		level = DynValue.NewNumber(1); // Default
             		}
 
             		if (level.Number > 0 && level.Number < stacktrace.Length)

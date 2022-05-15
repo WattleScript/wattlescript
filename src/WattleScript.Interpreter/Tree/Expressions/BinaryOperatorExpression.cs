@@ -300,11 +300,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		internal readonly Expression m_Exp1;
-		internal readonly Expression m_Exp2;
-		internal readonly Operator m_Operator;
+		private readonly Expression m_Exp1;
+		private readonly Expression m_Exp2;
+		private readonly Operator m_Operator;
 		private readonly ScriptLoadingContext lcontext;
 
+		internal Expression Exp1 => m_Exp1;
+		internal Expression Exp2 => m_Exp2;
+		internal Operator Operator => m_Operator;
 
 		private BinaryOperatorExpression(Expression exp1, Expression exp2, Operator op, ScriptLoadingContext lcontext)
 			: base (lcontext)

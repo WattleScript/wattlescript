@@ -175,35 +175,35 @@ namespace WattleScript.Interpreter.Tree.Statements
 		private bool CompileRangeStatement(Loop l, FunctionBuilder bc)
 		{
 			if (!(m_RValues is ExprListExpression listExpr)) return false;
-			if (listExpr.expressions.Count != 1) return false;
+			if (listExpr.Expressions.Count != 1) return false;
 			
-			Expression expr = listExpr.expressions[0];
+			Expression expr = listExpr.Expressions[0];
 
 			if (!(expr is BinaryOperatorExpression binaryExpr)) return false;
 			if (!binaryExpr.IsRangeCtor()) return false;
 			
-			if (binaryExpr.m_Operator == Operator.RightExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // ..<, >..< -> sub 1
+			if (binaryExpr.Operator == Operator.RightExclusiveRange || binaryExpr.Operator == Operator.ExclusiveRange) // ..<, >..< -> sub 1
 			{
-				if (binaryExpr.m_Exp2 is LiteralExpression le2 && le2.Value.Type == DataType.Number)
+				if (binaryExpr.Exp2 is LiteralExpression le2 && le2.Value.Type == DataType.Number)
 				{
 					le2.Value = DynValue.NewNumber(le2.Value.Number - 1);
 				}
 			}
 			
-			binaryExpr.m_Exp2.Compile(bc); // end
+			binaryExpr.Exp2.Compile(bc); // end
 			
-			new LiteralExpression(lcontext, DynValue.One).Compile(bc); // step
+			new LiteralExpression(lcontext, DynValue.NewNumber(1)).Compile(bc); // step
 			
 				
-			if (binaryExpr.m_Operator == Operator.LeftExclusiveRange || binaryExpr.m_Operator == Operator.ExclusiveRange) // >.., >..< -> add 1
+			if (binaryExpr.Operator == Operator.LeftExclusiveRange || binaryExpr.Operator == Operator.ExclusiveRange) // >.., >..< -> add 1
 			{
-				if (binaryExpr.m_Exp1 is LiteralExpression le1 && le1.Value.Type == DataType.Number)
+				if (binaryExpr.Exp1 is LiteralExpression le1 && le1.Value.Type == DataType.Number)
 				{
 					le1.Value = DynValue.NewNumber(le1.Value.Number + 1);
 				}
 			}
 
-			binaryExpr.m_Exp1.Compile(bc); // start
+			binaryExpr.Exp1.Compile(bc); // start
 
 			int rangeStart = bc.GetJumpPointForNextInstruction();
 			int rangeJmpEnd = bc.Emit_Jump(OpCode.JFor, -1);

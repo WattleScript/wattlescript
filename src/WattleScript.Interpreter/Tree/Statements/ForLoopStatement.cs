@@ -37,7 +37,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			}
 			else
 			{
-				m_Step = new LiteralExpression(lcontext, DynValue.One);
+				m_Step = new LiteralExpression(lcontext, DynValue.NewNumber(1));
 			}
 
 			this.nameToken = nameToken;
