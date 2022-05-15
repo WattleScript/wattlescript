@@ -1228,8 +1228,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue dvB = ref m_ValueStack.Peek(1);
 			DataType dvAType = dvA.Type;
 			DataType dvBType = dvB.Type;
-			
-			if (dvA.Type == DataType.Number && dvB.Type == DataType.Number && dvA.TryCastToNumber(out double rn) && dvB.TryCastToNumber(out double ln))
+
+			if (dvA.TryGetNumber(out double rn) && dvB.TryGetNumber(out double ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));

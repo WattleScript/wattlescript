@@ -692,6 +692,13 @@ namespace WattleScript.Interpreter
 			return num;
 		}
 		
+		internal bool TryGetNumber(out double n)
+		{
+			ref DynValue rv = ref ScalarReference(ref this);
+			n = rv.m_Number;
+			return rv.Type == DataType.Number;
+		}
+		
 		public bool TryCastToNumber(out double d)
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
