@@ -702,17 +702,20 @@ namespace WattleScript.Interpreter
 		public bool TryCastToNumber(out double d)
 		{
 			ref DynValue rv = ref ScalarReference(ref this);
-			switch (rv.Type)
+			if (rv.Type == DataType.Number)
 			{
-				case DataType.Number:
-					d = rv.Number;
-					return true;
-				case DataType.String when ToNumber(rv.String, out d):
-					return true;
-				default:
-					d = 0.0;
-					return false;
+				d = rv.Number;
+				return true;
 			}
+			else if (rv.Type == DataType.String)
+			{
+				if (ToNumber(rv.String, out d))
+				{
+					return true;
+				}
+			}
+			d = 0.0;
+			return false;
 		}
 
 		public static bool ToNumber(string str, out int num)
