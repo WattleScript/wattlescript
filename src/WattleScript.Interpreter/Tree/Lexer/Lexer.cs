@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace WattleScript.Interpreter.Tree
@@ -18,8 +19,9 @@ namespace WattleScript.Interpreter.Tree
 		private bool m_AutoSkipComments;
 		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
+		private Dictionary<string, PreprocessorDefine> m_Defines;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, PreprocessorDefine> defines)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -31,6 +33,7 @@ namespace WattleScript.Interpreter.Tree
 			m_AutoSkipComments = autoSkipComments;
 			m_Syntax = syntax;
 			m_Directives = directives;
+			m_Defines = defines;
 		}
 
 		public Token Current
@@ -1069,6 +1072,25 @@ namespace WattleScript.Interpreter.Tree
 			else if (m_Directives != null && m_Directives.Contains(name))
 			{
 				return ReadDirective(name, fromLine, fromCol);
+			}
+			else if (m_Defines != null && m_Defines.TryGetValue(name, out var value))
+			{
+				switch (value.Type)
+				{
+					case PreprocessorDefineType.String:
+						return CreateToken(TokenType.String, fromLine, fromCol, value.String);
+					case PreprocessorDefineType.Number:
+						return CreateToken(TokenType.Number, fromLine, fromCol,
+							value.Number.ToString(CultureInfo.InvariantCulture));
+					case PreprocessorDefineType.Boolean:
+						return CreateToken(value.Boolean ? TokenType.True : TokenType.False, fromLine, fromCol,
+							value.Boolean ? "true" : "false");
+					//No value set, don't use
+					case PreprocessorDefineType.Empty:
+						return CreateToken(TokenType.Name, fromLine, fromCol, name);
+					default:
+						throw new InternalErrorException("#define {0} has invalid type", name);
+				}
 			}
 			else
 			{

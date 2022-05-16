@@ -370,7 +370,11 @@ namespace WattleScript.Interpreter.Tree
             };
             return ret;
         }
-        public string Process()
+
+        public string ProcessedSource => output.ToString();
+        public Dictionary<string, PreprocessorDefine> Defines => defines;
+        
+        public void Process()
         {
             cursor.SkipWhiteSpace(output, outputChars);
             while (cursor.NotEof())
@@ -448,7 +452,6 @@ namespace WattleScript.Interpreter.Tree
                 throw new SyntaxErrorException(CreateToken(TokenType.Eof, cursor.Line, cursor.Column),
                     "expected #endregion, got <eof>");
             }
-            return output.ToString();
         }
     }
 }

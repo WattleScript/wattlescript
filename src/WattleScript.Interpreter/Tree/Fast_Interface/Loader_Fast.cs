@@ -1,4 +1,5 @@
-﻿using WattleScript.Interpreter.Debugging;
+﻿using System.Collections.Generic;
+using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
 using WattleScript.Interpreter.Tree.Expressions;
@@ -35,12 +36,14 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			}
 		}
 
-		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, string preprocessedCode = null)
+		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, 
+			string preprocessedCode = null,
+			Dictionary<string, PreprocessorDefine> defines = null)
 		{
 			return new ScriptLoadingContext(script)
 			{
 				Source = source,
-				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives),
+				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives, defines),
 				Syntax = script.Options.Syntax
 			};
 		}
@@ -60,7 +63,9 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 					if (script.Options.Syntax == ScriptSyntax.WattleScript)
 					{
 						var preprocess = new Preprocessor(script, source.SourceID, source.Code);
-						lcontext = CreateLoadingContext(script, source, preprocess.Process());
+						preprocess.Process();
+						lcontext = CreateLoadingContext(script, source, preprocess.ProcessedSource,
+							preprocess.Defines);
 					}
 					else
 					{
