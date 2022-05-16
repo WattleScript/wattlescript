@@ -12,6 +12,7 @@ namespace WattleScript.Interpreter.Tree
 		private int m_PrevColTo = 1;
 		private int m_Cursor;
 		private int m_Line = 1;
+		private int m_DefaultLine = 1;
 		private int m_Col;
 		private int m_SourceId;
 		private bool m_AutoSkipComments;
@@ -94,8 +95,10 @@ namespace WattleScript.Interpreter.Tree
 		struct Snapshot
 		{
 			public int Cursor;
+			public bool StartOfLine;
 			public Token Current;
 			public int Line;
+			public int DefaultLine;
 			public int Col;
 			public int[] TemplateStringState;
 		}
@@ -111,6 +114,8 @@ namespace WattleScript.Interpreter.Tree
 				Cursor = m_Cursor,
 				Current = m_Current,
 				Line = m_Line,
+				DefaultLine = m_DefaultLine,
+				StartOfLine = m_StartOfLine,
 				Col = m_Col,
 				TemplateStringState = templateStringState.ToArray(),
 			};
@@ -121,7 +126,9 @@ namespace WattleScript.Interpreter.Tree
 			m_Cursor = s.Cursor;
 			m_Current = s.Current;
 			m_Line = s.Line;
+			m_DefaultLine = s.DefaultLine;
 			m_Col = s.Col;
+			m_StartOfLine = s.StartOfLine;
 			templateStringState = new List<int>(s.TemplateStringState);
 		}
 
@@ -161,6 +168,7 @@ namespace WattleScript.Interpreter.Tree
 			return t;
 		}
 
+		private bool m_StartOfLine = true;
 
 		private void CursorNext()
 		{
@@ -170,9 +178,12 @@ namespace WattleScript.Interpreter.Tree
 				{
 					m_Col = 0;
 					m_Line += 1;
+					m_DefaultLine += 1;
+					m_StartOfLine = true;
 				}
 				else
 				{
+					if (!char.IsWhiteSpace(CursorChar())) m_StartOfLine = false;
 					m_Col += 1;
 				}
 
@@ -224,6 +235,27 @@ namespace WattleScript.Interpreter.Tree
 			{
 			}
 		}
+
+		void ProcessLineDirective(string directive, int line, int col)
+		{
+			var l = new DirectiveLexer(directive, m_SourceId, line, col);
+			if (l.Current.Text != "line")
+				throw new InternalErrorException("ProcessLineDirective called on != line");
+			l.Next();
+			var lineNumber = l.Next();
+			if (lineNumber.Text == "default")
+			{
+				m_Line = m_DefaultLine;
+			}
+			else
+			{
+				if (lineNumber.Type != TokenType.Number)
+					throw new SyntaxErrorException(lineNumber, "unexpected symbol near '{0}'", lineNumber.Text);
+				m_Line = (int) (lineNumber.GetNumberValue() - 1);
+			}
+			l.CheckEndOfLine();
+		}
+		
 
 
 		private Token ReadToken()
@@ -526,6 +558,27 @@ namespace WattleScript.Interpreter.Tree
 					return CreateSingleCharToken(TokenType.Op_Pwr, fromLine, fromCol);
 				case '$':
 					return PotentiallyDoubleCharOperator('{', TokenType.Op_Dollar, TokenType.Brk_Open_Curly_Shared, fromLine, fromCol);
+				case '#' when m_Syntax == ScriptSyntax.WattleScript:
+					if (m_Cursor == 0 && m_Code.Length > 1 && m_Code[1] == '!')
+						return ReadHashBang(fromLine, fromCol);
+					else if (m_StartOfLine && CursorMatches("#line"))
+					{
+						//Read in line
+						CursorNext();
+						var directive = new StringBuilder();
+						while (CursorNotEof() && CursorChar() != '\n' &&
+						       !CursorMatches("//") && !CursorMatches("/*")) {
+							directive.Append(CursorChar());
+							CursorNext();
+						}
+						ProcessLineDirective(directive.ToString(), fromLine, fromCol);
+						//Go to next token
+						return ReadToken();
+					}
+					else
+					{
+						goto default;
+					}
 				case '#':
 					if (m_Cursor == 0 && m_Code.Length > 1 && m_Code[1] == '!')
 						return ReadHashBang(fromLine, fromCol);

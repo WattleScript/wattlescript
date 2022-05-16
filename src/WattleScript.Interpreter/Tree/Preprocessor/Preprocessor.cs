@@ -30,7 +30,14 @@ namespace WattleScript.Interpreter.Tree
             if (text.Length > 0 && text[0] == 0xFEFF)
                 cursor.Input = text.Substring(1);
             output = new StringBuilder();
-            
+            //Read Hashbang line
+            if (cursor.Input.Length > 2 && cursor.Input[0] == '#' && cursor.Input[1] == '!') {
+                while (cursor.NotEof() && cursor.Char() != '\n')
+                {
+                    output.Append(cursor.Char());
+                    cursor.Next();
+                }
+            }
             defines.Add("LANGVER", new PreprocessorDefine("LANGVER", 1.0));
         }
 
@@ -123,6 +130,9 @@ namespace WattleScript.Interpreter.Tree
         
         void ProcessDirective()
         {
+            //Skip beginning spaces
+            while (cursor.NotEof() && cursor.Char() != '\n' && char.IsWhiteSpace(cursor.Char()))
+                cursor.Next();
             //Read up to end of line
             var currentLine = cursor.Line;
             int startCol = cursor.Column;
@@ -244,11 +254,25 @@ namespace WattleScript.Interpreter.Tree
                         throw new SyntaxErrorException(nameToken, "unexpected #endif");
                     }
                     break;
-                case "line": 
+                case "line":
+                {
+                    //Parse for preprocessor state
+                    var line = lexer.Next();
+                    if (line.Text == "default")
+                    {
+                        cursor.Line = cursor.DefaultLine;
+                    }
+                    else
+                    {
+                        CheckTokenType(line, TokenType.Number);
+                        cursor.Line = (int) (line.GetNumberValue() - 1); //Next line = value
+                    }
+                    lexer.CheckEndOfLine();
                     //Pass through to lexer
                     output.Append("#");
-                    output.Append(builder.ToString());
+                    output.Append(builder);
                     break;
+                }
                 case "region":
                     regionCount++;
                     break;
@@ -267,10 +291,6 @@ namespace WattleScript.Interpreter.Tree
                 default:
                     throw new SyntaxErrorException(nameToken, "unexpected preprocessor directive '{0}'", nameToken.Text);
             }
-            //put line in output to keep sourcerefs accurate
-            //regardless if we are currently outputting source
-            if (cursor.Char() == '\n') output.AppendLine();
-            cursor.Next();
         }
         
         

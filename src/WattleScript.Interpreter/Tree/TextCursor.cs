@@ -9,6 +9,7 @@ namespace WattleScript.Interpreter.Tree
         public string Input;
         public int Index;
         public int Line;
+        public int DefaultLine;
         public int Column;
         public bool StartOfLine;
 
@@ -17,6 +18,7 @@ namespace WattleScript.Interpreter.Tree
             Input = input;
             Index = 0;
             Line = 1;
+            DefaultLine = 1;
             Column = 1;
             StartOfLine = true;
         }
@@ -40,6 +42,7 @@ namespace WattleScript.Interpreter.Tree
                 if (Char() == '\n')
                 {
                     Line++;
+                    DefaultLine++;
                     Column = 1;
                     StartOfLine = true;
                 }

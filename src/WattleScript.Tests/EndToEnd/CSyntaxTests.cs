@@ -68,7 +68,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             {
                 values[x] = x;
             }
-            assert.areequal(10, #values);
+            assert.areequal(10, values.length);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
         }
 
