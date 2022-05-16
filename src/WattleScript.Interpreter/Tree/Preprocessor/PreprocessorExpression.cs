@@ -67,22 +67,7 @@ namespace WattleScript.Interpreter.Tree
                     throw new InvalidOperationException("Invalid DynValue evaluated");
             }
         }
-
-        public double GetNumber(Dictionary<string, PreprocessorDefine> defines)
-        {
-            var val = Evaluate(defines);
-            switch (val.Type)
-            {
-                case DataType.Boolean:
-                    return val.Boolean ? 1 : 0;
-                case DataType.Number:
-                    return val.Number;
-                case DataType.String:
-                    return 1;
-                default:
-                    throw new InvalidOperationException("Invalid DynValue evaluated");
-            }
-        }
+        
         public abstract DynValue Evaluate(Dictionary<string, PreprocessorDefine> defines);
     }
 
@@ -98,6 +83,21 @@ namespace WattleScript.Interpreter.Tree
             Right = right;
         }
 
+        double GetNumber(PreprocessorExpression exp, Dictionary<string,PreprocessorDefine> defines)
+        {
+            var val = exp.Evaluate(defines);
+            switch (val.Type)
+            {
+                case DataType.Boolean:
+                    return val.Boolean ? 1 : 0;
+                case DataType.Number:
+                    return val.Number;
+                case DataType.String:
+                    throw new SyntaxErrorException(Token, "string may not be used in comparison");
+                default:
+                    throw new InvalidOperationException("Invalid DynValue evaluated");
+            }
+        }
         
         public override DynValue Evaluate(Dictionary<string, PreprocessorDefine> defines)
         {
@@ -112,13 +112,13 @@ namespace WattleScript.Interpreter.Tree
                 case TokenType.Op_NotEqual:
                     return DynValue.NewBoolean(!Left.Evaluate(defines).Equals(Right.Evaluate(defines)));
                 case TokenType.Op_GreaterThan:
-                    return DynValue.NewBoolean(Left.GetNumber(defines) > Right.GetNumber(defines));
+                    return DynValue.NewBoolean(GetNumber(Left, defines) > GetNumber(Right, defines));
                 case TokenType.Op_GreaterThanEqual:
-                    return DynValue.NewBoolean(Left.GetNumber(defines) >= Right.GetNumber(defines));
+                    return DynValue.NewBoolean(GetNumber(Left, defines) >= GetNumber(Right, defines));
                 case TokenType.Op_LessThan:
-                    return DynValue.NewBoolean(Left.GetNumber(defines) < Right.GetNumber(defines));
+                    return DynValue.NewBoolean(GetNumber(Left, defines) < GetNumber(Right, defines));
                 case TokenType.Op_LessThanEqual:
-                    return DynValue.NewBoolean(Left.GetNumber(defines) <= Right.GetNumber(defines));
+                    return DynValue.NewBoolean(GetNumber(Left, defines) <= GetNumber(Right, defines));
                 default:
                     throw new NotImplementedException();
             }
