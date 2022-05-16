@@ -189,7 +189,14 @@ namespace WattleScript.Interpreter.Tree
                         case TokenType.Number:
                         case TokenType.Number_Hex:
                         case TokenType.Number_HexFloat:
+                            defines[definedName.Text] =
+                                new PreprocessorDefine(definedName.Text, definedValue.GetNumberValue());
                             break;
+                        case TokenType.String:
+                            defines[definedName.Text] = new PreprocessorDefine(definedName.Text, definedValue.Text);
+                            break;
+                        default:
+                            throw new SyntaxErrorException(nameToken, "unexpected symbol '{0}'", definedValue.Text);
                     }
                     lexer.CheckEndOfLine();
                     //For now do null
@@ -237,7 +244,8 @@ namespace WattleScript.Interpreter.Tree
                         throw new SyntaxErrorException(nameToken, "unexpected #endif");
                     }
                     break;
-                case "line": //Pass through to lexer
+                case "line": 
+                    //Pass through to lexer
                     output.Append("#");
                     output.Append(builder.ToString());
                     break;

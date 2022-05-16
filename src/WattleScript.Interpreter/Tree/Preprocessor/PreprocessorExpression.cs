@@ -67,6 +67,22 @@ namespace WattleScript.Interpreter.Tree
                     throw new InvalidOperationException("Invalid DynValue evaluated");
             }
         }
+
+        public double GetNumber(Dictionary<string, PreprocessorDefine> defines)
+        {
+            var val = Evaluate(defines);
+            switch (val.Type)
+            {
+                case DataType.Boolean:
+                    return val.Boolean ? 1 : 0;
+                case DataType.Number:
+                    return val.Number;
+                case DataType.String:
+                    return 1;
+                default:
+                    throw new InvalidOperationException("Invalid DynValue evaluated");
+            }
+        }
         public abstract DynValue Evaluate(Dictionary<string, PreprocessorDefine> defines);
     }
 
@@ -95,6 +111,14 @@ namespace WattleScript.Interpreter.Tree
                     return DynValue.NewBoolean(Left.Evaluate(defines).Equals(Right.Evaluate(defines)));
                 case TokenType.Op_NotEqual:
                     return DynValue.NewBoolean(!Left.Evaluate(defines).Equals(Right.Evaluate(defines)));
+                case TokenType.Op_GreaterThan:
+                    return DynValue.NewBoolean(Left.GetNumber(defines) > Right.GetNumber(defines));
+                case TokenType.Op_GreaterThanEqual:
+                    return DynValue.NewBoolean(Left.GetNumber(defines) >= Right.GetNumber(defines));
+                case TokenType.Op_LessThan:
+                    return DynValue.NewBoolean(Left.GetNumber(defines) < Right.GetNumber(defines));
+                case TokenType.Op_LessThanEqual:
+                    return DynValue.NewBoolean(Left.GetNumber(defines) <= Right.GetNumber(defines));
                 default:
                     throw new NotImplementedException();
             }
