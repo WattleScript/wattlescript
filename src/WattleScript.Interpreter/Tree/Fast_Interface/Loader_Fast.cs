@@ -35,12 +35,12 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			}
 		}
 
-		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, string sourceCode = null)
+		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, string preprocessedCode = null)
 		{
 			return new ScriptLoadingContext(script)
 			{
 				Source = source,
-				Lexer = new Lexer(source.SourceID, sourceCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives),
+				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives),
 				Syntax = script.Options.Syntax
 			};
 		}

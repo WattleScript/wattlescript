@@ -1,6 +1,6 @@
 namespace WattleScript.Interpreter
 {
-    public enum DefineType
+    public enum PreprocessorDefineType
     {
         Empty,
         Boolean,

@@ -186,12 +186,12 @@ namespace WattleScript.Interpreter.Tree
                 return DynValue.False; //Doesn't exist = false
             switch (def.Type)
             {
-                case DefineType.Boolean:
-                    return DynValue.NewBoolean(def.BooleanValue);
-                case DefineType.Number:
-                    return DynValue.NewNumber(def.NumberValue);
-                case DefineType.String:
-                    return DynValue.NewString(def.StringValue);
+                case PreprocessorDefineType.Boolean:
+                    return DynValue.NewBoolean(def.Boolean);
+                case PreprocessorDefineType.Number:
+                    return DynValue.NewNumber(def.Number);
+                case PreprocessorDefineType.String:
+                    return DynValue.NewString(def.String);
                 default:
                     return DynValue.True; //No value = true
             }
