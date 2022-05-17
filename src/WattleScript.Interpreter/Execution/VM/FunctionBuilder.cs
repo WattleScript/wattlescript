@@ -412,6 +412,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
+		public int Emit_ToNum()
+		{
+			return AppendInstruction(new Instruction(OpCode.ToNum));
+		}
+		
 		public int Emit_TblInitN(int count)
 		{
 			return AppendInstruction(new Instruction(OpCode.TblInitN, count));

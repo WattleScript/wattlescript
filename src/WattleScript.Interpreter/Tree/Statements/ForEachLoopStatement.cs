@@ -181,29 +181,60 @@ namespace WattleScript.Interpreter.Tree.Statements
 
 			if (!(expr is BinaryOperatorExpression binaryExpr)) return false;
 			if (!binaryExpr.IsRangeCtor()) return false;
-			
+
 			if (binaryExpr.Operator == Operator.RightExclusiveRange || binaryExpr.Operator == Operator.ExclusiveRange) // ..<, >..< -> sub 1
 			{
-				if (binaryExpr.Exp2 is LiteralExpression le2 && le2.Value.Type == DataType.Number)
+				if (binaryExpr.Exp2.EvalLiteral(out DynValue binExprDv) && binExprDv.TryCastToNumber(out double d))
 				{
-					le2.Value = DynValue.NewNumber(le2.Value.Number - 1);
+					bc.Emit_Literal(DynValue.NewNumber((int) d - 1));
+				}
+				else
+				{
+					binaryExpr.Exp2.Compile(bc);
+					bc.Emit_Literal(DynValue.NewNumber(1));
+					bc.Emit_Operator(OpCode.Sub);
 				}
 			}
-			
-			binaryExpr.Exp2.Compile(bc); // end
+			else
+			{
+				if (binaryExpr.Exp2.EvalLiteral(out DynValue binExprDv) && binExprDv.TryCastToNumber(out double d))
+				{
+					bc.Emit_Literal(DynValue.NewNumber((int)d));
+				}
+				else
+				{
+					binaryExpr.Exp2.Compile(bc);
+					bc.Emit_ToNum();
+				}
+			}
 			
 			new LiteralExpression(lcontext, DynValue.NewNumber(1)).Compile(bc); // step
-			
-				
+
 			if (binaryExpr.Operator == Operator.LeftExclusiveRange || binaryExpr.Operator == Operator.ExclusiveRange) // >.., >..< -> add 1
 			{
-				if (binaryExpr.Exp1 is LiteralExpression le1 && le1.Value.Type == DataType.Number)
+				if (binaryExpr.Exp1.EvalLiteral(out DynValue binExprDv) && binExprDv.TryCastToNumber(out double d))
 				{
-					le1.Value = DynValue.NewNumber(le1.Value.Number + 1);
+					bc.Emit_Literal(DynValue.NewNumber((int) d + 1));
+				}
+				else
+				{
+					binaryExpr.Exp1.Compile(bc);
+					bc.Emit_Literal(DynValue.NewNumber(1));
+					bc.Emit_Operator(OpCode.Add);
 				}
 			}
-
-			binaryExpr.Exp1.Compile(bc); // start
+			else
+			{
+				if (binaryExpr.Exp1.EvalLiteral(out DynValue binExprDv) && binExprDv.TryCastToNumber(out double d))
+				{
+					bc.Emit_Literal(DynValue.NewNumber((int)d));
+				}
+				else
+				{
+					binaryExpr.Exp1.Compile(bc);	
+					bc.Emit_ToNum();
+				}
+			}
 
 			int rangeStart = bc.GetJumpPointForNextInstruction();
 			int rangeJmpEnd = bc.Emit_Jump(OpCode.JFor, -1);

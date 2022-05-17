@@ -318,6 +318,17 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewRange:
 							ExecNewRange(i);
 							break;
+						case OpCode.ToNum:
+						{
+							ref var top = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Number) 
+							{
+								if (!top.TryCastToNumber(out var d))
+									throw ScriptRuntimeException.ArithmeticOnNonNumber(top);
+								top = DynValue.NewNumber(d);
+							}
+							break;
+						}
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
