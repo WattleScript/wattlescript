@@ -735,9 +735,17 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			bool implicitThis = argsCount < 0;
 			if (implicitThis) argsCount = -argsCount;
+			
 			DynValue fn = m_ValueStack.Peek(argsCount);
 			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
 
+			//Functions fetched from metatables transform implicit
+			//thiscall to explicit thiscall.
+			if (fn.FromMetatable && implicitThis) {
+				implicitThis = false; 
+				thisCall = true;
+			}
+			
 			// if TCO threshold reached
 			if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
 				|| (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
@@ -768,10 +776,6 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				case DataType.ClrFunction:
 				{
-					if (fn.FromMetatable && implicitThis) {
-						implicitThis = false; //explicit thiscall
-						thisCall = true;
-					}
 					IList<DynValue> args = CreateArgsListForFunctionCall(implicitThis ? (argsCount - 1) : argsCount, 0);
 					DynValue thisObj = DynValue.Nil;
 					if (implicitThis) thisObj = m_ValueStack[m_ValueStack.Count - argsCount];
