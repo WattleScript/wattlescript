@@ -1705,7 +1705,22 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
 
-							m_ValueStack.Push(DynValue.Nil);
+							//Check prototype for method call syntax
+							if (i.NumVal2 != 0)
+							{
+								var tb = m_Script.GetTablePrototype();
+								if (tb != null)
+								{
+									var v = tb.Get(idx);
+									v.FromMetatable = true;
+									m_ValueStack.Push(v);
+								} 
+							}
+							else
+							{
+								//Not a wattle method call, don't check prototype
+								m_ValueStack.Push(DynValue.Nil);
+							}
 							return instructionPtr;
 						}
 

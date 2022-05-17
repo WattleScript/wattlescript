@@ -16,6 +16,7 @@ namespace WattleScript.Interpreter.CoreLib
             proto.Set("boolean", sc.Registry.Get(BOOLEAN_PROTOTABLE));
             proto.Set("range", sc.Registry.Get(RANGE_PROTOTABLE));
             proto.Set("string", DynValue.NewTable(stringTable));
+            proto.Set("table", DynValue.NewTable(sc.GetTablePrototype()));
         }
 
         public static void EnablePrototypes(Table globalTable)
@@ -55,6 +56,8 @@ namespace WattleScript.Interpreter.CoreLib
                 //functions
                 rFuncs.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
             }
+            if(sc.GetTablePrototype() == null)
+                sc.SetTablePrototype(new Table(sc));
             //Copy tostring to string table
             stringTable.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
         }
