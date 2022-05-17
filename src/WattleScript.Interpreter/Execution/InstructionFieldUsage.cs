@@ -25,9 +25,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.IterPrep:
 				case OpCode.NewTable:
 				case OpCode.Concat:
-				case OpCode.LessEq:
-				case OpCode.Less:
-				case OpCode.Eq:
 				case OpCode.Add:
 				case OpCode.AddStr:
 				case OpCode.Sub:
@@ -38,7 +35,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Len:
 				case OpCode.Neg:
 				case OpCode.Power:
-				case OpCode.CNot:
 				case OpCode.ToBool:
 				case OpCode.PushNil:
 				case OpCode.PushTrue:
@@ -54,6 +50,10 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.CloseUp:
 				case OpCode.StrFormat:
 				case OpCode.TblInitN:
+				case OpCode.LessEq:
+				case OpCode.Less:
+				case OpCode.Eq:
+				case OpCode.CNot:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:
@@ -77,9 +77,9 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.IndexSet:
 				case OpCode.IndexSetN:
 				case OpCode.IndexSetL:
-					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.StoreLcl:
 				case OpCode.StoreUpv:
+				case OpCode.NewRange:
 					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Index:
 				case OpCode.IndexL:

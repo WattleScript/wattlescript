@@ -17,8 +17,8 @@ namespace WattleScript.Interpreter.Interop
         
         public static DynValue TaskResultToDynValue(Script script, Task task)
         {
-            var voidTaskType = typeof (Task<>).MakeGenericType(Type.GetType("System.Threading.Tasks.VoidTaskResult"));
-            if (voidTaskType.IsAssignableFrom(task.GetType()))
+            Type voidTaskType = typeof (Task<>).MakeGenericType(Type.GetType("System.Threading.Tasks.VoidTaskResult"));
+            if (voidTaskType.IsInstanceOfType(task))
             {
                 return DynValue.Nil; //no return type
             }

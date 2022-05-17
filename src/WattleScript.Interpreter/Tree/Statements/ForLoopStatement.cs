@@ -91,10 +91,38 @@ namespace WattleScript.Interpreter.Tree.Statements
 			};
 
 			bc.LoopTracker.Loops.Push(L);
+			
+			//Do literal evaluation here so we can skip type checks as needed
+			if (m_End.EvalLiteral(out var endval) && endval.TryCastToNumber(out var endNum)) 
+			{
+				bc.Emit_Literal(DynValue.NewNumber(endNum));
+			}
+			else 
+			{
+				m_End.CompilePossibleLiteral(bc);
+				bc.Emit_ToNum(3);
+			}
+			
+			if (m_Step.EvalLiteral(out var stepval) && stepval.TryCastToNumber(out var stepNum))
+			{
+				bc.Emit_Literal(DynValue.NewNumber(stepNum));
+			}
+			else
+			{
+				m_Step.CompilePossibleLiteral(bc);
+				bc.Emit_ToNum(2);
+			}
 
-			m_End.CompilePossibleLiteral(bc);
-			m_Step.Compile(bc);
-			m_Start.CompilePossibleLiteral(bc);
+			if (m_Start.EvalLiteral(out var startval) && startval.TryCastToNumber(out var startNum))
+			{
+				bc.Emit_Literal(DynValue.NewNumber(startNum));
+			}
+			else
+			{
+				m_Start.CompilePossibleLiteral(bc);
+				bc.Emit_ToNum(1);
+			}
+			
 
 			int start = bc.GetJumpPointForNextInstruction();
 			var jumpend = bc.Emit_Jump(OpCode.JFor, -1);

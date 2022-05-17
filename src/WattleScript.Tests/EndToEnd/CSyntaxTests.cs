@@ -68,8 +68,18 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             {
                 values[x] = x;
             }
-            assert.areequal(10, #values);
+            assert.areequal(10, values.length);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public void PreprocessorDefinition()
+        {
+            TestScript.Run("assert.areequal('hello', HELLO);", s =>
+            {
+                s.Options.Syntax = ScriptSyntax.WattleScript;
+                s.Options.Defines.Add(new PreprocessorDefine("HELLO", "hello"));
+            });
         }
 
         [Test]
@@ -230,20 +240,34 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             TestScript.Run(@"
             var tbl = { 
                 str = 'hello',
-                func2 = (x) => {   
-                    assert.areequal(nil, this);
+                func1 = (x) => {   
+                    assert.areequal('hello', this?.str, 'func1 - arrow lambda');
+                    assert.areequal(7, x);
+                },
+                func2 = function(x) {
+                    assert.areequal('hello', this?.str, 'func2');
                     assert.areequal(7, x);
                 }
             }
-            function tbl:hello(num) {
-                assert.areequal('hello', this?.str)
+            function tbl:func3(num) {
+                assert.areequal('hello', this?.str, 'tbl:func3')
                 assert.areequal(7, num);
             }
-            tbl.hello(7);
-            tbl::hello(7);
-            tbl.func2(7);
+            function tbl.func4(num) {
+                assert.areequal('hello', this?.str, 'tbl.func4')
+                assert.areequal(7, num);
+            }       
+            local function func5(num) {
+                assert.areequal(nil, this?.str, 'func5 - NOT table')
+                assert.areequal(7, num);
+            }         
+            tbl.func5 = func5; //'this' does not carry over, it is decided at the definition time
 
-
+            tbl.func1(7);
+            tbl::func2(7);
+            tbl.func3(7);
+            tbl.func4(7);
+            tbl.func5(7);
             table.insert(tbl, 1, 'goodbye');
             assert.areequal('goodbye', tbl[1]);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
@@ -785,7 +809,66 @@ return getnumber();
 ").Number);
         }
         
+        [Test]
+        public void RangeDefinition()
+        {
+            UserData.RegisterType<LuaAssertApi>();
+            
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+
+            Range r1 = new Range(sc, 5, 10);
+            sc.Globals["r1"] = r1;
+            
+            sc.Globals["assert"] = new LuaAssertApi();
+            sc.DoString(@"
+                assert.areequal(5, r1.from)
+                assert.areequal(10, r1.to)
+            ");
+        }
         
-       
+        [Test]
+        public void RangeGet()
+        {
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+            
+            DynValue dv = sc.DoString(@"
+                r1 = 1>..<10
+                return r1
+            ");
+            
+            Assert.AreEqual(2, dv.Range.From);
+            Assert.AreEqual(9, dv.Range.To);
+        }
+        
+        [Test]
+        public void RangeInOut()
+        {
+            Script sc = new Script();
+            sc.Options.Syntax = ScriptSyntax.WattleScript;
+            sc.Options.IndexTablesFrom = 0;
+
+            Range RangeTestMethod(Range r1)
+            {
+                Assert.AreEqual(2, r1.From);
+                Assert.AreEqual(4, r1.To);
+
+                return new Range(sc, 3, 5);
+            }
+
+            sc.Globals["rangeInOut"] = RangeTestMethod;
+            
+            DynValue dv = sc.DoString(@"
+                r1 = 2..<5
+                r2 = rangeInOut(r1)
+                return r2;
+            ");
+            
+            Assert.AreEqual(3, dv.Range.From);
+            Assert.AreEqual(5, dv.Range.To);
+        }
     }
 }

@@ -10,6 +10,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public DynValue Value
 		{
 			get { return m_Value; }
+			internal set { m_Value = value; }
 		}
 
 

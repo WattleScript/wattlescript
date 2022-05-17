@@ -59,6 +59,11 @@ namespace WattleScript.Interpreter.Interop
 		{
 			return ConvertIterator(table.OwnerScript, table.ReversePair.GetEnumerator());
 		}
+		
+		internal static DynValue ConvertRange(Range range)
+		{
+			return ConvertIterator(range.OwnerScript, range.ReversePair.GetEnumerator());
+		}
 
 
 		public DynValue Index(Script script, DynValue index, bool isDirectIndexing)

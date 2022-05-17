@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using WattleScript.Interpreter.CoreLib;
@@ -53,8 +54,13 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// The version of the WattleScript engine
 		/// </summary>
-		public const string VERSION = "3.0.0.0";
+		public static readonly string VERSION;
 
+		/// <summary>
+		/// The version of the WattleScript engine as a double.
+		/// </summary>
+		public static readonly double VERSION_NUMBER;
+		
 		/// <summary>
 		/// The Lua version being supported
 		/// </summary>
@@ -82,6 +88,10 @@ namespace WattleScript.Interpreter
 				ScriptLoader = PlatformAutoDetector.GetDefaultScriptLoader(),
 				TailCallOptimizationThreshold = 65536
 			};
+
+			var ver = typeof(Script).Assembly.GetName().Version;
+			VERSION = ver.ToString();
+			VERSION_NUMBER = ver.Major + ver.Minor / Math.Pow(10, Math.Floor(Math.Log10(ver.Minor) + 1));
 		}
 
 		/// <summary>
@@ -975,7 +985,7 @@ namespace WattleScript.Interpreter
 			StringBuilder sb = new StringBuilder();
 			sb.AppendLine(string.Format("WattleScript {0}{1} [{2}]", subproduct, Script.VERSION, Script.GlobalOptions.Platform.GetPlatformName()));
 			sb.AppendLine("Copyright (C) 2014-2022 WattleScript Contributors");
-			sb.AppendLine("http://www.wattlescript.org");
+			sb.AppendLine("https://wattlescript.github.io");
 			return sb.ToString();
 		}
 

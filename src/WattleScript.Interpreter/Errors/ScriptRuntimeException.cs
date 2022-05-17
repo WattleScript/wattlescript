@@ -339,7 +339,7 @@ namespace WattleScript.Interpreter
 		/// <returns>
 		/// The exception to be raised.
 		/// </returns>
-		public static ScriptRuntimeException ConvertToNumberFailed(int stage)
+		public static ScriptRuntimeException ConvertToNumberFailed(int stage, ref DynValue dv)
 		{
 			switch (stage)
 			{
@@ -349,6 +349,10 @@ namespace WattleScript.Interpreter
 					return new ScriptRuntimeException("'for' step must be a number");
 				case 3:
 					return new ScriptRuntimeException("'for' limit must be a number");
+				case 4:
+					return NewRangeBadValue("from", dv.Type.ToLuaTypeString());
+				case 5:
+					return NewRangeBadValue("to", dv.Type.ToLuaTypeString());
 				default:
 					return new ScriptRuntimeException("value must be a number");
 			}
@@ -500,6 +504,41 @@ namespace WattleScript.Interpreter
 		public static ScriptRuntimeException AccessInstanceMemberOnStatics(IUserDataDescriptor typeDescr, IMemberDescriptor desc)
 		{
 			return new ScriptRuntimeException("attempt to access instance member {0}.{1} from a static userdata", typeDescr.Name, desc.Name);
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid value to a new range was made
+		/// </summary>
+		/// <param name="property">To/From</param>
+		/// <param name="type">Unexpected type casted to string</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException NewRangeBadValue(string property, string type)
+		{
+			return new ScriptRuntimeException("bad value '{0}' for new range (number expected, got {1})", property, type);
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid value to a existing range was made
+		/// </summary>
+		/// <param name="range">A range</param>
+		/// <param name="type">Unexpected type casted to string</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException ExistingRangeBadValueAssigned(Range range, string type)
+		{
+			return new ScriptRuntimeException("bad value for range '{0}' (number expected, got {1})", range, type);
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// an attempt to assign an invalid property (something other than to/from) to a existing range was made
+		/// </summary>
+		/// <param name="property">Invalid property name</param>
+		/// <returns></returns>
+		public static ScriptRuntimeException ExistingRangeBadPropertyAssigned(string property)
+		{
+			return new ScriptRuntimeException("bad property name on a range (expected 'from' or 'to', got {0})", property);
 		}
 
 		/// <summary>

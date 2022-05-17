@@ -24,7 +24,7 @@ public class CLikeTestRunner
         await RunCore(path);
     }
 
-    [Test, TestCaseSource(nameof(GetTestCases))]
+    //[Test, TestCaseSource(nameof(GetTestCases))]
     public async Task RunReportErrors(string path)
     {
         await RunCore(path, true);
@@ -48,7 +48,12 @@ public class CLikeTestRunner
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-        
+        script.Globals["CurrentLine"] = (ScriptExecutionContext c, CallbackArguments a) => {
+            return c.CallingLocation.FromLine;
+        };
+        script.Globals["CurrentColumn"] = (ScriptExecutionContext c, CallbackArguments a) => {
+            return c.CallingLocation.FromChar;
+        };
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");
