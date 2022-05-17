@@ -234,6 +234,12 @@ namespace WattleScript.Interpreter.Tree
                     cur.Next();
                     cur.Next();
                     return CreateToken(TokenType.Op_Equal, line, fromCol, "==");
+                case '=':
+                    cur.Next();
+                    return CreateToken(TokenType.Op_Assignment, line, fromCol, "=");
+                case ',':
+                    cur.Next();
+                    return CreateToken(TokenType.Comma, line, fromCol, ",");
                 case '"':
                 case '\'':
                     return ReadSimpleStringToken(line, fromCol);

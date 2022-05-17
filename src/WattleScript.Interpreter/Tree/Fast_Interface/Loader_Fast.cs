@@ -38,7 +38,7 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 
 		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, 
 			string preprocessedCode = null,
-			Dictionary<string, PreprocessorDefine> defines = null)
+			Dictionary<string, DefineNode> defines = null)
 		{
 			return new ScriptLoadingContext(script)
 			{

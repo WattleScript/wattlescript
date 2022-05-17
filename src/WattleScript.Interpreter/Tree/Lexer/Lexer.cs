@@ -19,9 +19,9 @@ namespace WattleScript.Interpreter.Tree
 		private bool m_AutoSkipComments;
 		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
-		private Dictionary<string, PreprocessorDefine> m_Defines;
+		private Dictionary<string, DefineNode> m_Defines;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, PreprocessorDefine> defines)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, DefineNode> defines)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -1059,6 +1059,22 @@ namespace WattleScript.Interpreter.Tree
 				return CreateToken(singleCharToken, fromLine, fromCol, op);
 		}
 
+		PreprocessorDefine SearchDefine(string name)
+		{
+			if (m_Defines == null) return null;
+			if (!m_Defines.TryGetValue(name, out var node)) return null;
+			if (m_DefaultLine < node.StartLine) return null;
+			while (node != null && m_DefaultLine >= node.EndLine) {
+				node = node.Next;
+			}
+			return node?.Define;
+		}
+
+		bool GetDefine(string name, out PreprocessorDefine define)
+		{	
+			define = SearchDefine(name);
+			return define != null;
+		}
 
 
 		private Token CreateNameToken(string name, int fromLine, int fromCol)
@@ -1073,7 +1089,7 @@ namespace WattleScript.Interpreter.Tree
 			{
 				return ReadDirective(name, fromLine, fromCol);
 			}
-			else if (m_Defines != null && m_Defines.TryGetValue(name, out var value))
+			else if (GetDefine(name, out var value))
 			{
 				switch (value.Type)
 				{

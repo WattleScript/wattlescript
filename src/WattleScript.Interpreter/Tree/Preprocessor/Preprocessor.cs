@@ -12,7 +12,7 @@ namespace WattleScript.Interpreter.Tree
      * this is because the preprocessor is not expected to function
      * under a REPL
      */
-    public class Preprocessor
+    class Preprocessor
     {
         private StringBuilder output;
         private TextCursor cursor;
@@ -20,7 +20,7 @@ namespace WattleScript.Interpreter.Tree
         private int sourceIndex;
         
         private Dictionary<string, PreprocessorDefine> defines = new Dictionary<string, PreprocessorDefine>();
-
+        private Dictionary<string, DefineNode> nodes = new Dictionary<string, DefineNode>();
         public Preprocessor(Script script, int sourceIndex, string text)
         {
             this.script = script;
@@ -38,7 +38,7 @@ namespace WattleScript.Interpreter.Tree
                     cursor.Next();
                 }
             }
-            defines.Add("LANGVER", new PreprocessorDefine("LANGVER", 1.0));
+            SetDefine("LANGVER", new PreprocessorDefine("LANGVER", 1.0));
         }
 
         //preprocessor execution state
@@ -127,6 +127,39 @@ namespace WattleScript.Interpreter.Tree
                 throw new SyntaxErrorException(t, "unexpected symbol near '{0}'", display);
             }
         }
+
+        bool OptionalToken(DirectiveLexer lex, TokenType type)
+        {
+            if (lex.Current.Type == type)
+            {
+                lex.Next();
+                return true;
+            }
+            return false;
+        }
+
+        void SetDefine(string name, PreprocessorDefine value)
+        {
+            if (value == null)
+                defines.Remove(name);
+            else
+                defines[name] = value;
+            var newNode = new DefineNode()
+            {
+                StartLine = cursor.DefaultLine,
+                EndLine = int.MaxValue,
+                Define = value
+            };
+            if (nodes.TryGetValue(name, out var n))
+            {
+                n.EndLine = cursor.DefaultLine;
+                n.Next = newNode;
+            }
+            else
+            {
+                nodes[name] = newNode;
+            }
+        }
         
         void ProcessDirective()
         {
@@ -186,53 +219,49 @@ namespace WattleScript.Interpreter.Tree
                 case "define":
                 {
                     if (!outputChars) break; //We're not executing now
-                    var definedName = lexer.Next();
-                    CheckTokenType(nameToken, TokenType.Name);
-                    var definedValue = lexer.Next();
-                    if (definedValue.Type == TokenType.Op_Equal)
+                    do
                     {
-                        definedValue = lexer.Current;
-                        lexer.Next();
-                    }
-                    //Support values wrapped in () for convenience sake
-                    if (definedValue.Type == TokenType.Brk_Open_Round)
-                    {
-                        definedValue = lexer.Next();
-                        if (definedValue.Type != TokenType.Brk_Close_Round)
+                        //skip comma
+                        OptionalToken(lexer, TokenType.Comma);
+                        var definedName = lexer.Next();
+                        CheckTokenType(nameToken, TokenType.Name);
+                        Token definedValue;
+                        //#define optionally has =
+                        OptionalToken(lexer, TokenType.Op_Assignment);
+                        //#define value optionally can be wrapped in ()
+                        if (OptionalToken(lexer, TokenType.Brk_Open_Round))
                         {
-                            var close = lexer.Next();
-                            CheckTokenType(close, TokenType.Brk_Close_Round);
-                        } 
+                            definedValue = lexer.Next();
+                            CheckTokenType(lexer.Next(), TokenType.Brk_Close_Round);
+                        }
                         else
                         {
-                            //() just resolves to a null token value
-                            definedValue = lexer.EofToken;
+                            definedValue = lexer.Next();
                         }
-                    }
-                    //
-                    switch (definedValue.Type)
-                    {
-                        case TokenType.Eof:
-                            defines[definedName.Text] = new PreprocessorDefine(definedName.Text);
-                            break;
-                        case TokenType.True:
-                            defines[definedName.Text] = new PreprocessorDefine(definedName.Text, true);
-                            break;
-                        case TokenType.False:
-                            defines[definedName.Text] = new PreprocessorDefine(definedName.Text, false);
-                            break;
-                        case TokenType.Number:
-                        case TokenType.Number_Hex:
-                        case TokenType.Number_HexFloat:
-                            defines[definedName.Text] =
-                                new PreprocessorDefine(definedName.Text, definedValue.GetNumberValue());
-                            break;
-                        case TokenType.String:
-                            defines[definedName.Text] = new PreprocessorDefine(definedName.Text, definedValue.Text);
-                            break;
-                        default:
-                            throw new SyntaxErrorException(nameToken, "unexpected symbol '{0}'", definedValue.Text);
-                    }
+                        
+                        switch (definedValue.Type)
+                        {
+                            case TokenType.Eof: //eof tokens = empty define
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text));
+                                break;
+                            case TokenType.True:
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text, true));
+                                break;
+                            case TokenType.False:
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text, false));
+                                break;
+                            case TokenType.Number:
+                            case TokenType.Number_Hex:
+                            case TokenType.Number_HexFloat:
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text, definedValue.GetNumberValue()));
+                                break;
+                            case TokenType.String:
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text, definedValue.Text));
+                                break;
+                            default:
+                                throw new SyntaxErrorException(nameToken, "unexpected symbol '{0}'", definedValue.Text);
+                        }
+                    } while (lexer.Current.Type == TokenType.Comma);
                     lexer.CheckEndOfLine();
                     //For now do null
                     break;
@@ -240,9 +269,13 @@ namespace WattleScript.Interpreter.Tree
                 case "undef":
                 {
                     if (!outputChars) break; //We're not executing now
-                    var definedName = lexer.Next();
-                    CheckTokenType(definedName, TokenType.Name);
-                    defines.Remove(definedName.Text);
+                    do
+                    {
+                        OptionalToken(lexer, TokenType.Comma); //skip comma
+                        var definedName = lexer.Next();
+                        CheckTokenType(definedName, TokenType.Name);
+                        SetDefine(definedName.Text, null);
+                    } while (lexer.Current.Type == TokenType.Comma);
                     lexer.CheckEndOfLine();
                     break;
                 }
@@ -397,7 +430,7 @@ namespace WattleScript.Interpreter.Tree
         }
 
         public string ProcessedSource => output.ToString();
-        public Dictionary<string, PreprocessorDefine> Defines => defines;
+        public Dictionary<string, DefineNode> Defines => nodes;
         
         public void Process()
         {
