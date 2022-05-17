@@ -39,14 +39,22 @@ namespace WattleScript.Interpreter.Tree
                 }
             }
             SetDefine("LANGVER", new PreprocessorDefine("LANGVER", Script.VERSION_NUMBER));
+            foreach (var def in script.Options.Defines)
+            {
+                if (string.IsNullOrEmpty(def.Name))
+                    throw new ArgumentException("Preprocessor definition name can't be empty");
+                if (Token.GetReservedTokenType(def.Name, ScriptSyntax.WattleScript) != null)
+                    throw new ArgumentException($"Preprocessor definition name can't be keyword '{def.Name}'");
+                //overwrite previous entries as we are still at line 1
+                SetDefine(def.Name, def, true);
+            }
         }
 
         //preprocessor execution state
         
         private bool outputChars = true;
         private int regionCount = 0;
-        private int prevLine = 1;
-        private int prevCol = 1;
+
         struct IfBlockState
         {
             public bool ConditionTriggered;
@@ -138,7 +146,7 @@ namespace WattleScript.Interpreter.Tree
             return false;
         }
 
-        void SetDefine(string name, PreprocessorDefine value)
+        void SetDefine(string name, PreprocessorDefine value, bool overwrite = false)
         {
             if (value == null)
                 defines.Remove(name);
@@ -150,7 +158,7 @@ namespace WattleScript.Interpreter.Tree
                 EndLine = int.MaxValue,
                 Define = value
             };
-            if (nodes.TryGetValue(name, out var n))
+            if (!overwrite && nodes.TryGetValue(name, out var n))
             {
                 n.EndLine = cursor.DefaultLine;
                 n.Next = newNode;

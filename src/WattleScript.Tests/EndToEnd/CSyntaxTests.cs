@@ -73,6 +73,16 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         }
 
         [Test]
+        public void PreprocessorDefinition()
+        {
+            TestScript.Run("assert.areequal('hello', HELLO);", s =>
+            {
+                s.Options.Syntax = ScriptSyntax.WattleScript;
+                s.Options.Defines.Add(new PreprocessorDefine("HELLO", "hello"));
+            });
+        }
+
+        [Test]
         public void CFor()
         {
             TestScript.Run(@"
