@@ -172,6 +172,7 @@ namespace WattleScript.Interpreter.Tree
 		}
 
 		private bool m_StartOfLine = true;
+		private int m_ColOffset = 0;
 
 		private void CursorNext()
 		{
@@ -179,7 +180,8 @@ namespace WattleScript.Interpreter.Tree
 			{
 				if (CursorChar() == '\n')
 				{
-					m_Col = 0;
+					m_Col = m_ColOffset;
+					m_ColOffset = 0;
 					m_Line += 1;
 					m_DefaultLine += 1;
 					m_StartOfLine = true;
@@ -255,6 +257,14 @@ namespace WattleScript.Interpreter.Tree
 				if (lineNumber.Type != TokenType.Number)
 					throw new SyntaxErrorException(lineNumber, "unexpected symbol near '{0}'", lineNumber.Text);
 				m_Line = (int) (lineNumber.GetNumberValue() - 1);
+			}
+			if (l.Current.Type == TokenType.Comma)
+			{
+				l.Next();
+				var colOffset = l.Next();
+				if (colOffset.Type != TokenType.Number)
+					throw new SyntaxErrorException(colOffset, "unexpected symbol near '{0}'", colOffset.Text);
+				m_ColOffset = -(int) (colOffset.GetNumberValue());
 			}
 			l.CheckEndOfLine();
 		}
@@ -1145,13 +1155,20 @@ namespace WattleScript.Interpreter.Tree
 
 		private Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null)
 		{
-			Token t = new Token(tokenType, m_SourceId, fromLine, fromCol, m_Line, m_Col, m_PrevLineTo, m_PrevColTo)
+			//Make sure negative values aren't created in tokens
+			//Breaks other things
+			Token t = new Token(tokenType, m_SourceId, 
+				fromLine < 1 ? 1 : fromLine, 
+				fromCol < 0 ? 0 : fromCol, 
+				m_Line < 1 ? 1 : m_Line, 
+				m_Col < 0 ? 0 : m_Col,
+				m_PrevLineTo, m_PrevColTo)
 			{
 				Text = text
 				
 			};
-			m_PrevLineTo = m_Line;
-			m_PrevColTo = m_Col;
+			m_PrevLineTo = m_Line < 1 ? 1 : m_Line;
+			m_PrevColTo = m_Col < 0 ? 0 : m_Col;
 			return t;
 		}
 

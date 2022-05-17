@@ -341,6 +341,14 @@ namespace WattleScript.Interpreter.Tree
                         CheckTokenType(line, TokenType.Number);
                         cursor.Line = (int) (line.GetNumberValue() - 1); //Next line = value
                     }
+                    //column offset, not really relevant to preprocessor. check for correctness
+                    if (lexer.Current.Type == TokenType.Comma)
+                    {
+                        lexer.Next();
+                        var colOffset = lexer.Next();
+                        if (colOffset.Type != TokenType.Number)
+                            throw new SyntaxErrorException(colOffset, "unexpected symbol near '{0}'", colOffset.Text);
+                    }
                     lexer.CheckEndOfLine();
                     //Pass through to lexer
                     output.Append("#");
