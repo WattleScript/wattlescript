@@ -38,7 +38,7 @@ namespace WattleScript.Interpreter.Tree
                     cursor.Next();
                 }
             }
-            SetDefine("LANGVER", new PreprocessorDefine("LANGVER", 1.0));
+            SetDefine("LANGVER", new PreprocessorDefine("LANGVER", Script.VERSION_NUMBER));
         }
 
         //preprocessor execution state
@@ -88,7 +88,7 @@ namespace WattleScript.Interpreter.Tree
             if (block.ConditionTriggered) //already happened, don't exec
             {
                 block.OutputChars = outputChars = false;
-                return true; //
+                return true;
             }
             block.OutputChars = 
             block.ConditionTriggered = 
@@ -350,6 +350,7 @@ namespace WattleScript.Interpreter.Tree
                     break;
                 case "error":
                 {
+                    if (!outputChars) break; //don't execute
                     var msg = lexer.Next();
                     var message = string.IsNullOrWhiteSpace(msg.Text) ? "#error" : "#error: " + msg.Text;
                     throw new SyntaxErrorException(nameToken, message);
