@@ -430,13 +430,13 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0));
 		}
 
-		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false)
+		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false)
 		{
 			OpCode o;
 			if (isNameIndex) o = OpCode.IndexN;
 			else if (isExpList) o = OpCode.IndexL;
 			else o = OpCode.Index;
-			return AppendInstruction(new Instruction(o, StringArg(index)));
+			return AppendInstruction(new Instruction(o, StringArg(index), isMethodCall ? 1 : 0));
 		}
 
 		public int Emit_IndexSet(int stackofs, int tupleidx, string index = null, bool isNameIndex = false, bool isExpList = false)

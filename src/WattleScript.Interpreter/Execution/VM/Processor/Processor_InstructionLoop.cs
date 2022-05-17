@@ -768,6 +768,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				case DataType.ClrFunction:
 				{
+					if (fn.FromMetatable && implicitThis) {
+						implicitThis = false; //explicit thiscall
+						thisCall = true;
+					}
 					IList<DynValue> args = CreateArgsListForFunctionCall(implicitThis ? (argsCount - 1) : argsCount, 0);
 					DynValue thisObj = DynValue.Nil;
 					if (implicitThis) thisObj = m_ValueStack[m_ValueStack.Count - argsCount];
@@ -1668,6 +1672,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 
+			bool setFromMT = false; 
+			
 			while (nestedMetaOps > 0)
 			{
 				--nestedMetaOps;
@@ -1683,6 +1689,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 							if (!v.IsNil())
 							{
+								if (setFromMT) v.FromMetatable = true;
 								m_ValueStack.Push(v);
 								return instructionPtr;
 							}
@@ -1728,7 +1735,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							return instructionPtr;
 						}
 						
-						throw ScriptRuntimeException.IndexType(obj);
+						goto default;
 					}
 					default:
 					{
@@ -1750,6 +1757,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 
 				obj = h;
+				setFromMT = i.NumVal2 != 0;
 			}
 
 			throw ScriptRuntimeException.LoopInIndex();
