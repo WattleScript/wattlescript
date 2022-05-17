@@ -219,9 +219,12 @@ namespace WattleScript.Interpreter.Tree
                 case "define":
                 {
                     if (!outputChars) break; //We're not executing now
+                    if(lexer.Current.Type == TokenType.Comma)
+                        throw new SyntaxErrorException(nameToken, "unexpected symbol '{0}'", lexer.Current.Text);
                     do
                     {
                         //skip comma
+                        on_comma:
                         OptionalToken(lexer, TokenType.Comma);
                         var definedName = lexer.Next();
                         CheckTokenType(nameToken, TokenType.Name);
@@ -244,6 +247,9 @@ namespace WattleScript.Interpreter.Tree
                             case TokenType.Eof: //eof tokens = empty define
                                 SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text));
                                 break;
+                            case TokenType.Comma: //empty - jump to next
+                                SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text));
+                                goto on_comma; //we've already consumed the comma, check again
                             case TokenType.True:
                                 SetDefine(definedName.Text, new PreprocessorDefine(definedName.Text, true));
                                 break;
@@ -269,6 +275,8 @@ namespace WattleScript.Interpreter.Tree
                 case "undef":
                 {
                     if (!outputChars) break; //We're not executing now
+                    if(lexer.Current.Type == TokenType.Comma)
+                        throw new SyntaxErrorException(nameToken, "unexpected symbol '{0}'", lexer.Current.Text);
                     do
                     {
                         OptionalToken(lexer, TokenType.Comma); //skip comma

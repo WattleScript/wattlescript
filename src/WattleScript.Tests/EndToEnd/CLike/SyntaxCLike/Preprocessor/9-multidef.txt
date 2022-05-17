@@ -1,4 +1,6 @@
 hello
 world
+nil
+ok
 ok
 ok
