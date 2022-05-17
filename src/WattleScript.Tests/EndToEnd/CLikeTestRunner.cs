@@ -51,6 +51,9 @@ public class CLikeTestRunner
         script.Globals["CurrentLine"] = (ScriptExecutionContext c, CallbackArguments a) => {
             return c.CallingLocation.FromLine;
         };
+        script.Globals["CurrentColumn"] = (ScriptExecutionContext c, CallbackArguments a) => {
+            return c.CallingLocation.FromChar;
+        };
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");

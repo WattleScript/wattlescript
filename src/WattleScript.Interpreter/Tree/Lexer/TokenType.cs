@@ -114,7 +114,9 @@ namespace WattleScript.Interpreter.Tree
 		Op_ExclusiveRange, // >..<
 		Op_InclusiveRange, // ..
 		Op_LeftExclusiveRange, // >..
-		Op_RightExclusiveRange // ..<
+		Op_RightExclusiveRange, // ..<
+		
+		Preprocessor_Defined //Reserved only in preprocessor
 	}
 
 

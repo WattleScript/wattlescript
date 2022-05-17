@@ -85,6 +85,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
+			bc.PushSourceRef(SourceRef);
 			int argslen = m_Arguments.Count;
 
 			if (m_Kind == CallKind.ImplicitThisCall && m_Name == null)
@@ -135,6 +136,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			if (bc.NilChainTargets.Count > 0) {
 				bc.SetNumVal(bc.NilChainTargets.Pop(), bc.GetJumpPointForNextInstruction());
 			}
+			bc.PopSourceRef();
 		}
 
 		public override bool EvalLiteral(out DynValue dv)

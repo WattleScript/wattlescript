@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace WattleScript.Interpreter.Tree
@@ -12,13 +13,15 @@ namespace WattleScript.Interpreter.Tree
 		private int m_PrevColTo = 1;
 		private int m_Cursor;
 		private int m_Line = 1;
+		private int m_DefaultLine = 1;
 		private int m_Col;
 		private int m_SourceId;
 		private bool m_AutoSkipComments;
 		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
+		private Dictionary<string, DefineNode> m_Defines;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, DefineNode> defines)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
@@ -30,6 +33,7 @@ namespace WattleScript.Interpreter.Tree
 			m_AutoSkipComments = autoSkipComments;
 			m_Syntax = syntax;
 			m_Directives = directives;
+			m_Defines = defines;
 		}
 
 		public Token Current
@@ -94,8 +98,10 @@ namespace WattleScript.Interpreter.Tree
 		struct Snapshot
 		{
 			public int Cursor;
+			public bool StartOfLine;
 			public Token Current;
 			public int Line;
+			public int DefaultLine;
 			public int Col;
 			public int[] TemplateStringState;
 		}
@@ -111,6 +117,8 @@ namespace WattleScript.Interpreter.Tree
 				Cursor = m_Cursor,
 				Current = m_Current,
 				Line = m_Line,
+				DefaultLine = m_DefaultLine,
+				StartOfLine = m_StartOfLine,
 				Col = m_Col,
 				TemplateStringState = templateStringState.ToArray(),
 			};
@@ -121,7 +129,9 @@ namespace WattleScript.Interpreter.Tree
 			m_Cursor = s.Cursor;
 			m_Current = s.Current;
 			m_Line = s.Line;
+			m_DefaultLine = s.DefaultLine;
 			m_Col = s.Col;
+			m_StartOfLine = s.StartOfLine;
 			templateStringState = new List<int>(s.TemplateStringState);
 		}
 
@@ -161,6 +171,8 @@ namespace WattleScript.Interpreter.Tree
 			return t;
 		}
 
+		private bool m_StartOfLine = true;
+		private int m_ColOffset = 0;
 
 		private void CursorNext()
 		{
@@ -168,11 +180,15 @@ namespace WattleScript.Interpreter.Tree
 			{
 				if (CursorChar() == '\n')
 				{
-					m_Col = 0;
+					m_Col = m_ColOffset;
+					m_ColOffset = 0;
 					m_Line += 1;
+					m_DefaultLine += 1;
+					m_StartOfLine = true;
 				}
 				else
 				{
+					if (!char.IsWhiteSpace(CursorChar())) m_StartOfLine = false;
 					m_Col += 1;
 				}
 
@@ -224,6 +240,35 @@ namespace WattleScript.Interpreter.Tree
 			{
 			}
 		}
+
+		void ProcessLineDirective(string directive, int line, int col)
+		{
+			var l = new DirectiveLexer(directive, m_SourceId, line, col);
+			if (l.Current.Text != "line")
+				throw new InternalErrorException("ProcessLineDirective called on != line");
+			l.Next();
+			var lineNumber = l.Next();
+			if (lineNumber.Text == "default")
+			{
+				m_Line = m_DefaultLine;
+			}
+			else
+			{
+				if (lineNumber.Type != TokenType.Number)
+					throw new SyntaxErrorException(lineNumber, "unexpected symbol near '{0}'", lineNumber.Text);
+				m_Line = (int) (lineNumber.GetNumberValue() - 1);
+			}
+			if (l.Current.Type == TokenType.Comma)
+			{
+				l.Next();
+				var colOffset = l.Next();
+				if (colOffset.Type != TokenType.Number)
+					throw new SyntaxErrorException(colOffset, "unexpected symbol near '{0}'", colOffset.Text);
+				m_ColOffset = -(int) (colOffset.GetNumberValue());
+			}
+			l.CheckEndOfLine();
+		}
+		
 
 
 		private Token ReadToken()
@@ -526,6 +571,27 @@ namespace WattleScript.Interpreter.Tree
 					return CreateSingleCharToken(TokenType.Op_Pwr, fromLine, fromCol);
 				case '$':
 					return PotentiallyDoubleCharOperator('{', TokenType.Op_Dollar, TokenType.Brk_Open_Curly_Shared, fromLine, fromCol);
+				case '#' when m_Syntax == ScriptSyntax.WattleScript:
+					if (m_Cursor == 0 && m_Code.Length > 1 && m_Code[1] == '!')
+						return ReadHashBang(fromLine, fromCol);
+					else if (m_StartOfLine && CursorMatches("#line"))
+					{
+						//Read in line
+						CursorNext();
+						var directive = new StringBuilder();
+						while (CursorNotEof() && CursorChar() != '\n' &&
+						       !CursorMatches("//") && !CursorMatches("/*")) {
+							directive.Append(CursorChar());
+							CursorNext();
+						}
+						ProcessLineDirective(directive.ToString(), fromLine, fromCol);
+						//Go to next token
+						return ReadToken();
+					}
+					else
+					{
+						goto default;
+					}
 				case '#':
 					if (m_Cursor == 0 && m_Code.Length > 1 && m_Code[1] == '!')
 						return ReadHashBang(fromLine, fromCol);
@@ -1003,6 +1069,22 @@ namespace WattleScript.Interpreter.Tree
 				return CreateToken(singleCharToken, fromLine, fromCol, op);
 		}
 
+		PreprocessorDefine SearchDefine(string name)
+		{
+			if (m_Defines == null) return null;
+			if (!m_Defines.TryGetValue(name, out var node)) return null;
+			if (m_DefaultLine < node.StartLine) return null;
+			while (node != null && m_DefaultLine >= node.EndLine) {
+				node = node.Next;
+			}
+			return node?.Define;
+		}
+
+		bool GetDefine(string name, out PreprocessorDefine define)
+		{	
+			define = SearchDefine(name);
+			return define != null;
+		}
 
 
 		private Token CreateNameToken(string name, int fromLine, int fromCol)
@@ -1016,6 +1098,25 @@ namespace WattleScript.Interpreter.Tree
 			else if (m_Directives != null && m_Directives.Contains(name))
 			{
 				return ReadDirective(name, fromLine, fromCol);
+			}
+			else if (GetDefine(name, out var value))
+			{
+				switch (value.Type)
+				{
+					case PreprocessorDefineType.String:
+						return CreateToken(TokenType.String, fromLine, fromCol, value.String);
+					case PreprocessorDefineType.Number:
+						return CreateToken(TokenType.Number, fromLine, fromCol,
+							value.Number.ToString(CultureInfo.InvariantCulture));
+					case PreprocessorDefineType.Boolean:
+						return CreateToken(value.Boolean ? TokenType.True : TokenType.False, fromLine, fromCol,
+							value.Boolean ? "true" : "false");
+					//No value set, don't use
+					case PreprocessorDefineType.Empty:
+						return CreateToken(TokenType.Name, fromLine, fromCol, name);
+					default:
+						throw new InternalErrorException("#define {0} has invalid type", name);
+				}
 			}
 			else
 			{
@@ -1054,13 +1155,20 @@ namespace WattleScript.Interpreter.Tree
 
 		private Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null)
 		{
-			Token t = new Token(tokenType, m_SourceId, fromLine, fromCol, m_Line, m_Col, m_PrevLineTo, m_PrevColTo)
+			//Make sure negative values aren't created in tokens
+			//Breaks other things
+			Token t = new Token(tokenType, m_SourceId, 
+				fromLine < 1 ? 1 : fromLine, 
+				fromCol < 0 ? 0 : fromCol, 
+				m_Line < 1 ? 1 : m_Line, 
+				m_Col < 0 ? 0 : m_Col,
+				m_PrevLineTo, m_PrevColTo)
 			{
 				Text = text
 				
 			};
-			m_PrevLineTo = m_Line;
-			m_PrevColTo = m_Col;
+			m_PrevLineTo = m_Line < 1 ? 1 : m_Line;
+			m_PrevColTo = m_Col < 0 ? 0 : m_Col;
 			return t;
 		}
 

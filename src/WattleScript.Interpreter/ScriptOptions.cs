@@ -140,5 +140,11 @@ namespace WattleScript.Interpreter
 		/// Options are: Throw (paring is aborted after first error), Report (errors are stashed and available in Script.ParserMessages)
 		/// </summary>
 		public ParserErrorModes ParserErrorMode { get; set; } = ParserErrorModes.Throw;
+
+		/// <summary>
+		/// Definitions to be passed to the preprocessor.
+		/// Only used when <see cref="Syntax"/> is set to WattleScript
+		/// </summary>
+		public List<PreprocessorDefine> Defines { get; set; } = new List<PreprocessorDefine>();
 	}
 }

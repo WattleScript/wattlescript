@@ -68,8 +68,18 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             {
                 values[x] = x;
             }
-            assert.areequal(10, #values);
+            assert.areequal(10, values.length);
             ", s => s.Options.Syntax = ScriptSyntax.WattleScript);
+        }
+
+        [Test]
+        public void PreprocessorDefinition()
+        {
+            TestScript.Run("assert.areequal('hello', HELLO);", s =>
+            {
+                s.Options.Syntax = ScriptSyntax.WattleScript;
+                s.Options.Defines.Add(new PreprocessorDefine("HELLO", "hello"));
+            });
         }
 
         [Test]
