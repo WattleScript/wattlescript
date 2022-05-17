@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security;
 
 namespace WattleScript.Interpreter.Tree
 {
@@ -26,6 +25,8 @@ namespace WattleScript.Interpreter.Tree
             var T = lex.Current;
             switch (T.Type)
             {
+                case TokenType.Preprocessor_Defined:
+                    return new PreprocessorDefinedExpression(lex);
                 case TokenType.Not:
                     return new PreprocessorNegateExpression(lex);
                 case TokenType.Name:
@@ -42,7 +43,8 @@ namespace WattleScript.Interpreter.Tree
                 case TokenType.Number: 
                 case TokenType.Number_Hex:
                 case TokenType.Number_HexFloat:
-                    throw new NotImplementedException();
+                    lex.Next();
+                    return new LiteralPreprocessorExpression(DynValue.NewNumber(T.GetNumberValue()));
                 case TokenType.Brk_Open_Round:
                     return new PreprocessorAdjustmentExpression(lex);
                 case TokenType.Eof:
@@ -61,10 +63,20 @@ namespace WattleScript.Interpreter.Tree
                 case DataType.Number:
                     return val.Number > 0;
                 case DataType.String:
-                    return true;
+                    return !string.IsNullOrEmpty(val.String);
                 default:
                     //This won't ever be thrown.
                     throw new InvalidOperationException("Invalid DynValue evaluated");
+            }
+        }
+        
+        protected void CheckTokenType(Token t, TokenType type)
+        {
+            if (t.Type != type)
+            {
+                //Premature stream termination not possible with preprocessor statements
+                var display = t.Type == TokenType.Eof ? "\\n" : t.Text;
+                throw new SyntaxErrorException(t, "unexpected symbol near '{0}'", display);
             }
         }
         
@@ -141,6 +153,26 @@ namespace WattleScript.Interpreter.Tree
         }
     }
 
+    class PreprocessorDefinedExpression : PreprocessorExpression
+    {
+        private string name;
+
+        public PreprocessorDefinedExpression(DirectiveLexer lex)
+        {
+            lex.Next();
+            CheckTokenType(lex.Next(), TokenType.Brk_Open_Round);
+            var nameToken = lex.Next();
+            CheckTokenType(nameToken, TokenType.Name);
+            CheckTokenType(lex.Next(), TokenType.Brk_Close_Round);
+            name = nameToken.Text;
+        }
+
+        public override DynValue Evaluate(Dictionary<string, PreprocessorDefine> defines)
+        {
+            return DynValue.NewBoolean(defines.ContainsKey(name));
+        }
+    }
+
     class PreprocessorAdjustmentExpression : PreprocessorExpression
     {
         private PreprocessorExpression expression;
@@ -149,7 +181,7 @@ namespace WattleScript.Interpreter.Tree
         {
             lex.Next();
             expression = Create(lex);
-            lex.Next(); //check if it is a ), if not throw error
+            CheckTokenType(lex.Next(), TokenType.Brk_Close_Round);
         }
         
         public override DynValue Evaluate(Dictionary<string, PreprocessorDefine> defines)

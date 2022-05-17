@@ -49,3 +49,9 @@ print("ok")
 print("not ok B <= A")
 #endif
 print(CurrentLine())
+
+#if 23 > A 
+print("ok")
+#else
+print("not ok 23 > A");
+#endif

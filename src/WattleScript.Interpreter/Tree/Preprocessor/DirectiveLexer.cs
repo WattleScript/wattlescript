@@ -250,8 +250,15 @@ namespace WattleScript.Interpreter.Tree
                     if (char.IsLetter(cur.Char()) || cur.Char() == '_')
                     {
                         var name = ReadNameToken();
-                        var type = Token.GetReservedTokenType(name, ScriptSyntax.WattleScript);
-                        return CreateToken(type ?? TokenType.Name, line, fromCol, name);
+                        if (name == "defined")
+                        {
+                            return CreateToken(TokenType.Preprocessor_Defined, line, fromCol, name);
+                        }
+                        else
+                        {
+                            var type = Token.GetReservedTokenType(name, ScriptSyntax.WattleScript);
+                            return CreateToken(type ?? TokenType.Name, line, fromCol, name);
+                        }
                     }
                     else if (LexerUtils.CharIsDigit(cur.Char()))
                     {
