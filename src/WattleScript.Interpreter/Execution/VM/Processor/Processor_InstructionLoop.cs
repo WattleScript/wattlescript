@@ -316,8 +316,19 @@ namespace WattleScript.Interpreter.Execution.VM
 								instructionPtr = i.NumVal;
 							break;
 						case OpCode.NewRange:
-							ExecNewRange();
+							ExecNewRange(i);
 							break;
+						case OpCode.ToNum:
+						{
+							ref var top = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Number) 
+							{
+								if (!top.TryCastToNumber(out var d))
+									throw ScriptRuntimeException.ArithmeticOnNonNumber(top);
+								top = DynValue.NewNumber(d);
+							}
+							break;
+						}
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
@@ -1228,8 +1239,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue dvB = ref m_ValueStack.Peek(1);
 			DataType dvAType = dvA.Type;
 			DataType dvBType = dvB.Type;
-			
-			if (dvA.TryCastToNumber(out var rn) && dvB.TryCastToNumber(out var ln))
+
+			if (dvA.TryGetNumber(out double rn) && dvB.TryGetNumber(out double ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber(ln + rn));
@@ -1479,25 +1490,32 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.RemoveLast(i.NumVal);
 		}
 
-		private void ExecNewRange()
+		private void ExecNewRange(Instruction i)
 		{
-			DynValue toDv = m_ValueStack.Pop().ToScalar();
-			DynValue fromDv = m_ValueStack.Pop().ToScalar();
-
-			int? fromInt = fromDv.CastToInt();
-			int? toInt = toDv.CastToInt();
-
-			if (fromInt == null)
+			if (i.NumVal3 == 1) // from v-stack
 			{
-				throw ScriptRuntimeException.NewRangeBadValue("from", fromDv.Type.ToLuaTypeString());
-			}
+				DynValue toDv = m_ValueStack.Pop();
+				DynValue fromDv = m_ValueStack.Pop();
+
+				int? fromInt = fromDv.CastToInt();
+				int? toInt = toDv.CastToInt();
+
+				if (fromInt == null)
+				{
+					throw ScriptRuntimeException.NewRangeBadValue("from", fromDv.Type.ToLuaTypeString());
+				}
 			
-			if (toInt == null)
-			{
-				throw ScriptRuntimeException.NewRangeBadValue("to", toDv.Type.ToLuaTypeString());
-			}
+				if (toInt == null)
+				{
+					throw ScriptRuntimeException.NewRangeBadValue("to", toDv.Type.ToLuaTypeString());
+				}
 				
-			m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, fromInt.Value, toInt.Value)));
+				m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, fromInt.Value, toInt.Value)));	
+			}
+			else // from numVal, numVal2
+			{
+				m_ValueStack.Push(DynValue.NewRange(new Range(m_Script, i.NumVal, i.NumVal2)));	
+			}
 		}
 		
 		private void ExecTblInitN(Instruction i)

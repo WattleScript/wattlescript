@@ -305,6 +305,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		private readonly Operator m_Operator;
 		private readonly ScriptLoadingContext lcontext;
 
+		internal Expression Exp1 => m_Exp1;
+		internal Expression Exp2 => m_Exp2;
+		internal Operator Operator => m_Operator;
 
 		private BinaryOperatorExpression(Expression exp1, Expression exp2, Operator op, ScriptLoadingContext lcontext)
 			: base (lcontext)
@@ -380,6 +383,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				default:
 					throw new InternalErrorException("Unsupported operator {0}", op);
 			}
+		}
+
+		public bool IsRangeCtor()
+		{
+			return m_Exp1 != null && m_Exp2 != null && (m_Operator & RANGES) != 0;
 		}
 
 		public override void ResolveScope(ScriptLoadingContext lcontext)

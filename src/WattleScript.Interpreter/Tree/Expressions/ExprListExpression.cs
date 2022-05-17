@@ -6,7 +6,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 {
 	class ExprListExpression : Expression 
 	{
-		List<Expression> expressions;
+		private List<Expression> expressions;
+		internal List<Expression> Expressions => expressions;
 
 		public ExprListExpression(List<Expression> exps, ScriptLoadingContext lcontext)
 			: base(lcontext)

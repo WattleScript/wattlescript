@@ -411,14 +411,16 @@ namespace WattleScript.Interpreter
 		/// A preinitialized, readonly instance, equaling False
 		/// </summary>
 		public static DynValue False { get; private set; }
-
+		/// <summary>
+		/// A preinitialized, readonly instance, equaling Number 0
+		/// </summary>
 
 		static DynValue()
 		{
-			Nil = new DynValue() { };
-			Void = new DynValue() { m_U64 = TYPE(DataType.Void) };
-			True = DynValue.NewBoolean(true);
-			False = DynValue.NewBoolean(false);
+			Nil = new DynValue { };
+			Void = new DynValue { m_U64 = TYPE(DataType.Void) };
+			True = NewBoolean(true);
+			False = NewBoolean(false);
 		}
 
 
@@ -688,6 +690,13 @@ namespace WattleScript.Interpreter
 			if (!TryCastToNumber(out var num))
 				throw ScriptRuntimeException.ConvertToNumberFailed(stage);
 			return num;
+		}
+		
+		internal bool TryGetNumber(out double n)
+		{
+			ref DynValue rv = ref ScalarReference(ref this);
+			n = rv.m_Number;
+			return rv.Type == DataType.Number;
 		}
 		
 		public bool TryCastToNumber(out double d)

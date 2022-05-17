@@ -237,6 +237,11 @@ namespace WattleScript.Interpreter.Execution.VM
 					return AppendInstruction(new Instruction(OpCode.PushString, StringArg(value.String)));
 				case DataType.Range:
 				{
+					if (value.Range.To >= Instruction.NumVal2Min && value.Range.To <= Instruction.NumVal2Max)
+					{
+						return AppendInstruction(new Instruction(OpCode.NewRange, value.Range.From, value.Range.To, 0));
+					}
+
 					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.From));
 					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.To));
 					return AppendInstruction(new Instruction(OpCode.NewRange, 0, 0, 1));
@@ -407,6 +412,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
+		public int Emit_ToNum()
+		{
+			return AppendInstruction(new Instruction(OpCode.ToNum));
+		}
+		
 		public int Emit_TblInitN(int count)
 		{
 			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
