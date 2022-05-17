@@ -191,6 +191,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				else
 				{
 					binaryExpr.Exp2.Compile(bc);
+					bc.Emit_ToNum(5); //Do conversion here to get correct error message
 					bc.Emit_Literal(DynValue.NewNumber(1));
 					bc.Emit_Operator(OpCode.Sub);
 				}
@@ -204,7 +205,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				else
 				{
 					binaryExpr.Exp2.Compile(bc);
-					bc.Emit_ToNum();
+					bc.Emit_ToNum(5);
 				}
 			}
 			
@@ -219,6 +220,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				else
 				{
 					binaryExpr.Exp1.Compile(bc);
+					bc.Emit_ToNum(4); //Do conversion here to get correct error message
 					bc.Emit_Literal(DynValue.NewNumber(1));
 					bc.Emit_Operator(OpCode.Add);
 				}
@@ -232,7 +234,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				else
 				{
 					binaryExpr.Exp1.Compile(bc);	
-					bc.Emit_ToNum();
+					bc.Emit_ToNum(4);
 				}
 			}
 

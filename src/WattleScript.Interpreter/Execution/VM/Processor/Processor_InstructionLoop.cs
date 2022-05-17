@@ -324,7 +324,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (top.Type != DataType.Number) 
 							{
 								if (!top.TryCastToNumber(out var d))
-									throw ScriptRuntimeException.ArithmeticOnNonNumber(top);
+									throw ScriptRuntimeException.ConvertToNumberFailed(i.NumVal, ref top);
 								top = DynValue.NewNumber(d);
 							}
 							break;
@@ -604,9 +604,9 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		private int ExecJFor(Instruction i, int instructionPtr)
 		{
-			double val = m_ValueStack.Peek().AssertNumber(1);
-			double step = m_ValueStack.Peek(1).AssertNumber(2);
-			double stop = m_ValueStack.Peek(2).AssertNumber(3);
+			double val = m_ValueStack.Peek().Number;
+			double step = m_ValueStack.Peek(1).Number;
+			double stop = m_ValueStack.Peek(2).Number;
 
 			bool whileCond = (step > 0) ? val <= stop : val >= stop;
 

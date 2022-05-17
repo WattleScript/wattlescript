@@ -685,13 +685,6 @@ namespace WattleScript.Interpreter
 			}
 		}
 
-		internal double AssertNumber(int stage)
-		{
-			if (!TryCastToNumber(out var num))
-				throw ScriptRuntimeException.ConvertToNumberFailed(stage);
-			return num;
-		}
-		
 		internal bool TryGetNumber(out double n)
 		{
 			ref DynValue rv = ref ScalarReference(ref this);

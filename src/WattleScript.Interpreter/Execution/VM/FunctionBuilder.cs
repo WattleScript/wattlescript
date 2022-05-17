@@ -412,9 +412,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
-		public int Emit_ToNum()
+		public int Emit_ToNum(int stage)
 		{
-			return AppendInstruction(new Instruction(OpCode.ToNum));
+			return AppendInstruction(new Instruction(OpCode.ToNum, stage));
 		}
 		
 		public int Emit_TblInitN(int count)

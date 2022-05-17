@@ -339,7 +339,7 @@ namespace WattleScript.Interpreter
 		/// <returns>
 		/// The exception to be raised.
 		/// </returns>
-		public static ScriptRuntimeException ConvertToNumberFailed(int stage)
+		public static ScriptRuntimeException ConvertToNumberFailed(int stage, ref DynValue dv)
 		{
 			switch (stage)
 			{
@@ -349,6 +349,10 @@ namespace WattleScript.Interpreter
 					return new ScriptRuntimeException("'for' step must be a number");
 				case 3:
 					return new ScriptRuntimeException("'for' limit must be a number");
+				case 4:
+					return NewRangeBadValue("from", dv.Type.ToLuaTypeString());
+				case 5:
+					return NewRangeBadValue("to", dv.Type.ToLuaTypeString());
 				default:
 					return new ScriptRuntimeException("value must be a number");
 			}
