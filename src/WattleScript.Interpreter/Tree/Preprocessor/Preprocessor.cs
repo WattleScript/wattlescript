@@ -137,15 +137,40 @@ namespace WattleScript.Interpreter.Tree
             var currentLine = cursor.Line;
             int startCol = cursor.Column;
             var builder = new StringBuilder();
-            while (cursor.NotEof() && cursor.Char() != '\n')
+            bool read = true;
+            while (cursor.NotEof() && cursor.Char() != '\n' && read)
             {
-                if (cursor.Char() == '/' && 
-                    (cursor.PeekNext() == '/' || cursor.PeekNext() == '*')) {
-                    //Stop reading directive at comment
-                    break;
+                switch (cursor.Char())
+                {
+                    case '\'':
+                    case '"':
+                    {
+                        //Read whole literal so '//' is valid
+                        var sep = cursor.Char();
+                        builder.Append(sep);
+                        for (var c = cursor.CharNext(); cursor.NotEof() && cursor.Char() != '\n'; c = cursor.CharNext())
+                        {
+                            builder.Append(c);
+                            if (c == '\\') {
+                                cursor.Next();
+                                if (cursor.NotEof()) builder.Append(cursor.Char());
+                            }
+                            if (c == sep) {
+                                cursor.Next();
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    //Don't include comments in directive
+                    case '/' when (cursor.PeekNext() == '/' || cursor.PeekNext() == '*'):
+                        read = false;
+                        break;
+                    default:
+                        builder.Append(cursor.Char());
+                        cursor.Next();
+                        break;
                 }
-                builder.Append(cursor.Char());
-                cursor.Next();
             }
             //Parse Line
             var lexer = new DirectiveLexer(builder.ToString(), sourceIndex, currentLine, startCol);
