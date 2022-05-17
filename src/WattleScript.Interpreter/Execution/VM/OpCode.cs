@@ -82,8 +82,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		Len,		// Size operator of the topmost operand on the v-stack
 		Neg,		// Negation (unary minus) operator of the topmost operand on the v-stack
 		Power,		// Power of the two topmost operands on the v-stack
-		CNot,		// Conditional NOT - takes second operand from the v-stack (must be bool), if true execs a NOT otherwise execs a TOBOOL
-		
+		CNot,		// Conditional NOT - takes second operand from the v-stack (must be bool), if true execs a NOT otherwise execs a TOBOOL.
+					// If NumVal != 0, then execute a second NOT
 		//Bit Operators
 		BAnd,
 		BOr,

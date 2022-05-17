@@ -423,10 +423,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				m_Exp2.CompilePossibleLiteral(bc);
 			}
 
-			bc.Emit_Operator(OperatorToOpCode(m_Operator));
-
-			if (ShouldInvertBoolean(m_Operator))
-				bc.Emit_Operator(OpCode.Not);
+			bc.Emit_Operator(OperatorToOpCode(m_Operator), ShouldInvertBoolean(m_Operator));
 		}
 
 		public override bool EvalLiteral(out DynValue dv)

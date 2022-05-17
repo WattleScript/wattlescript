@@ -265,19 +265,22 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.MkTuple, cnt));
 		}
 
-		public int Emit_Operator(OpCode opcode)
+		public int Emit_Operator(OpCode opcode, bool invert = false)
 		{
-			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode);
+			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode, invert ? 1 : 0);
 			int i = AppendInstruction(instr);
 			
 			switch (opcode)
 			{
 				case OpCode.LessEq:
-					AppendInstruction(new Instruction(OpCode.CNot));
+					AppendInstruction(new Instruction(OpCode.CNot, invert ? 1 : 0));
 					break;
 				case OpCode.Eq:
 				case OpCode.Less:
-					AppendInstruction(new Instruction(OpCode.ToBool));
+					if (invert)
+						AppendInstruction(new Instruction(OpCode.Not));
+					else
+						AppendInstruction(new Instruction(OpCode.ToBool));
 					break;
 			}
 

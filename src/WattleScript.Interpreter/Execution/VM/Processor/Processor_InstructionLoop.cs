@@ -150,15 +150,15 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Eq:
-							instructionPtr = ExecEq(instructionPtr);
+							instructionPtr = ExecEq(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.LessEq:
-							instructionPtr = ExecLessEq(instructionPtr);
+							instructionPtr = ExecLessEq(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Less:
-							instructionPtr = ExecLess(instructionPtr);
+							instructionPtr = ExecLess(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
 						case OpCode.Len:
@@ -193,7 +193,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							ExecNot();
 							break;
 						case OpCode.CNot:
-							ExecCNot();
+							ExecCNot(i);
 							break;
 						case OpCode.JfOrPop:
 						case OpCode.JtOrPop:
@@ -621,7 +621,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			top = DynValue.NewNumber(top.Number + btm.Number);
 		}
 		
-		private void ExecCNot()
+		private void ExecCNot(Instruction i)
 		{
 			DynValue v = m_ValueStack.Pop().ToScalar();
 			DynValue not = m_ValueStack.Pop().ToScalar();
@@ -629,7 +629,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (not.Type != DataType.Boolean)
 				throw new InternalErrorException("CNOT had non-bool arg");
 
-			m_ValueStack.Push(not.CastToBool() ? DynValue.NewBoolean(!v.CastToBool()) : DynValue.NewBoolean(v.CastToBool()));
+			var result = v.CastToBool();
+			if (not.CastToBool()) result = !result; //execute CNOT
+			if (i.NumVal != 0) result = !result; //merged NOT instruction
+			m_ValueStack.Push(DynValue.NewBoolean(result));
 		}
 
 		private void ExecNot()
@@ -1346,10 +1349,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		}
 
 
-		private int ExecEq(int instructionPtr)
+		
+		private int ExecEq(int instructionPtr, Instruction i)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
+
+			bool invert = i.NumVal != 0; //elide NOT
 			
 			// if they are userdatas, attempt meta
 			if (l.Type == DataType.UserData || r.Type == DataType.UserData)
@@ -1362,11 +1368,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (r.Type != l.Type)
 			{
 				if ((l.Type == DataType.Nil && r.Type == DataType.Void) || (l.Type == DataType.Void && r.Type == DataType.Nil))
-					m_ValueStack.Push(DynValue.True);
+					m_ValueStack.Push(invert ? DynValue.False: DynValue.True);
 				else
-					m_ValueStack.Push(DynValue.False);
+					m_ValueStack.Push(invert ? DynValue.True : DynValue.False);
 
-				return instructionPtr;
+				return instructionPtr + 1; //Skip TOBOOL/NOT
 			}
 
 			// then attempt metatables for tables
@@ -1377,22 +1383,28 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 
 			// else perform standard comparison
-			m_ValueStack.Push(DynValue.NewBoolean(r.Equals(l)));
-			return instructionPtr;
+			bool result = r.Equals(l);
+			if (invert) result = !result;
+			m_ValueStack.Push(DynValue.NewBoolean(result));
+			return instructionPtr + 1; //Skip TOBOOL/NOT
 		}
 
-		private int ExecLess(int instructionPtr)
+		private int ExecLess(int instructionPtr, Instruction i)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
-
+			bool invert = i.NumVal != 0;
 			if (l.Type == DataType.Number && r.Type == DataType.Number)
 			{
-				m_ValueStack.Push(DynValue.NewBoolean(l.Number < r.Number));
+				var res = l.Number < r.Number;
+				if (invert) res = !res;
+				m_ValueStack.Push(DynValue.NewBoolean(res));
 			}
 			else if (l.Type == DataType.String && r.Type == DataType.String)
 			{
-				m_ValueStack.Push(DynValue.NewBoolean(string.Compare(l.String, r.String, StringComparison.Ordinal) < 0));
+				var res = string.Compare(l.String, r.String, StringComparison.Ordinal) < 0;
+				if (invert) res = !res;
+				m_ValueStack.Push(DynValue.NewBoolean(res));
 			}
 			else
 			{
@@ -1402,24 +1414,31 @@ namespace WattleScript.Interpreter.Execution.VM
 				return ip;
 			}
 
-			return instructionPtr;
+			return instructionPtr + 1; //Skip TOBOOL/NOT
 		}
 		
-		private int ExecLessEq(int instructionPtr)
+		private int ExecLessEq(int instructionPtr, Instruction i)
 		{
 			DynValue r = m_ValueStack.Pop().ToScalar();
 			DynValue l = m_ValueStack.Pop().ToScalar();
+			bool invert = i.NumVal != 0;
 
 			switch (l.Type)
 			{
 				case DataType.Number when r.Type == DataType.Number:
-					m_ValueStack.Push(DynValue.False);
-					m_ValueStack.Push(DynValue.NewBoolean(l.Number <= r.Number));
-					break;
+				{
+					var res = l.Number <= r.Number;
+					if (invert) res = !res;
+					m_ValueStack.Push(DynValue.NewBoolean(res));
+					return instructionPtr + 1; //skip CNOT
+				}
 				case DataType.String when r.Type == DataType.String:
-					m_ValueStack.Push(DynValue.False);
-					m_ValueStack.Push(DynValue.NewBoolean(string.Compare(l.String, r.String, StringComparison.Ordinal) <= 0));
-					break;
+				{
+					var res = string.Compare(l.String, r.String, StringComparison.Ordinal) <= 0;
+					if (invert) res = !res;
+					m_ValueStack.Push(DynValue.NewBoolean(res));
+					return instructionPtr + 1; //skip CNOT
+				}
 				default:
 				{
 					int ip = Internal_InvokeBinaryMetaMethod(l, r, "__le", instructionPtr, DynValue.False);
@@ -1435,8 +1454,6 @@ namespace WattleScript.Interpreter.Execution.VM
 					return ip;
 				}
 			}
-
-			return instructionPtr;
 		}
 
 		private int ExecLen(int instructionPtr)
