@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using NUnit.Framework;
 using WattleScript.Templating;
 
@@ -64,10 +66,26 @@ public class TemplatingTestsRunner
         
         return Array.Empty<string>();
     }
+    
+    [WattleScriptUserData]
+    class HtmlModule
+    {
+        public static DynValue Encode(ScriptExecutionContext context, CallbackArguments args)
+        {
+            return DynValue.NewString(HttpUtility.HtmlEncode(args[0].String));
+        }
+        
+        public static DynValue Raw(ScriptExecutionContext context, CallbackArguments args)
+        {
+            return DynValue.NewString(args[0].String);
+        }
+    }
 
     [OneTimeSetUp]
     public async Task Init()
     {
+        UserData.RegisterAssembly(Assembly.GetAssembly(typeof(HtmlModule)));
+
         if (!COMPILE_TAG_HELPERS)
         {
             return;
@@ -83,6 +101,9 @@ public class TemplatingTestsRunner
             script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
             script.Options.Syntax = ScriptSyntax.WattleScript;
             script.Options.Directives.Add("using");
+
+            HtmlModule htmlModule = new HtmlModule();
+            script.Globals["Html"] = htmlModule;
 
             TemplatingEngine tmp = new TemplatingEngine(script);
             
@@ -126,6 +147,9 @@ public class TemplatingTestsRunner
         script.Options.Syntax = ScriptSyntax.WattleScript;
         script.Options.Directives.Add("using");
 
+        HtmlModule htmlModule = new HtmlModule();
+        script.Globals["Html"] = htmlModule;
+        
         TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers);
         TemplatingEngine.RenderResult rr = null;
         
