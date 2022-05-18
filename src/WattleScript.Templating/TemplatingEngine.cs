@@ -10,12 +10,12 @@ public class TemplatingEngine
     private readonly TemplatingEngineOptions options;
     internal readonly Script script;
     private StringBuilder stdOut = new StringBuilder();
-    internal StringBuilder stdOutTagHelper = new StringBuilder();
+    private StringBuilder stdOutTagHelper = new StringBuilder();
     public readonly List<TagHelper> tagHelpers;
     internal Dictionary<string, TagHelper> tagHelpersMap = new Dictionary<string, TagHelper>();
-    internal StringBuilder stdOutTagHelperTmp = new StringBuilder();
-    private Parser parser;
-    private Table? tagHelpersSharedTbl = null;
+    private StringBuilder stdOutTagHelperTmp = new StringBuilder();
+    private Parser? parser;
+    private Table? tagHelpersSharedTbl;
 
     public TemplatingEngine(TemplatingEngine parent, Table? tbl)
     {
@@ -239,6 +239,11 @@ public class TemplatingEngine
         
         foreach (Token tkn in tokens)
         {
+            if (options.RunMode == TemplatingEngineOptions.RunModes.Debug)
+            {
+                sb.AppendLine($"#line {tkn.FromLine}, {tkn.StartCol}");
+            }
+
             switch (tkn.Type)
             {
                 case TokenTypes.Text:
