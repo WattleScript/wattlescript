@@ -982,7 +982,7 @@ internal partial class Parser
                     {
                         string subStr = str.TrimStart().Substring(2).ToLowerInvariant(); // skip <!, normalize
 
-                        if (subStr != "doctype" && subStr != "-" && !subStr.StartsWith("--") && !subStr.StartsWith("["))
+                        if (!subStr.StartsWith("doctype ") && !subStr.StartsWith("doctype>") && subStr != "-" && !subStr.StartsWith("--") && !subStr.StartsWith("["))
                         {
                             DiscardCurrentLexeme();
                             currentLexeme.Append(str.ReplaceFirst("!", ""));
@@ -1041,11 +1041,7 @@ internal partial class Parser
 
                 return tagName;
             }
-            else
-            {
-                AddToken(TokenTypes.Text);
-            }
-
+            
             return sb.ToString();
         }
 
