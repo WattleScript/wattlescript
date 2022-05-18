@@ -259,6 +259,10 @@ public class TemplatingEngine
                     break;
                 }
                 case TokenTypes.BlockExpr:
+                    if (string.IsNullOrWhiteSpace(tkn.Lexeme))
+                    {
+                        continue;
+                    }
                     sb.AppendLine(tkn.Lexeme);
                     break;
                 case TokenTypes.ImplicitExpr:
