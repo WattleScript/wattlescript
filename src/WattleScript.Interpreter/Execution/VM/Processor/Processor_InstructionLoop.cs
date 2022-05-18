@@ -20,7 +20,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		string GetString(int i)
 		{
-			return m_ExecutionStack.Peek().Function.Strings[i];
+			return m_ExecutionStack.Peek().Function.strings[i];
 		}
 
 		private DynValue Processing_Loop(int instructionPtr, bool canAwait = false)
@@ -40,7 +40,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					//can change frame to jump to before loop when changing frame
 					ref var currentFrame = ref m_ExecutionStack.Peek();
 					
-					Instruction i = currentFrame.Function.Code[instructionPtr];
+					Instruction i = currentFrame.Function.code[instructionPtr];
 					int currentPtr = instructionPtr;
 					if (m_Debug.DebuggerAttached != null)
 					{
@@ -87,10 +87,10 @@ namespace WattleScript.Interpreter.Execution.VM
 							m_ValueStack.Push(DynValue.NewNumber(i.NumVal));
 							break;
 						case OpCode.PushNumber:
-							m_ValueStack.Push(DynValue.NewNumber(currentFrame.Function.Numbers[i.NumVal]));
+							m_ValueStack.Push(DynValue.NewNumber(currentFrame.Function.numbers[i.NumVal]));
 							break;
 						case OpCode.PushString:
-							m_ValueStack.Push(DynValue.NewString(currentFrame.Function.Strings[i.NumVal]));
+							m_ValueStack.Push(DynValue.NewString(currentFrame.Function.strings[i.NumVal]));
 							break;
 						case OpCode.BNot:
 							ExecBNot();
@@ -489,8 +489,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecClosure(Instruction i)
 		{
 			var proto = m_ExecutionStack.Peek().Function.Functions[i.NumVal];
-			Closure c = new Closure(m_Script, proto, proto.Upvalues,
-				proto.Upvalues.Select(GetUpvalueSymbol).ToList());
+			Closure c = new Closure(m_Script, proto, proto.upvalues,
+				proto.upvalues.Select(GetUpvalueSymbol).ToList());
 			m_ValueStack.Push(DynValue.NewClosure(c));
 		}
 
@@ -676,7 +676,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			var stackframe = m_ExecutionStack.Peek();
 
-			int localCount = stackframe.Function.LocalCount;
+			int localCount = stackframe.Function.localCount;
 			int numargs = (int)m_ValueStack.Peek(localCount).Number;
 			bool implicitThis = false;
 			if (numargs < 0)
@@ -691,11 +691,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			int offset = 0;
 			int startIdx = 0;
 			//Skip implicit this passed on stack
-			if (implicitThis && (stackframe.Function.Flags & FunctionFlags.TakesSelf) != FunctionFlags.TakesSelf) {
+			if (implicitThis && (stackframe.Function.flags & FunctionFlags.TakesSelf) != FunctionFlags.TakesSelf) {
 				offset = 1;
 			}
 			//Only fill implicit this argument if method is thiscall.
-			if ((stackframe.Function.Flags & FunctionFlags.ImplicitThis) == FunctionFlags.ImplicitThis &&
+			if ((stackframe.Function.flags & FunctionFlags.ImplicitThis) == FunctionFlags.ImplicitThis &&
 			    (stackframe.Flags & CallStackItemFlags.MethodCall) != CallStackItemFlags.MethodCall)
 			{
 				m_ValueStack[stackframe.BasePointer + I.NumVal - 1] = DynValue.Nil;
@@ -742,7 +742,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
 				|| (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
 			{
-				var code = m_ExecutionStack.Peek().Function.Code;
+				var code = m_ExecutionStack.Peek().Function.code;
 				// and the "will-be" return address is valid (we don't want to crash here)
 				if (instructionPtr >= 0 && instructionPtr < code.Length)
 				{
@@ -819,7 +819,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						ErrorHandlerBeforeUnwind = unwindHandler,
 						Flags = flags,
 						//Reserve stack space for locals
-						BasePointer = m_ValueStack.Reserve(fn.Function.Function.LocalCount)
+						BasePointer = m_ValueStack.Reserve(fn.Function.Function.localCount)
 					});
 					return 0;
 				}
@@ -925,7 +925,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 
 			if (csi.Continuation != null)
-				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.SourceRefs[currentPtr]),
+				m_ValueStack.Push(csi.Continuation.Invoke(new ScriptExecutionContext(this, csi.Continuation, csi.Function.sourceRefs[currentPtr]),
 					new[] { m_ValueStack.Pop() }, DynValue.Nil));
 
 			return retpoint;
@@ -1019,7 +1019,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			uint numCount = i.NumValB;
 			//default comes immediately after switch case
 			int defaultPtr = (int)(currentPtr + numOff + numCount);
-			int GetJump(FunctionProto p, int offset) => (int) (currentPtr + (p.Code[currentPtr + offset].NumValB));
+			int GetJump(FunctionProto p, int offset) => (int) (currentPtr + (p.code[currentPtr + offset].NumValB));
 			var value = m_ValueStack.Pop().ToScalar();
 			switch (value.Type)
 			{
@@ -1036,11 +1036,11 @@ namespace WattleScript.Interpreter.Execution.VM
 					var d = value.Number;
 					for (int j = 0; j < numCount; j++)
 					{
-						var ins = cframe.Function.Code[currentPtr + numOff + j];
+						var ins = cframe.Function.code[currentPtr + numOff + j];
 						if (ins.OpCode == OpCode.SInteger && ins.NumVal == d) {
 							return (int) (currentPtr + ins.NumValB);
 						}
-						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.Numbers[ins.NumVal]) {
+						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.numbers[ins.NumVal]) {
 							return (int) (currentPtr + ins.NumValB);
 						}
 					}
@@ -1049,8 +1049,8 @@ namespace WattleScript.Interpreter.Execution.VM
 					var s = value.String;
 					for (int j = 0; j < strCount; j++)
 					{
-						var ins = cframe.Function.Code[currentPtr + strOff + j];
-						if (s == cframe.Function.Strings[ins.NumVal]) {
+						var ins = cframe.Function.code[currentPtr + strOff + j];
+						if (s == cframe.Function.strings[ins.NumVal]) {
 							return (int) (currentPtr + ins.NumValB);
 						}
 					}

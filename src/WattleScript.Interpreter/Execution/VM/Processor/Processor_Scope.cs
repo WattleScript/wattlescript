@@ -119,11 +119,11 @@ namespace WattleScript.Interpreter.Execution.VM
 
 				if (!stackframe.IsNil)
 				{
-					if (stackframe.Function.Locals != null)
+					if (stackframe.Function.locals != null)
 					{
-						for (int i = stackframe.Function.Locals.Length - 1; i >= 0; i--)
+						for (int i = stackframe.Function.locals.Length - 1; i >= 0; i--)
 						{
-							var l = stackframe.Function.Locals[i];
+							var l = stackframe.Function.locals[i];
 
 							if (l.i_Name == name /*&& stackframe.LocalScope[i] != null*/) //should a local scope ever not be inited?
 								return l;

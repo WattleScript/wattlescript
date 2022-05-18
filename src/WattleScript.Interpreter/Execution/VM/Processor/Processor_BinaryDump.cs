@@ -29,24 +29,24 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		internal void DumpFuncString(FunctionProto function, StringBuilder builder)
 		{
-			builder.Append((function.Flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk
+			builder.Append((function.flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk
 				? "CHUNK " : "FUNCTION ").AppendLine(function.Name);
 			builder.AppendLine("-");
-			if (function.Upvalues.Length > 0)
+			if (function.upvalues.Length > 0)
 			{
 				builder.AppendLine("Upvalues:");
 			}
-			for (int i = 0; i < function.Upvalues.Length; i++)
-				builder.Append(i).Append(": ").AppendLine(function.Upvalues[i].ToString());
-			if (function.Locals.Length > 0)
+			for (int i = 0; i < function.upvalues.Length; i++)
+				builder.Append(i).Append(": ").AppendLine(function.upvalues[i].ToString());
+			if (function.locals.Length > 0)
 			{
 				builder.AppendLine("Locals:");
 			}
-			foreach (var lcl in function.Locals) builder.AppendLine(lcl.ToString());
+			foreach (var lcl in function.locals) builder.AppendLine(lcl.ToString());
 			builder.AppendLine("--");
-			foreach (var c in function.Code) builder.AppendLine(c.ToString());
+			foreach (var c in function.code) builder.AppendLine(c.ToString());
 			builder.AppendLine("--");
-			if (function.Functions.Length > 0) builder.AppendLine("Functions: ");
+			if (function.functions.Length > 0) builder.AppendLine("Functions: ");
 			builder.AppendLine("-");
 			foreach (var p in function.Functions) {
 				DumpFuncString(p, builder);
@@ -139,49 +139,49 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		internal void DumpFunction(BinDumpWriter bw, FunctionProto function, bool writeSourceRefs)
 		{
-			bw.WriteString(function.Name);
-			bw.WriteByte((byte)function.Flags);
-			bw.WriteVarUInt32((uint)function.Annotations.Length);
+			bw.WriteString(function.name);
+			bw.WriteByte((byte)function.flags);
+			bw.WriteVarUInt32((uint)function.annotations.Length);
 			foreach (var ant in function.Annotations) {
 				bw.WriteString(ant.Name);
 				WriteDynValue(bw, ant.Value, true);
 			}
-			bw.WriteVarUInt32((uint)function.LocalCount);
+			bw.WriteVarUInt32((uint)function.localCount);
 			//Symbols
 			Dictionary<SymbolRef, int> symbolMap = new Dictionary<SymbolRef, int>();
-			bw.WriteVarUInt32((uint)function.Locals.Length);
-			bw.WriteVarUInt32((uint)function.Upvalues.Length);
-			for (int i = 0; i < function.Locals.Length; i++) {
-				symbolMap[function.Locals[i]] = i;
-				function.Locals[i].WriteBinary(bw);
+			bw.WriteVarUInt32((uint)function.locals.Length);
+			bw.WriteVarUInt32((uint)function.upvalues.Length);
+			for (int i = 0; i < function.locals.Length; i++) {
+				symbolMap[function.locals[i]] = i;
+				function.locals[i].WriteBinary(bw);
 			}
-			for (int i = 0; i < function.Upvalues.Length; i++) {
-				symbolMap[function.Upvalues[i]] = i + function.Locals.Length;
-				function.Upvalues[i].WriteBinary(bw);
+			for (int i = 0; i < function.upvalues.Length; i++) {
+				symbolMap[function.upvalues[i]] = i + function.locals.Length;
+				function.upvalues[i].WriteBinary(bw);
 			}
-			foreach (var s in function.Locals) s.WriteBinaryEnv(bw, symbolMap);
-			foreach (var s in function.Upvalues) s.WriteBinaryEnv(bw, symbolMap);
+			foreach (var s in function.locals) s.WriteBinaryEnv(bw, symbolMap);
+			foreach (var s in function.upvalues) s.WriteBinaryEnv(bw, symbolMap);
 			//Constants
-			bw.WriteVarUInt32((uint)function.Functions.Length);
+			bw.WriteVarUInt32((uint)function.functions.Length);
 			foreach(var f in function.Functions) DumpFunction(bw, f, writeSourceRefs);
-			bw.WriteVarUInt32((uint)function.Strings.Length);
-			foreach(var str in function.Strings) bw.WriteString(str);
-			bw.WriteVarUInt32((uint)function.Numbers.Length);
-			foreach(var dbl in function.Numbers) bw.WriteDouble(dbl);
+			bw.WriteVarUInt32((uint)function.strings.Length);
+			foreach(var str in function.strings) bw.WriteString(str);
+			bw.WriteVarUInt32((uint)function.numbers.Length);
+			foreach(var dbl in function.numbers) bw.WriteDouble(dbl);
 			//Code
-			bw.WriteVarUInt32((uint)function.Code.Length);
-			foreach(var c in function.Code) c.WriteBinary(bw);
+			bw.WriteVarUInt32((uint)function.code.Length);
+			foreach(var c in function.code) c.WriteBinary(bw);
 			bw.WriteBoolean(writeSourceRefs);
 			if (writeSourceRefs)
 			{
-				for (int i = 0; i < function.SourceRefs.Length; i++)
+				for (int i = 0; i < function.sourceRefs.Length; i++)
 				{
-					if(function.SourceRefs[i] == null) bw.WriteByte(0);
-					else if(i != 0 && function.SourceRefs[i] == function.SourceRefs[i - 1]) bw.WriteByte(1);
+					if(function.sourceRefs[i] == null) bw.WriteByte(0);
+					else if(i != 0 && function.sourceRefs[i] == function.sourceRefs[i - 1]) bw.WriteByte(1);
 					else
 					{
 						bw.WriteByte(2);
-						function.SourceRefs[i].WriteBinary(bw);
+						function.sourceRefs[i].WriteBinary(bw);
 					}
 				}
 			}
@@ -198,48 +198,48 @@ namespace WattleScript.Interpreter.Execution.VM
 		internal FunctionProto UndumpProto(BinDumpReader br, int sourceID)
 		{
 			var proto = new FunctionProto();
-			proto.Name = br.ReadString();
-			proto.Flags = (FunctionFlags)br.ReadByte();
-			proto.Annotations = new Annotation[br.ReadVarUInt32()];
-			for (int i = 0; i < proto.Annotations.Length; i++) {
-				proto.Annotations[i] = new Annotation(br.ReadString(), ReadDynValue(br, true));
+			proto.name = br.ReadString();
+			proto.flags = (FunctionFlags)br.ReadByte();
+			proto.annotations = new Annotation[br.ReadVarUInt32()];
+			for (int i = 0; i < proto.annotations.Length; i++) {
+				proto.annotations[i] = new Annotation(br.ReadString(), ReadDynValue(br, true));
 			}
-			proto.LocalCount = (int) br.ReadVarUInt32();
+			proto.localCount = (int) br.ReadVarUInt32();
 			//Symbols
-			proto.Locals = new SymbolRef[br.ReadVarUInt32()];
-			proto.Upvalues = new SymbolRef[br.ReadVarUInt32()];
-			var allsyms = new SymbolRef[proto.Locals.Length + proto.Upvalues.Length];
+			proto.locals = new SymbolRef[br.ReadVarUInt32()];
+			proto.upvalues = new SymbolRef[br.ReadVarUInt32()];
+			var allsyms = new SymbolRef[proto.locals.Length + proto.upvalues.Length];
 			for (int i = 0; i < allsyms.Length; i++) allsyms[i] = SymbolRef.ReadBinary(br);
 			for (int i = 0; i < allsyms.Length; i++) allsyms[i].ReadBinaryEnv(br, allsyms);
-			Array.Copy(allsyms, proto.Locals, proto.Locals.Length);
-			Array.Copy(allsyms, proto.Locals.Length, proto.Upvalues, 0, proto.Upvalues.Length);
+			Array.Copy(allsyms, proto.locals, proto.locals.Length);
+			Array.Copy(allsyms, proto.locals.Length, proto.upvalues, 0, proto.upvalues.Length);
 			//Constants
-			proto.Functions = new FunctionProto[br.ReadVarUInt32()];
-			for (int i = 0; i < proto.Functions.Length; i++) proto.Functions[i] = UndumpProto(br, sourceID);
-			proto.Strings = new string[br.ReadVarUInt32()];
-			for (int i = 0; i < proto.Strings.Length; i++) proto.Strings[i] = br.ReadString();
-			proto.Numbers = new double[br.ReadVarUInt32()];
-			for (int i = 0; i < proto.Numbers.Length; i++) proto.Numbers[i] = br.ReadDouble();
+			proto.functions = new FunctionProto[br.ReadVarUInt32()];
+			for (int i = 0; i < proto.functions.Length; i++) proto.functions[i] = UndumpProto(br, sourceID);
+			proto.strings = new string[br.ReadVarUInt32()];
+			for (int i = 0; i < proto.strings.Length; i++) proto.strings[i] = br.ReadString();
+			proto.numbers = new double[br.ReadVarUInt32()];
+			for (int i = 0; i < proto.numbers.Length; i++) proto.numbers[i] = br.ReadDouble();
 			//Code
-			proto.Code = new Instruction[br.ReadVarUInt32()];
-			proto.SourceRefs = new SourceRef[proto.Code.Length];
-			for (int i = 0; i < proto.Code.Length; i++) proto.Code[i] = Instruction.ReadBinary(br);
+			proto.code = new Instruction[br.ReadVarUInt32()];
+			proto.sourceRefs = new SourceRef[proto.code.Length];
+			for (int i = 0; i < proto.code.Length; i++) proto.code[i] = Instruction.ReadBinary(br);
 			SourceRef sourceRef = new SourceRef(sourceID, 0, 0, 0, 0, false);
 			if (br.ReadBoolean())
 			{
 				//Debug info!
-				for (int i = 0; i < proto.SourceRefs.Length; i++)
+				for (int i = 0; i < proto.sourceRefs.Length; i++)
 				{
 					switch (br.ReadByte())
 					{
 						case 0:
-							proto.SourceRefs[i] = sourceRef;
+							proto.sourceRefs[i] = sourceRef;
 							break;
 						case 1:
-							proto.SourceRefs[i] = proto.SourceRefs[i - 1];
+							proto.sourceRefs[i] = proto.sourceRefs[i - 1];
 							break;
 						case 2:
-							proto.SourceRefs[i] = SourceRef.ReadBinary(br, sourceID);
+							proto.sourceRefs[i] = SourceRef.ReadBinary(br, sourceID);
 							break;
 					}
 				}
@@ -247,7 +247,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			else
 			{
 				//No debug info
-				for (int i = 0; i < proto.SourceRefs.Length; i++) proto.SourceRefs[i] = sourceRef;
+				for (int i = 0; i < proto.sourceRefs.Length; i++) proto.sourceRefs[i] = sourceRef;
 			}
 			return proto;
 		}

@@ -448,7 +448,7 @@ namespace WattleScript.Interpreter
 			
 			if (envTable == null)
 			{
-				if ((proto.Flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk)
+				if ((proto.flags & FunctionFlags.IsChunk) == FunctionFlags.IsChunk)
 				{
 					c = new Closure(this, proto,
 						new SymbolRef[] { SymbolRef.Upvalue(WellKnownSymbols.ENV, 0) },

@@ -28,7 +28,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ListenDebugger(int instructionPtr)
 		{
 			bool isOnDifferentRef = false;
-			var instr_SourceCodeRef = m_ExecutionStack.Peek().Function.SourceRefs[instructionPtr];
+			var instr_SourceCodeRef = m_ExecutionStack.Peek().Function.sourceRefs[instructionPtr];
 			
 			if (instr_SourceCodeRef != null && m_Debug.LastHlRef != null)
 			{
@@ -295,18 +295,18 @@ namespace WattleScript.Interpreter.Execution.VM
 			List<WatchItem> locals = new List<WatchItem>();
 			ref var top = ref m_ExecutionStack.Peek();
 
-			if (!top.IsNil && top.Function.Locals != null && top.Function.LocalCount != 0)
+			if (!top.IsNil && top.Function.locals != null && top.Function.localCount != 0)
 			{
-				int len = Math.Min(top.Function.Locals.Length, top.Function.LocalCount);
+				int len = Math.Min(top.Function.locals.Length, top.Function.localCount);
 
 				for (int i = 0; i < len; i++)
 				{
 					locals.Add(new WatchItem()
 					{
 						IsError = false,
-						LValue = top.Function.Locals[i],
+						LValue = top.Function.locals[i],
 						Value = m_ValueStack[top.BasePointer + i],
-						Name = top.Function.Locals[i].i_Name
+						Name = top.Function.locals[i].i_Name
 					});
 				}
 			}

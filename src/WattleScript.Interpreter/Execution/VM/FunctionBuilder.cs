@@ -63,14 +63,14 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			return new FunctionProto()
 			{
-				Code = Code.ToArray(),
-				SourceRefs = SourceRefs.ToArray(),
-				Name = name,
-				Locals = stackFrame.DebugSymbols.ToArray(),
-				LocalCount = stackFrame.Count,
-				Functions = Protos.ToArray(),
-				Strings = strings.ToArray(),
-				Numbers = numbers.ToArray()
+				code = Code.ToArray(),
+				sourceRefs = SourceRefs.ToArray(),
+				name = name,
+				locals = stackFrame.DebugSymbols.ToArray(),
+				localCount = stackFrame.Count,
+				functions = Protos.ToArray(),
+				strings = strings.ToArray(),
+				numbers = numbers.ToArray()
 			};
 		}
 

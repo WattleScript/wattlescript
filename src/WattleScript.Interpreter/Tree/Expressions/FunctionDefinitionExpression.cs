@@ -341,13 +341,13 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			bc.PopSourceRef();
 
 			var proto = bc.GetProto(funcName, m_StackFrame);
-			proto.Annotations = m_Annotations;
-			proto.Upvalues = m_Closure.ToArray();
+			proto.annotations = m_Annotations;
+			proto.upvalues = m_Closure.ToArray();
 			if (m_ParamNames.Length > 0 && (m_ParamNames[0].i_Name == "self" || m_ParamNames[0].i_Name == "this"))
 			{
-				proto.Flags |= FunctionFlags.TakesSelf;
+				proto.flags |= FunctionFlags.TakesSelf;
 			}
-			if (m_ImplicitThis) proto.Flags |= FunctionFlags.ImplicitThis;
+			if (m_ImplicitThis) proto.flags |= FunctionFlags.ImplicitThis;
 			
 			if(parent != null) parent.Protos.Add(proto);
 			

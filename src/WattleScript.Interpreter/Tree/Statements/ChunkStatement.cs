@@ -46,9 +46,9 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.Emit_Ret(0);
 			
 			var proto = bc.GetProto("<chunk-root>", m_StackFrame);
-			proto.Annotations = annotations;
-			proto.Upvalues = new SymbolRef[] {SymbolRef.Upvalue(WellKnownSymbols.ENV, 0)};
-			proto.Flags = FunctionFlags.IsChunk;
+			proto.annotations = annotations;
+			proto.upvalues = new SymbolRef[] {SymbolRef.Upvalue(WellKnownSymbols.ENV, 0)};
+			proto.flags = FunctionFlags.IsChunk;
 			return proto;
 		}
 
