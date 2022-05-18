@@ -80,7 +80,6 @@ internal partial class Parser
         source = templateSource;
         this.friendlyName = friendlyName;
         ParseClient();
-        //Lookahead();
 
         if (IsAtEnd())
         {
@@ -317,8 +316,7 @@ internal partial class Parser
                     Step();
                     continue;
                 }
-
-                string str = GetCurrentLexeme();
+                
                 DiscardCurrentLexeme();
                 started = true;
                 continue;
@@ -387,18 +385,14 @@ internal partial class Parser
             return false;
         }
         
-        if (Peek() == '@')
+        if (Peek() == '@' && Peek(2) == ':')
         {
-            if (Peek(2) == ':')
-            {
-                AddToken(TokenTypes.BlockExpr);
-                Step();
-                Step();
-                string str = GetCurrentLexeme();
-                DiscardCurrentLexeme();
-                ParseRestOfLineAsClient();
-                return true;
-            }
+            AddToken(TokenTypes.BlockExpr);
+            Step();
+            Step();
+            DiscardCurrentLexeme();
+            ParseRestOfLineAsClient();
+            return true;
         }
 
         return false;
@@ -458,8 +452,7 @@ internal partial class Parser
                     ParseHtmlTag(null);
                 }
 
-                char c = Step();
-                string str = GetCurrentLexeme();
+                Step();
             }
 
             AddToken(TokenTypes.Text);
@@ -520,51 +513,54 @@ internal partial class Parser
             DiscardCurrentLexeme();
             c = Peek();
             
-            if (c == '{')
+            switch (c)
             {
-                Step();
-                ParseCodeBlock(false, false);
-            }
-            else if (c == '(')
-            {
-                Step();
-                DiscardCurrentLexeme();
-                ParseExplicitExpression();
-            }
-            else if (c == ':' && currentSide == Sides.Client)
-            {
-                Step();
-                DiscardCurrentLexeme();
-                ParseRestOfLineAsClient();
-            }
-            else if (c == '!' && currentSide == Sides.Client && NextNonWhiteSpaceCharMatches('{', 1))
-            {
-                Step();
-                DiscardCurrentLexeme();
-                SetParsingControlChars(false);
-                ParseCodeBlock(false, false);
-                SetParsingControlChars(true);
-            }
-            else if (c == '#')
-            {
-                Step();
-                ParseRestOfLineAsServer();
-            }
-            else if (IsAlpha(c))
-            {
-                ParseImplicitExpression(currentSide);
-            }
-            else
-            {
-                // [todo] either an invalid transition or an annotation
-                if (currentSide == Sides.Server)
+                case '{':
+                    Step();
+                    ParseCodeBlock(false, false);
+                    break;
+                case '(':
+                    Step();
+                    DiscardCurrentLexeme();
+                    ParseExplicitExpression();
+                    break;
+                case ':' when currentSide == Sides.Client:
+                    Step();
+                    DiscardCurrentLexeme();
+                    ParseRestOfLineAsClient();
+                    break;
+                case '!' when currentSide == Sides.Client && NextNonWhiteSpaceCharMatches('{', 1):
+                    Step();
+                    DiscardCurrentLexeme();
+                    SetParsingControlChars(false);
+                    ParseCodeBlock(false, false);
+                    SetParsingControlChars(true);
+                    break;
+                case '#':
+                    Step();
+                    ParseRestOfLineAsServer();
+                    break;
+                default:
                 {
-                    // we don't know enough to decide so we treat it as an annotation in server mode for now
-                    currentLexeme.Insert(0, "@");
-                    return true;
-                }
+                    if (IsAlpha(c))
+                    {
+                        ParseImplicitExpression(currentSide);
+                    }
+                    else
+                    {
+                        // [todo] either an invalid transition or an annotation
+                        if (currentSide == Sides.Server)
+                        {
+                            // we don't know enough to decide so we treat it as an annotation in server mode for now
+                            currentLexeme.Insert(0, "@");
+                            return true;
+                        }
 
-                return Throw("Invalid character after @");
+                        return Throw("Invalid character after @");
+                    }
+
+                    break;
+                }
             }
 
             return false;
@@ -577,12 +573,7 @@ internal partial class Parser
                 return ImplicitExpressionTypes.AllowedKeyword;
             }
 
-            if (BannedTransitionKeywords.Contains(str))
-            {
-                return ImplicitExpressionTypes.BannedKeyword;
-            }
-
-            return ImplicitExpressionTypes.Literal;
+            return BannedTransitionKeywords.Contains(str) ? ImplicitExpressionTypes.BannedKeyword : ImplicitExpressionTypes.Literal;
         }
 
         string ParseLiteral(Sides currentSide)
@@ -757,11 +748,12 @@ internal partial class Parser
             }
             
             AddToken(TokenTypes.BlockExpr);
+
+            int lastPos = pos;
             
             while (!IsAtEnd())
             {
                 ParseUntilHtmlOrClientTransition();
-                string str = GetCurrentLexeme();
                 StorePos();
                 bool matchedClosingBrk = MatchNextNonWhiteSpaceNonNewlineChar('}');
 
@@ -771,9 +763,16 @@ internal partial class Parser
                 }
                 
                 RestorePos();
+
+                // Safety measure. If something unexpected goes wrong we could deadlock here
+                if (lastPos == pos)
+                {
+                    Throw("Internal parser error (infinite loop detected). Please open an issue with the template you are parsing here - https://github.com/WattleScript/wattlescript. We are sorry for the inconvenience.");
+                }
+                
+                lastPos = pos;
             }
             
-            l = GetCurrentLexeme();
             if (!keepClosingBrk && currentLexeme.Length > 0)
             {
                 RemoveLastCharFromCurrentLexeme();
@@ -839,9 +838,8 @@ internal partial class Parser
 
             void HandleStringSequence(char chr)
             {
-                char stepC = Step();
-                string str = GetCurrentLexeme();
-                
+                Step();
+
                 if (LastStoredCharMatches(1, '\\')) // check that string symbol is not escaped
                 {
                     return;
@@ -954,12 +952,10 @@ internal partial class Parser
                     }   
                 }
 
-                string str2 = GetCurrentLexeme();
-                char chr = Step();
+                GetCurrentLexeme();
+                Step();
                 allowHtml = false;
             }
-            
-            string str = GetCurrentLexeme();
         }
 
         string ParseHtmlTagName(bool inBuffer, int offset = 1)
@@ -1002,9 +998,6 @@ internal partial class Parser
             // First char in a proper HTML tag (after opening <) can be [_, !, /, Alpha, ?]
             if (!(Peek() == '_' || Peek() == '!' || Peek() == '?' || Peek() == '/' || IsAlpha(Peek())))
             {
-                char chr = Peek();
-                string lexeme = GetCurrentLexeme();
-                
                 Throw("First char after < in an  HTML tag must be _, !, / or alpha");
             }
             else
@@ -1026,11 +1019,6 @@ internal partial class Parser
                 sb.Append(chr);
             }
 
-            if (IsAtEnd())
-            {
-                //Throw("Unclosed HTML tag at the end of file");
-            }
-
             if (inBuffer)
             {
                 string tagName = GetBuffer();
@@ -1050,7 +1038,7 @@ internal partial class Parser
             return Peek() == '>' || (Peek() == '/' && Peek(2) == '>');
         }
         
-        bool ParseHtmlTag(string? parentTagName)
+        bool ParseHtmlTag(HtmlElement? parentElement)
         {
             ParseWhitespaceAndNewlines(Sides.Client);
             AddToken(TokenTypes.Text);
@@ -1101,17 +1089,8 @@ internal partial class Parser
         bool ParseTagHelper(HtmlElement el)
         {
             // parser is located after name in a tag
-            /*
-             * 1. we parse opening tag as normal, 
-             */
-
-            if (friendlyName != "tagHelperDefinition")
-            {
-                string str = GetCurrentLexeme();
-            }
-            
+            // 0. the process starts the same as with native tag helpers
             DiscardCurrentLexeme();
-
             tagParsingMode = HtmlTagParsingModes.TagHelper;
 
             // 1. parse until end of opening tag-helper tag
@@ -1158,9 +1137,6 @@ internal partial class Parser
             
             DynValue fAttrTable = DynValue.NewTable(attrTable);
             ctxTable.Set("attributes", fAttrTable);
-
-            //engine.script.Globals["stdout"] = engine.PrintTaghelperTmp;
-            //engine.stdOutTagHelperTmp.Clear();
             
             // 3. before resolving tag helper, we need to resolve the part of template currently transpiled
             string pendingTemplate = engine.Transform(Tokens);
@@ -1169,24 +1145,14 @@ internal partial class Parser
             engine.script.Call(pVal);
             
             Tokens.Clear();
-            
-            
+
             engine.script.DoString(helper.Template);
             engine.script.Globals.Get("Render").Function.Call(ctxTable);
-                
-            string tagOutput = engine.stdOutTagHelper.ToString();
-            
             engine.script.Globals["stdout"] = engine.Print;
             
             // tag output is already in stdout
-            //currentLexeme.Append(tagOutput);
-            //AddToken(TokenTypes.Text);
-            
             tagParsingMode = HtmlTagParsingModes.Native;
-
-            // 4. continue from the content
-            //ParseHtmlOrPlaintextUntilClosingTag(el.Name, el);
-
+            
             return true;
         }
         
@@ -1295,11 +1261,6 @@ internal partial class Parser
         
         bool CloseTag(string tagName, bool startsFromClosingTag, HtmlElement? el, bool parseTagContent)
         {
-            if (tagName == "html")
-            {
-                string g = "";
-            }
-            
             if (Peek() == '/' && Peek(2) == '>')
             {
                 Step();
@@ -1377,11 +1338,6 @@ internal partial class Parser
             }
 
             string s = GetCurrentLexeme();
-
-            if (s.Contains("</body>"))
-            {
-                string h = "";
-            }
             
             if (startsFromClosingTag && tagName == "/text" && s.Trim() == "</text>" && el != null && source?.Substring(el.CharFrom, 6) == "<text>") // <text>
             {
@@ -1401,7 +1357,7 @@ internal partial class Parser
             return parseContent;   
         }
 
-            // parser has to be positioned at opening < of the closing tag
+        // parser has to be positioned at opening < of the closing tag
         string ParseHtmlClosingTag(string openingTagName, HtmlElement? el, bool inBuffer)
         {
             ParseWhitespaceAndNewlines(Sides.Client);
@@ -1464,7 +1420,7 @@ internal partial class Parser
         void ParseHtmlOrPlaintextUntilClosingTag(string openingTagName, HtmlElement el)
         {
             AddToken(TokenTypes.Text);
-            string s = GetCurrentLexeme();
+
             while (!IsAtEnd())
             {
                 bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
@@ -1489,7 +1445,6 @@ internal partial class Parser
                 {
                     if (Peek(2) == '/' && IsHtmlTagOpeningChar(Peek(3)))
                     {
-                        string str = GetCurrentLexeme();
                         AddToken(TokenTypes.Text);
                         
                         string closingNameLookahead = ParseHtmlTagName(true, 3); // skip </ and parse name in buffer
@@ -1500,8 +1455,6 @@ internal partial class Parser
                         if (string.Equals(openingTagName, closingNameLookahead, StringComparison.InvariantCultureIgnoreCase))
                         {
                             el.ContentTo = pos;
-                            str = GetCurrentLexeme();
-
                             if (tagParsingMode == HtmlTagParsingModes.TagHelper)
                             {
                                 StorePos();
@@ -1522,7 +1475,7 @@ internal partial class Parser
                             // 2) peeked element encloses another element that is already in opened elements -> <div><a></a></div>
                             if (openElements.FirstOrDefault(x => string.Equals(x?.Name, closingNameLookahead, StringComparison.InvariantCultureIgnoreCase)) == null)
                             {
-                                ParseHtmlTag(openingTagName);   
+                                ParseHtmlTag(el);   
                             }
                             else
                             {
@@ -1534,14 +1487,13 @@ internal partial class Parser
                             }
                         }
                         
-                        string lex = GetCurrentLexeme();
                         AddToken(TokenTypes.Text);
                         return;
                     }
   
                     if (IsHtmlTagOpeningChar(Peek(2)))
                     {
-                        ParseHtmlTag(openingTagName);
+                        ParseHtmlTag(el);
                         continue;
                     }
                 }
@@ -1553,8 +1505,6 @@ internal partial class Parser
             {
                 FatalIfInBlock($"Unclosed element {el.Name} at line {el.Line}, {el.Col}. Parser could not recover from this error.");
             }
-
-            s = GetCurrentLexeme();
         }
 
         bool LookaheadForHtmlComment(Sides currentSide)
