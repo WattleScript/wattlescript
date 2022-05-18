@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System;
 
 namespace WattleScript.Templating;
 
@@ -30,5 +31,11 @@ internal static class Extensions
     public static void Push<T>(this List<T?> list, T? itm)
     {
         list.Add(itm);
+    }
+    
+    public static string ReplaceFirst(this string text, string search, string replace)
+    {
+        int pos = text.IndexOf(search, StringComparison.Ordinal);
+        return pos < 0 ? text : string.Concat(text[..pos], replace, text.AsSpan(pos + search.Length));
     }
 } 

@@ -108,6 +108,20 @@ internal partial class Parser
         return cc;
     }
 
+    private Dictionary<TokenTypes, Action> AddTokenActions = new Dictionary<TokenTypes, Action>();
+
+    void SetAddTokenAction(TokenTypes tokenType, Action action)
+    {
+        if (AddTokenActions.ContainsKey(tokenType))
+        {
+            AddTokenActions[tokenType] = action;
+        }
+        else
+        {
+            AddTokenActions.Add(tokenType, action);
+        }
+    }
+
     private int storedPos;
     void StorePos()
     {
@@ -251,11 +265,12 @@ internal partial class Parser
             return false;
         }
 
-        if (currentLexeme.ToString() == "\r\n</html>")
+        if (AddTokenActions.ContainsKey(type))
         {
-            string str = "";
+            AddTokenActions[type].Invoke();
+            AddTokenActions.Remove(type);
         }
-        
+
         Token token = new Token(type, GetCurrentLexeme(), lastCommitedLine + 1, line + 1, lastCommitedPos + 1, pos + 1);
         Tokens.Add(token);
         DiscardCurrentLexeme();

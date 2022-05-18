@@ -971,6 +971,25 @@ internal partial class Parser
                 ClearBuffer(true);
                 SetStepMode(StepModes.Buffer);   
             }
+            else
+            {
+                SetAddTokenAction(TokenTypes.Text, () =>
+                {
+                    // Next text block to add will be tag's name
+                    // If starting with ! and not doctype or comment (html/cdata), ommit the !
+                    string str = GetCurrentLexeme();
+                    if (str.TrimStart().StartsWith("<!"))
+                    {
+                        string subStr = str.TrimStart().Substring(2).ToLowerInvariant(); // skip <!, normalize
+
+                        if (subStr != "doctype" && subStr != "-" && !subStr.StartsWith("--") && !subStr.StartsWith("["))
+                        {
+                            DiscardCurrentLexeme();
+                            currentLexeme.Append(str.ReplaceFirst("!", ""));
+                        }
+                    }
+                });
+            }
 
             if (offset > 1 && inBuffer)
             {
@@ -997,7 +1016,7 @@ internal partial class Parser
             // The next few chars represent element's name
             while (!IsAtEnd() && IsHtmlTagChar(Peek()))
             {
-                bool shouldContinue = LookaheadForTransitionServerSide();
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
                 if (shouldContinue)
                 {
                     continue;
@@ -1015,12 +1034,16 @@ internal partial class Parser
             if (inBuffer)
             {
                 string tagName = GetBuffer();
-            
+
                 AddBufferToCurrentLexeme();
                 ClearBuffer(false);
                 SetStepMode(StepModes.CurrentLexeme);
-            
-                return tagName;   
+
+                return tagName;
+            }
+            else
+            {
+                AddToken(TokenTypes.Text);
             }
 
             return sb.ToString();
@@ -1047,11 +1070,6 @@ internal partial class Parser
             el.Name = tagName;
             openElements.Push(el);
 
-            if (friendlyName != "tagHelperDefinition")
-            {
-                
-            }
-            
             if (tagParsingMode == HtmlTagParsingModes.Native && engine.tagHelpersMap.ContainsKey(tagName.ToLowerInvariant()))
             {
                 return ParseTagHelper(el);
