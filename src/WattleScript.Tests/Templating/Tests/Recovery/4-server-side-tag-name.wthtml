@@ -1,0 +1,2 @@
+@#define TAG "div"
+<@TAG>content</@TAG>

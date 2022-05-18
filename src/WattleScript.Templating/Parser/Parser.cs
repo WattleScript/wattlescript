@@ -1610,9 +1610,15 @@ internal partial class Parser
                     StepN(3);
                     AddToken(TokenTypes.Text);
                     return;
-                } 
+                }
 
-                Step();   
+                bool shouldContinue = LookaheadForTransitionClient(Sides.Client);
+                if (shouldContinue)
+                {
+                    continue;
+                }
+
+                Step();
             }
             
             // [todo] error, unclosed html comment
