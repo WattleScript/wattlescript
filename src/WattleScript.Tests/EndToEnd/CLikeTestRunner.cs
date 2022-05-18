@@ -45,6 +45,7 @@ public class CLikeTestRunner
         StringBuilder stdOut = new StringBuilder();
 
         Script script = new Script(CoreModules.Preset_HardSandboxWattle | CoreModules.PrototypeTable);
+        script.Options.InstructionLimit = ulong.MaxValue;
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);

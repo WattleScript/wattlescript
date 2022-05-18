@@ -282,7 +282,7 @@ namespace WattleScript.Interpreter
 		/// <value>
 		/// The automatic yield counter.
 		/// </value>
-		public long AutoYieldCounter
+		public ulong AutoYieldCounter
 		{
 			get { return m_Processor.AutoYieldCounter; }
 			set { m_Processor.AutoYieldCounter = value; }
