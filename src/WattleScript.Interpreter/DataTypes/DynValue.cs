@@ -94,6 +94,8 @@ namespace WattleScript.Interpreter
 		public UserData UserData { get { return m_Object as UserData; } }
 		
 		internal Task Task { get { return m_Object as Task; } }
+		
+		public Range Range { get { return m_Object as Range; } }
 
 		/// <summary>
 		/// Creates a new writable value initialized to the specified boolean.
@@ -139,6 +141,15 @@ namespace WattleScript.Interpreter
 			{
 				m_Object = sb.ToString(),
 				m_U64 = TYPE(DataType.String)
+			};
+		}
+		
+		public static DynValue NewRange(Range range)
+		{
+			return new DynValue()
+			{
+				m_Object = range,
+				m_U64 = TYPE(DataType.Range)
 			};
 		}
 
@@ -400,14 +411,16 @@ namespace WattleScript.Interpreter
 		/// A preinitialized, readonly instance, equaling False
 		/// </summary>
 		public static DynValue False { get; private set; }
-
+		/// <summary>
+		/// A preinitialized, readonly instance, equaling Number 0
+		/// </summary>
 
 		static DynValue()
 		{
-			Nil = new DynValue() { };
-			Void = new DynValue() { m_U64 = TYPE(DataType.Void) };
-			True = DynValue.NewBoolean(true);
-			False = DynValue.NewBoolean(false);
+			Nil = new DynValue { };
+			Void = new DynValue { m_U64 = TYPE(DataType.Void) };
+			True = NewBoolean(true);
+			False = NewBoolean(false);
 		}
 
 
@@ -422,9 +435,8 @@ namespace WattleScript.Interpreter
 
 				string typeString = this.Type.ToLuaTypeString();
 
-				if (m_Object is UserData)
+				if (m_Object is UserData ud)
 				{
-					UserData ud = (UserData)m_Object;
 					string str = ud.Descriptor.AsString(ud.Object);
 					if (str != null)
 						return str;
@@ -505,7 +517,7 @@ namespace WattleScript.Interpreter
 				case DataType.String:
 					return "\"" + String + "\"";
 				case DataType.Function:
-					return string.Format("(Function {0:X8})", Function.Function.Name ?? "no-name");
+					return $"(Function {Function.Function.Name ?? "no-name":X8})";
 				case DataType.ClrFunction:
 					return string.Format("(Function CLR)", Function);
 				case DataType.Table:
@@ -517,7 +529,9 @@ namespace WattleScript.Interpreter
 				case DataType.UserData:
 					return "(UserData)";
 				case DataType.Thread:
-					return string.Format("(Coroutine {0:X8})", this.Coroutine.ReferenceID);
+					return $"(Coroutine {this.Coroutine.ReferenceID:X8})";
+				case DataType.Range:
+					return $"Range ({Range.From} - {Range.To})";
 				default:
 					return "(???)";
 			}
@@ -671,11 +685,11 @@ namespace WattleScript.Interpreter
 			}
 		}
 
-		internal double AssertNumber(int stage)
+		internal bool TryGetNumber(out double n)
 		{
-			if (!TryCastToNumber(out var num))
-				throw ScriptRuntimeException.ConvertToNumberFailed(stage);
-			return num;
+			ref DynValue rv = ref ScalarReference(ref this);
+			n = rv.m_Number;
+			return rv.Type == DataType.Number;
 		}
 		
 		public bool TryCastToNumber(out double d)
@@ -1029,7 +1043,7 @@ namespace WattleScript.Interpreter
 #endif
 
 		/// <summary>
-		/// Checks the type of this value corresponds to the desired type. A propert ScriptRuntimeException is thrown
+		/// Checks the type of this value corresponds to the desired type. A proper ScriptRuntimeException is thrown
 		/// if the value is not of the specified type or - considering the TypeValidationFlags - is not convertible
 		/// to the specified type.
 		/// </summary>

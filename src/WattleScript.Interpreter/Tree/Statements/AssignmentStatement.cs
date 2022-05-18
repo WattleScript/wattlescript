@@ -112,7 +112,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			while (lcontext.Lexer.Current.Type == TokenType.Comma)
 			{
 				lcontext.Lexer.Next();
-				Expression e = Expression.PrimaryExp(lcontext);
+				Expression e = Expression.PrimaryExp(lcontext, false);
 				m_LValues.Add(CheckVar(lcontext, e));
 			}
 

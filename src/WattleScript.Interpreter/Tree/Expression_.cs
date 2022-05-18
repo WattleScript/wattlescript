@@ -72,12 +72,12 @@ namespace WattleScript.Interpreter.Tree
 			return exps; 
 		}
 
-		internal static Expression Expr(ScriptLoadingContext lcontext)
+		internal static Expression Expr(ScriptLoadingContext lcontext, bool isTableInit = false)
 		{
-			return SubExpr(lcontext, true);
+			return SubExpr(lcontext, true, false, isTableInit);
 		}
 
-		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary, bool binaryChainInProgress = false)
+		internal static Expression SubExpr(ScriptLoadingContext lcontext, bool isPrimary, bool binaryChainInProgress = false, bool isTableInit = false)
 		{
 			Expression e;
 			Token T = lcontext.Lexer.Current;
@@ -115,7 +115,7 @@ namespace WattleScript.Interpreter.Tree
 			}
 			else
 			{
-				e = SimpleExp(lcontext);
+				e = SimpleExp(lcontext, isTableInit);
 			}
 
 			T = lcontext.Lexer.Current;
@@ -163,7 +163,7 @@ namespace WattleScript.Interpreter.Tree
 			return e;
 		}
 
-		internal static Expression SimpleExp(ScriptLoadingContext lcontext)
+		internal static Expression SimpleExp(ScriptLoadingContext lcontext, bool isTableInit)
 		{
 			Token t = lcontext.Lexer.Current;
 
@@ -182,12 +182,12 @@ namespace WattleScript.Interpreter.Tree
 					return new SymbolRefExpression(t, lcontext);
 				case TokenType.Function:
 					lcontext.Lexer.Next();
-					return new FunctionDefinitionExpression(lcontext, SelfType.None, false);
+					return new FunctionDefinitionExpression(lcontext, isTableInit ? SelfType.Implicit : SelfType.None, false);
 				case TokenType.Lambda:
-					return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
+					return new FunctionDefinitionExpression(lcontext, isTableInit ? SelfType.Implicit : SelfType.None, true);
 				case TokenType.Brk_Open_Round:
 				{
-					if (lcontext.Syntax == ScriptSyntax.Lua) return PrimaryExp(lcontext);
+					if (lcontext.Syntax == ScriptSyntax.Lua) return PrimaryExp(lcontext, isTableInit);
 					//Scan to see if this is an arrow lambda
 					lcontext.Lexer.SavePos();
 					lcontext.Lexer.Next(); // skip bracket
@@ -200,12 +200,12 @@ namespace WattleScript.Interpreter.Tree
 					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow || lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
 					lcontext.Lexer.RestorePos();
 					if (arrowLambda) 					
-						return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
+						return new FunctionDefinitionExpression(lcontext, isTableInit ? SelfType.Implicit : SelfType.None, true);
 					else
-						return PrimaryExp(lcontext);
+						return PrimaryExp(lcontext, isTableInit);
 				}
 				default:
-					return PrimaryExp(lcontext);
+					return PrimaryExp(lcontext, isTableInit);
 			}
 
 		}
@@ -215,11 +215,11 @@ namespace WattleScript.Interpreter.Tree
 		/// </summary>
 		/// <param name="lcontext">The lcontext.</param>
 		/// <returns></returns>
-		internal static Expression PrimaryExp(ScriptLoadingContext lcontext)
+		internal static Expression PrimaryExp(ScriptLoadingContext lcontext, bool tableInit)
 		{
 			if (lcontext.Lexer.PeekNext().Type == TokenType.Arrow && lcontext.Lexer.Current.Type == TokenType.Name)
 			{
-				return new FunctionDefinitionExpression(lcontext, SelfType.None, true);
+				return new FunctionDefinitionExpression(lcontext, tableInit ? SelfType.Implicit : SelfType.None, true);
 			}
 
 			Expression e = PrefixExp(lcontext);

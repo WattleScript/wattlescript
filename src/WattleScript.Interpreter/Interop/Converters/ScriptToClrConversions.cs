@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace WattleScript.Interpreter.Interop.Converters
 {
@@ -81,11 +82,9 @@ namespace WattleScript.Interpreter.Interop.Converters
 				desiredType = desiredType.GetElementType();
 
 			var converter = Script.GlobalOptions.CustomConverters.GetScriptToClrCustomConversion(value.Type, desiredType);
-			if (converter != null)
-			{
-				var v = converter(value);
-				if (v != null) return v;
-			}
+			var v = converter?.Invoke(value);
+			
+			if (v != null) return v;
 
 			if (desiredType == typeof(DynValue))
 				return value;
@@ -96,96 +95,101 @@ namespace WattleScript.Interpreter.Interop.Converters
 			StringConversions.StringSubtype stringSubType = StringConversions.GetStringSubtype(desiredType);
 			string str = null;
 
-			Type nt = Nullable.GetUnderlyingType(desiredType);
-			Type nullableType = null;
-
-			if (nt != null)
+			if (desiredType != null)
 			{
-				nullableType = desiredType;
-				desiredType = nt;
-			}
+				Type nt = Nullable.GetUnderlyingType(desiredType);
+				Type nullableType = null;
 
-			switch (value.Type)
-			{
-				case DataType.Void:
-					if (isOptional)
-						return defaultValue;
-					else if (!desiredType.IsValueType || (nullableType != null))
-						return null;
-					break;
-				case DataType.Nil:
-					if (desiredType.IsValueType)
-					{
-						if (nullableType != null)
-							return null;
+				if (nt != null)
+				{
+					nullableType = desiredType;
+					desiredType = nt;
+				}
 
+				switch (value.Type)
+				{
+					case DataType.Void:
 						if (isOptional)
 							return defaultValue;
-					}
-					else
-					{
-						return null;
-					}
-					break;
-				case DataType.Boolean:
-					if (desiredType == typeof(bool))
-						return value.Boolean;
-					if (stringSubType != StringConversions.StringSubtype.None)
-						str = value.Boolean.ToString();
-					break;
-				case DataType.Number:
-					if (desiredType.IsEnum)
-					{	// number to enum conv
-						Type underType = Enum.GetUnderlyingType(desiredType);
-						return NumericConversions.DoubleToType(underType, value.Number);
-					}
-                    			if (NumericConversions.NumericTypes.Contains(desiredType))
-                    			{
-                        			object d = NumericConversions.DoubleToType(desiredType, value.Number);
-                        			if (d.GetType() == desiredType)
-                            				return d;
-                        			break;
-                    			}
-					if (stringSubType != StringConversions.StringSubtype.None)
-						str = value.Number.ToString();
-					break;
-				case DataType.String:
-					if (stringSubType != StringConversions.StringSubtype.None)
-						str = value.String;
-					break;
-				case DataType.Function:
-					if (desiredType == typeof(Closure)) return value.Function;
-					else if (desiredType == typeof(ScriptFunctionDelegate)) return value.Function.GetDelegate();
-					break;
-				case DataType.ClrFunction:
-					if (desiredType == typeof(CallbackFunction)) return value.Callback;
-					else if (desiredType == typeof(Func<ScriptExecutionContext, CallbackArguments, DynValue>)) return value.Callback.ClrCallback;
-					break;
-				case DataType.UserData:
-					if (value.UserData.Object != null)
-					{
-						var udObj = value.UserData.Object;
-						var udDesc = value.UserData.Descriptor;
+						if (!desiredType.IsValueType || (nullableType != null))
+							return null;
+						break;
+					case DataType.Nil:
+						if (desiredType.IsValueType)
+						{
+							if (nullableType != null)
+								return null;
 
-						if (udDesc.IsTypeCompatible(desiredType, udObj))
-							return udObj;
-
+							if (isOptional)
+								return defaultValue;
+						}
+						else
+						{
+							return null;
+						}
+						break;
+					case DataType.Boolean:
+						if (desiredType == typeof(bool))
+							return value.Boolean;
 						if (stringSubType != StringConversions.StringSubtype.None)
-							str = udDesc.AsString(udObj);
-					}
-					break;
-				case DataType.Table:
-					if (desiredType == typeof(Table) || desiredType.IsAssignableFrom(typeof(Table)))
-						return value.Table;
-					else
-					{
+							str = value.Boolean.ToString();
+						break;
+					case DataType.Number:
+						if (desiredType.IsEnum)
+						{	
+							// number to enum conv
+							Type underType = Enum.GetUnderlyingType(desiredType);
+							return NumericConversions.DoubleToType(underType, value.Number);
+						}
+						if (NumericConversions.NumericTypes.Contains(desiredType))
+						{
+							object d = NumericConversions.DoubleToType(desiredType, value.Number);
+							if (d.GetType() == desiredType)
+								return d;
+							break;
+						}
+						if (stringSubType != StringConversions.StringSubtype.None)
+							str = value.Number.ToString(CultureInfo.InvariantCulture);
+						break;
+					case DataType.String:
+						if (stringSubType != StringConversions.StringSubtype.None)
+							str = value.String;
+						break;
+					case DataType.Function:
+						if (desiredType == typeof(Closure)) return value.Function;
+						if (desiredType == typeof(ScriptFunctionDelegate)) return value.Function.GetDelegate();
+						break;
+					case DataType.ClrFunction:
+						if (desiredType == typeof(CallbackFunction)) return value.Callback;
+						if (desiredType == typeof(Func<ScriptExecutionContext, CallbackArguments, DynValue>)) return value.Callback.ClrCallback;
+						break;
+					case DataType.UserData:
+						if (value.UserData.Object != null)
+						{
+							var udObj = value.UserData.Object;
+							var udDesc = value.UserData.Descriptor;
+
+							if (udDesc.IsTypeCompatible(desiredType, udObj))
+								return udObj;
+
+							if (stringSubType != StringConversions.StringSubtype.None)
+								str = udDesc.AsString(udObj);
+						}
+						break;
+					case DataType.Table:
+						if (desiredType == typeof(Table) || desiredType.IsAssignableFrom(typeof(Table)))
+							return value.Table;
 						object o = TableConversions.ConvertTableToType(value.Table, desiredType);
 						if (o != null)
 							return o;
-					}
-					break;
-				case DataType.Tuple:
-					break;
+						break;
+					case DataType.Range:
+						if (desiredType == typeof(Range) || desiredType.IsAssignableFrom(typeof(Range)))
+							return value.Range;
+						break;
+					case DataType.Tuple:
+						break;
+				}
 			}
 
 			if (stringSubType != StringConversions.StringSubtype.None && str != null)

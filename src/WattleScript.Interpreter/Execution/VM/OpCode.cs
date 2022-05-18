@@ -15,13 +15,14 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushNil,	// Pushes nil to the v-stack
 		PushTrue,	// Pushes true to the v-stack
 		PushFalse,	// Pushes false to the v-stack
-		PushInt, // Pushes an integer to the v-stack
+		PushInt,    // Pushes an integer to the v-stack
 		PushNumber, // Pushes a number to the v-stack
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
 		NewTable,	// Creates a new empty table on the stack
 		TblInitN,	// Initializes a table named entry
 		TblInitI,	// Initializes a table positional entry
+		NewRange,   // Creates a range from the v-stack
 
 		StoreLcl, Local,
 		StoreUpv, Upvalue,
@@ -81,8 +82,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		Len,		// Size operator of the topmost operand on the v-stack
 		Neg,		// Negation (unary minus) operator of the topmost operand on the v-stack
 		Power,		// Power of the two topmost operands on the v-stack
-		CNot,		// Conditional NOT - takes second operand from the v-stack (must be bool), if true execs a NOT otherwise execs a TOBOOL
-		
+		CNot,		// Conditional NOT - takes second operand from the v-stack (must be bool), if true execs a NOT otherwise execs a TOBOOL.
+					// If NumVal != 0, then execute a second NOT
 		//Bit Operators
 		BAnd,
 		BOr,
@@ -110,7 +111,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		NilCoalescingInverse,
 
 		JLclInit, // Inits a param value if a default one is specified and not provided at callsite.
-		
+
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

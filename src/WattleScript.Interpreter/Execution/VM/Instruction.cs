@@ -12,20 +12,15 @@ namespace WattleScript.Interpreter.Execution.VM
 	internal struct Instruction
 	{
 		private ulong _data;
+		internal const int NumVal2Min = -4095;
+		internal const int NumVal2Max = 4096;
 
 		public OpCode OpCode => (OpCode) (_data & 0x7F); //7 bits
 		//32 bits
 		public int NumVal
 		{
-			get
-			{
-				return (int) (_data >> 7);
-			}
-			set
-			{
-				_data = (_data & ~0x7fffffff80UL) |
-				        ((ulong) (uint) value) << 7;
-			}
+			get => (int) (_data >> 7);
+			set => _data = (_data & ~0x7fffffff80UL) | ((ulong) (uint) value) << 7;
 		}
 
 		public int NumVal2 => ((int) ((_data >> 39) & 0x1FFF)) - 0xFFF; //13 bits, signed -4095 to 4095
@@ -34,15 +29,12 @@ namespace WattleScript.Interpreter.Execution.VM
 		//NumVal2 + NumVal3
 		public uint NumValB
 		{
-			get
-			{
-				return (uint) (_data >> 39); //25 bits unsigned
-			}
+			get => (uint) (_data >> 39); //25 bits unsigned
 			set
 			{
 				if (value > 0x2000000) throw new ArgumentOutOfRangeException("NumValB");
 				_data = (_data & ~0xFFFFFF8000000000) |
-				        ((ulong) (uint) value) << 39;
+				        ((ulong) value) << 39;
 			}
 		}
 
@@ -59,7 +51,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public Instruction(OpCode op, int numval, int numval2)
 		{
-			if (numval2 > 4096 || numval2 < -4095)
+			if (numval2 > NumVal2Max || numval2 < NumVal2Min)
 				throw new ArgumentOutOfRangeException(nameof(numval2));
 			numval2 += 0xFFF;
 			_data = (ulong) op |
@@ -69,10 +61,10 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		public Instruction(OpCode op, int numval, int numval2, uint numval3)
 		{
-			if (numval2 > 4096 || numval2 < -4095)
+			if (numval2 > NumVal2Max || numval2 < NumVal2Min)
 				throw new ArgumentOutOfRangeException(nameof(numval2));
 			numval2 += 0xFFF;
-			if (numval3 < 0 || numval3 > 4095)
+			if (numval3 > 4095)
 				throw new ArgumentOutOfRangeException(nameof(numval3));
 			_data = (ulong) op |
 			        ((ulong) (uint) numval) << 7 |
@@ -83,7 +75,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		
 		public override string ToString()
 		{
-			string append = this.OpCode.ToString().ToUpperInvariant();
+			string append = OpCode.ToString().ToUpperInvariant();
 
 			int usage = (int)OpCode.GetFieldUsage();
 
@@ -106,7 +98,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private string GenSpaces()
 		{
-			return new string(' ', 10 - this.OpCode.ToString().Length);
+			return new string(' ', 10 - OpCode.ToString().Length);
 		}
 
 		internal void WriteBinary(BinDumpWriter wr)

@@ -21,7 +21,7 @@ namespace WattleScript.Hardwire.Generators
 		{
 			List<CodeExpression> initializers = new List<CodeExpression>();
 
-			generator.DispatchTablePairs(parent, table.Get("overloads").Table, members, exp =>
+			generator.DispatchTablePairs(parent + (table["name"] as string), table.Get("overloads").Table, members, exp =>
 			{
 				initializers.Add(exp);
 			});

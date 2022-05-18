@@ -237,7 +237,7 @@ namespace WattleScript.Interpreter.Tree
 						}
 						lcontext.Lexer.RestorePos();
 						//Regular expression
-						Expression exp = Expression.PrimaryExp(lcontext);
+						Expression exp = Expression.PrimaryExp(lcontext, false);
 						FunctionCallExpression fnexp = exp as FunctionCallExpression;
 						if (fnexp != null)
 							return new FunctionCallStatement(lcontext, fnexp);
@@ -316,8 +316,6 @@ namespace WattleScript.Interpreter.Tree
 					return new ForLoopStatement(lcontext, name, forTkn, false);
 				default:
 				{
-					if (CheckRangeFor(lcontext))
-						return new ForRangeStatement(lcontext, name, forTkn, paren);
 					return new ForEachLoopStatement(lcontext, name, forTkn, paren);
 				}
 			}

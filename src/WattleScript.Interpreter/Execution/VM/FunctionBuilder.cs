@@ -235,6 +235,17 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 				case DataType.String:
 					return AppendInstruction(new Instruction(OpCode.PushString, StringArg(value.String)));
+				case DataType.Range:
+				{
+					if (value.Range.To >= Instruction.NumVal2Min && value.Range.To <= Instruction.NumVal2Max)
+					{
+						return AppendInstruction(new Instruction(OpCode.NewRange, value.Range.From, value.Range.To, 0));
+					}
+
+					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.From));
+					AppendInstruction(new Instruction(OpCode.PushInt, value.Range.To));
+					return AppendInstruction(new Instruction(OpCode.NewRange, 0, 0, 1));
+				}
 			}
 			throw new InvalidOperationException(value.Type.ToString());
 		}
@@ -254,16 +265,23 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.MkTuple, cnt));
 		}
 
-		public int Emit_Operator(OpCode opcode)
+		public int Emit_Operator(OpCode opcode, bool invert = false)
 		{
-			var i = AppendInstruction(new Instruction(opcode));
+			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode, invert ? 1 : 0);
+			int i = AppendInstruction(instr);
 			
-			if (opcode == OpCode.LessEq)
-				AppendInstruction(new Instruction(OpCode.CNot));
-
-			if (opcode == OpCode.Eq || opcode == OpCode.Less)
+			switch (opcode)
 			{
-				AppendInstruction(new Instruction(OpCode.ToBool));
+				case OpCode.LessEq:
+					AppendInstruction(new Instruction(OpCode.CNot, invert ? 1 : 0));
+					break;
+				case OpCode.Eq:
+				case OpCode.Less:
+					if (invert)
+						AppendInstruction(new Instruction(OpCode.Not));
+					else
+						AppendInstruction(new Instruction(OpCode.ToBool));
+					break;
 			}
 
 			return i;
@@ -397,6 +415,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
+		public int Emit_ToNum(int stage)
+		{
+			return AppendInstruction(new Instruction(OpCode.ToNum, stage));
+		}
+		
 		public int Emit_TblInitN(int count)
 		{
 			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
