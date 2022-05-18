@@ -169,7 +169,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				Flags = flags
 			});
 
-			m_ValueStack.Reserve(function.Function.Function.LocalCount);
+			m_ValueStack.Reserve(function.Function.Function.localCount);
 
 			return 0;
 		}

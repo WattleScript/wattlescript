@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.Debugging;
 
 namespace WattleScript.Interpreter.Execution.VM
@@ -14,19 +15,32 @@ namespace WattleScript.Interpreter.Execution.VM
     
     public class FunctionProto
     {
-        //Function Data
-        public string Name;
-        internal FunctionFlags Flags;
-        public SymbolRef[] Locals;
-        public SymbolRef[] Upvalues;
-        public Annotation[] Annotations;
-        public int LocalCount;
-        //Constants
-        public FunctionProto[] Functions;
-        public string[] Strings;
-        public double[] Numbers;
-        //Source Code
-        internal Instruction[] Code;
-        public SourceRef[] SourceRefs;
+        /// <summary>
+        /// Declared annotations on this function
+        /// </summary>
+        public IReadOnlyList<Annotation> Annotations => annotations;
+        /// <summary>
+        /// Name of this function
+        /// </summary>
+        public string Name => name;
+        /// <summary>
+        /// Functions declared in scope of this function
+        /// </summary>
+        public IReadOnlyList<FunctionProto> Functions => functions;
+        
+        // Function Data
+        internal string name;
+        internal FunctionFlags flags;
+        internal SymbolRef[] locals;
+        internal SymbolRef[] upvalues;
+        internal Annotation[] annotations;
+        internal int localCount;
+        // Constants
+        internal FunctionProto[] functions;
+        internal string[] strings;
+        internal double[] numbers;
+        // Source Code
+        internal Instruction[] code;
+        internal SourceRef[] sourceRefs;
     }
 }

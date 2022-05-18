@@ -51,6 +51,9 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		internal ClosureContext ClosureContext { get; private set; }
 		
+		/// <summary>
+		/// Provides information about this closure definition
+		/// </summary>
 		public FunctionProto Function { get; private set; }
 
 
