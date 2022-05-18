@@ -90,7 +90,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			if (m_Kind == CallKind.ImplicitThisCall && m_Name == null)
 			{
-				((IndexExpression)m_Function).Compile(bc, true);
+				((IndexExpression)m_Function).Compile(bc, true, true);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
@@ -108,7 +108,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			if (!string.IsNullOrEmpty(m_Name))
 			{
 				bc.Emit_Copy(0);
-				bc.Emit_Index(m_Name, true);
+				bc.Emit_Index(m_Name, true, isMethodCall: m_Kind != CallKind.Normal);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}

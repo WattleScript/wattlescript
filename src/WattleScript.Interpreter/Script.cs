@@ -71,6 +71,7 @@ namespace WattleScript.Interpreter
 		Table m_GlobalTable;
 		IDebugger m_Debugger;
 		Table[] m_TypeMetatables = new Table[(int)LuaTypeExtensions.MaxMetaTypes];
+		Table m_TablePrototype;
 		internal List<ScriptParserMessage> i_ParserMessages { get; set; } = new List<ScriptParserMessage>();
 
 		/// <summary>
@@ -901,7 +902,7 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// Sets a type metatable.
 		/// </summary>
-		/// <param name="type">The type. Must be Nil, Boolean, Number, String or Function</param>
+		/// <param name="type">The type. Must be Nil, Boolean, Number, String, Range or Function</param>
 		/// <param name="metatable">The metatable.</param>
 		/// <exception cref="System.ArgumentException">Specified type not supported :  + type.ToString()</exception>
 		public void SetTypeMetatable(DataType type, Table metatable)
@@ -915,6 +916,17 @@ namespace WattleScript.Interpreter
 			else
 				throw new ArgumentException("Specified type not supported : " + type.ToString());
 		}
+
+		/// <summary>
+		/// Sets the prototype for tables
+		/// </summary>
+		internal void SetTablePrototype(Table prototype)
+		{
+			this.CheckScriptOwnership(prototype);
+			m_TablePrototype = prototype;
+		}
+
+		internal Table GetTablePrototype() => m_TablePrototype;
 
 
 		/// <summary>

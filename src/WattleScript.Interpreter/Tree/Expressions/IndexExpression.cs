@@ -78,7 +78,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			Compile(bc, false);
 		}
-		public void Compile(FunctionBuilder bc, bool duplicate)
+		public void Compile(FunctionBuilder bc, bool duplicate, bool isMethodCall = false)
 		{
 			m_BaseExp.Compile(bc);
 			if (duplicate) bc.Emit_Copy(0);
@@ -99,16 +99,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 			if (m_Name != null)
 			{
-				bc.Emit_Index(m_Name, true);
+				bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
 			}
 			else if (m_IndexExp is LiteralExpression lit && lit.Value.Type == DataType.String)
 			{
-				bc.Emit_Index(lit.Value.String);
+				bc.Emit_Index(lit.Value.String, isMethodCall: isMethodCall);
 			}
 			else
 			{
 				m_IndexExp.Compile(bc);
-				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression));
+				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression), isMethodCall: isMethodCall);
 			}
 			if (inc)
 			{

@@ -44,7 +44,7 @@ public class CLikeTestRunner
         string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
 
-        Script script = new Script(CoreModules.Preset_HardSandbox);
+        Script script = new Script(CoreModules.Preset_HardSandboxWattle | CoreModules.PrototypeTable);
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
