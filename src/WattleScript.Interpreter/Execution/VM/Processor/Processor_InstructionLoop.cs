@@ -1714,7 +1714,12 @@ namespace WattleScript.Interpreter.Execution.VM
 									var v = tb.Get(idx);
 									v.FromMetatable = true;
 									m_ValueStack.Push(v);
-								} 
+								}
+								else
+								{
+									//No prototype, nil
+									m_ValueStack.Push(DynValue.Nil);
+								}
 							}
 							else
 							{
