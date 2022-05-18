@@ -421,6 +421,17 @@ internal partial class Parser
         AddToken(TokenTypes.Text);
     }
     
+    void ParseRestOfLineAsServer()
+    {
+        char chr = Step();
+        while (!IsAtEnd() && chr != '\n' && chr != '\r')
+        {
+            chr = Step();
+        }
+        
+        AddToken(TokenTypes.BlockExpr);
+    }
+    
         /* In client mode everything is a literal
          * until we encouter @
          * then we lookahead at next char and if it's not another @ (escape)
@@ -533,6 +544,11 @@ internal partial class Parser
                 SetParsingControlChars(false);
                 ParseCodeBlock(false, false);
                 SetParsingControlChars(true);
+            }
+            else if (c == '#')
+            {
+                Step();
+                ParseRestOfLineAsServer();
             }
             else if (IsAlpha(c))
             {
