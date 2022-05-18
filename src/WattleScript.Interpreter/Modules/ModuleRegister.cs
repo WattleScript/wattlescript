@@ -40,7 +40,13 @@ namespace WattleScript.Interpreter
 			if (modules.Has(CoreModules.IO)) RegisterModuleType<IoModule>(table);
 			if (modules.Has(CoreModules.Debug)) RegisterModuleType<DebugModule>(table);
 			if (modules.Has(CoreModules.Json)) RegisterModuleType<JsonModule>(table);
-
+			if (modules.Has(CoreModules.PrototypeMethods)) {
+				PrototypeModule.EnablePrototypes(table);
+				if (modules.Has(CoreModules.PrototypeTable))
+				{
+					RegisterModuleType<PrototypeModule>(table);
+				}
+			}
 			return table;
 		}
 

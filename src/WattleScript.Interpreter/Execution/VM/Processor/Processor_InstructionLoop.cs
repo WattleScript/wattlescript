@@ -735,9 +735,17 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			bool implicitThis = argsCount < 0;
 			if (implicitThis) argsCount = -argsCount;
+			
 			DynValue fn = m_ValueStack.Peek(argsCount);
 			CallStackItemFlags flags = (thisCall ? CallStackItemFlags.MethodCall : CallStackItemFlags.None);
 
+			//Functions fetched from metatables transform implicit
+			//thiscall to explicit thiscall.
+			if (fn.FromMetatable && implicitThis) {
+				implicitThis = false; 
+				thisCall = true;
+			}
+			
 			// if TCO threshold reached
 			if ((m_ExecutionStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ExecutionStack.Count > 1)
 				|| (m_ValueStack.Count > m_Script.Options.TailCallOptimizationThreshold && m_ValueStack.Count > 1))
@@ -1668,6 +1676,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			DynValue idx = originalIdx.ToScalar();
 			DynValue obj = m_ValueStack.Pop().ToScalar();
 
+			bool setFromMT = false; 
+			
 			while (nestedMetaOps > 0)
 			{
 				--nestedMetaOps;
@@ -1683,6 +1693,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 							if (!v.IsNil())
 							{
+								if (setFromMT) v.FromMetatable = true;
 								m_ValueStack.Push(v);
 								return instructionPtr;
 							}
@@ -1694,7 +1705,27 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							if (isMultiIndex) throw new ScriptRuntimeException("cannot multi-index a table. userdata expected");
 
-							m_ValueStack.Push(DynValue.Nil);
+							//Check prototype for method call syntax
+							if (i.NumVal2 != 0)
+							{
+								var tb = m_Script.GetTablePrototype();
+								if (tb != null)
+								{
+									var v = tb.Get(idx);
+									v.FromMetatable = true;
+									m_ValueStack.Push(v);
+								}
+								else
+								{
+									//No prototype, nil
+									m_ValueStack.Push(DynValue.Nil);
+								}
+							}
+							else
+							{
+								//Not a wattle method call, don't check prototype
+								m_ValueStack.Push(DynValue.Nil);
+							}
 							return instructionPtr;
 						}
 
@@ -1728,7 +1759,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							return instructionPtr;
 						}
 						
-						throw ScriptRuntimeException.IndexType(obj);
+						goto default;
 					}
 					default:
 					{
@@ -1750,6 +1781,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 
 				obj = h;
+				setFromMT = i.NumVal2 != 0;
 			}
 
 			throw ScriptRuntimeException.LoopInIndex();

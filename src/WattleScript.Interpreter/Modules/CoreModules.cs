@@ -81,27 +81,51 @@ namespace WattleScript.Interpreter
 		/// The "json" package (introduced by WattleScript).
 		/// </summary>
 		Json = 0x10000,
-
-
+		/// <summary>
+		/// Prototype methods for all types
+		/// </summary>
+		PrototypeMethods = 0x20000,
+		/// <summary>
+		/// Prototype table for changing types. PrototypeMethods must also be set.
+		/// </summary>
+		PrototypeTable = 0x40000,
+		
 		/// <summary>
 		/// A sort of "hard" sandbox preset, including string, math, table, bit32 packages, constants and table iterators.
 		/// </summary>
 		Preset_HardSandbox = GlobalConsts | TableIterators | String | Table | Basic | Math | Bit32,
 		/// <summary>
+		/// A sort of "hard" sandbox preset, including string, math, table, bit32 packages, constants and table iterators.
+		/// </summary>
+		Preset_HardSandboxWattle = Preset_HardSandbox | PrototypeMethods,
+		/// <summary>
 		/// A softer sandbox preset, adding metatables support, error handling, coroutine, time functions, json parsing and dynamic evaluations.
 		/// </summary>
 		Preset_SoftSandbox = Preset_HardSandbox | Metatables | ErrorHandling | Coroutine | OS_Time | Dynamic | Json,
+		/// <summary>
+		/// A softer sandbox preset + prototypes, adding metatables support, error handling, coroutine, time functions, json parsing and dynamic evaluations.
+		/// </summary>
+		Preset_SoftSandboxWattle = Preset_SoftSandbox | PrototypeMethods | PrototypeTable,
 		/// <summary>
 		/// The default preset. Includes everything except "debug" as now.
 		/// Beware that using this preset allows scripts unlimited access to the system.
 		/// </summary>
 		Preset_Default = Preset_SoftSandbox | LoadMethods | OS_System | IO,
 		/// <summary>
+		/// The default preset + prototypes. Includes everything except "debug" as now.
+		/// Beware that using this preset allows scripts unlimited access to the system.
+		/// </summary>
+		Preset_DefaultWattle = Preset_Default | PrototypeMethods | PrototypeTable,
+		/// <summary>
 		/// The complete package.
 		/// Beware that using this preset allows scripts unlimited access to the system.
 		/// </summary>
 		Preset_Complete = Preset_Default | Debug,
-
+		/// <summary>
+		/// The complete package + prototypes
+		/// Beware that using this preset allows scripts unlimited access to the system.
+		/// </summary>
+		Preset_CompleteWattle = Preset_DefaultWattle | Debug
 	}
 
 	internal static class CoreModules_ExtensionMethods

@@ -33,6 +33,11 @@ namespace WattleScript.Interpreter
 		/// A Lua function
 		/// </summary>
 		Function,
+		
+		/// <summary>
+		/// A range object from..to
+		/// </summary>
+		Range,
 
 		/// <summary>
 		/// A Lua table
@@ -69,11 +74,6 @@ namespace WattleScript.Interpreter
 		/// A request to await a task
 		/// </summary>
 		AwaitRequest,
-		
-		/// <summary>
-		/// A range object from..to
-		/// </summary>
-		Range
 	}
 
 	/// <summary>

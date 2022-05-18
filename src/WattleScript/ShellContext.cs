@@ -9,10 +9,11 @@ namespace WattleScript
 	public class ShellContext
 	{
 		public Script Script { get; private set; }
+		public bool Lua;
 
 		public ShellContext(Script script)
 		{
-			this.Script = script;
+			this.Script = new Script();
 		}
 	}
 }

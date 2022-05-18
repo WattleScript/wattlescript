@@ -22,6 +22,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		string m_DebugErr;
 		private CallKind m_Kind;
 		internal SourceRef SourceRef { get; private set; }
+		
+		private bool wattleCallSyntax;
 
 		public FunctionCallExpression(ScriptLoadingContext lcontext, Expression function, Token thisCallName, CallKind kind)
 			: base(lcontext)
@@ -32,6 +34,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_DebugErr = function.GetFriendlyDebugName();
 			m_Function = function;
 			m_Kind = kind;
+			wattleCallSyntax = lcontext.Syntax == ScriptSyntax.WattleScript;
 			
 			switch (lcontext.Lexer.Current.Type)
 			{
@@ -88,9 +91,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			bc.PushSourceRef(SourceRef);
 			int argslen = m_Arguments.Count;
 
+			bool isMethodCall = wattleCallSyntax && m_Kind != CallKind.Normal;
 			if (m_Kind == CallKind.ImplicitThisCall && m_Name == null)
 			{
-				((IndexExpression)m_Function).Compile(bc, true);
+				((IndexExpression)m_Function).Compile(bc, true, true);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
@@ -108,7 +112,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			if (!string.IsNullOrEmpty(m_Name))
 			{
 				bc.Emit_Copy(0);
-				bc.Emit_Index(m_Name, true);
+				bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}

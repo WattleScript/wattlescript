@@ -25,7 +25,7 @@ namespace WattleScript.Interpreter
 		private object m_Object;
 
 		private const ulong QNAN = 0x7ffc000000000000;
-		private const ulong BOOLEAN_MASK = 0x0FFFFFFFFF;
+		private const ulong BOOLEAN_MASK = 0xFFFF; //set lower 16 bits to 1 for true
 		private const ulong BOOL_TRUE = QNAN | ((ulong)DataType.Boolean << 40) | BOOLEAN_MASK;
 		private const ulong BOOL_FALSE = QNAN | ((ulong) DataType.Boolean << 40);
 		
@@ -44,6 +44,29 @@ namespace WattleScript.Interpreter
 			{
 				if (m_Object == m_NumberTag) return DataType.Number;
 				return (DataType) ((m_U64 >> 40) & 0xFF);
+			}
+		}
+		
+		/// <summary>
+		/// Gets/sets whether this value was indexed from a metatable.
+		/// Should only be used internally for function calls.
+		/// </summary>
+		internal bool FromMetatable
+		{
+			get
+			{
+				if (m_Object == m_NumberTag) return false;
+				return (m_U64 & (1UL << 24)) != 0;
+			}
+			set
+			{
+				if (m_Object != m_NumberTag)
+				{
+					if (value)
+						m_U64 |= (1UL << 24);
+					else
+						m_U64 &= ~(1UL << 24);
+				}
 			}
 		}
 
