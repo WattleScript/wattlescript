@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Mono.Options;
 using WattleScript.Commands;
 using WattleScript.Commands.Implementations;
 using WattleScript.Interpreter;
@@ -23,15 +24,16 @@ namespace WattleScript
 			CommandManager.Initialize();
 
 			Script.DefaultOptions.ScriptLoader = new ReplInterpreterScriptLoader();
-
-			Script script = new Script(CoreModules.Preset_Complete);
-
-			script.Globals["makestatic"] = (Func<string, DynValue>)(MakeStatic);
-
-			if (CheckArgs(args, new ShellContext(script)))
+			
+			bool langLua;
+			if (CheckArgs(args, out langLua))
 				return;
 
-			Banner();
+			Banner(langLua);
+			
+			Script script = new Script(langLua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle);
+			script.Options.Syntax = langLua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
+			script.Globals["makestatic"] = (Func<string, DynValue>)(MakeStatic);
 
 			ReplInterpreter interpreter = new ReplInterpreter(script)
 			{
@@ -86,100 +88,122 @@ namespace WattleScript
 			}
 		}
 
-		private static void Banner()
+		private static void Banner(bool lua)
 		{
 			Console.WriteLine(Script.GetBanner("Console"));
 			Console.WriteLine();
-			Console.WriteLine("Type Lua code to execute it or type !help to see help on commands.\n");
+			Console.WriteLine($"Type {(lua ? "Lua" : "WattleScript")} code to execute it or type !help to see help on commands.\n");
 			Console.WriteLine("Welcome.\n");
 		}
 
-
-		private static bool CheckArgs(string[] args, ShellContext shellContext)
+		private static void ShowUsage()
 		{
-			if (args.Length == 0)
-				return false;
-
-			if (args.Length == 1 && args[0].Length > 0 && args[0][0] != '-')
+			Console.WriteLine("usage: wattlescript [-L | --lua] [-h | --help | -X \"command\" | -W <dumpfile> <destfile> [--internals] [--vb] | <script>]");
+		}
+		
+		private static bool CheckArgs(string[] args, out bool lang_lua)
+		{
+			lang_lua = false; //Default to Wattle
+			
+			//General options
+			bool show_help = false;
+			bool print_version = false;
+			bool do_hardwire = false;
+			bool do_exec = false;
+			//Hardwire Options
+			string classname = null;
+			string namespacename = null;
+			bool internals = false;
+			bool useVb = false;
+			bool lua = false;
+			//
+			var p = new OptionSet()
 			{
-				Script script = new Script();
-				script.DoFile(args[0]);
+				{"h|?|help", "show this message and exit", v => show_help = v != null},
+				{"v|version", "print version and exit", v => print_version = v != null },
+				{"X|exec", "runs the specified command", v => do_exec = v != null },
+				{"L|lua", "run interpreter in lua mode", v => lua = v != null },
+				{"W|wire", "generate code for hardwiring table", v=> do_hardwire = v != null },
+				{"vb", "set hardwire generator to Visual Basic.NET", v => useVb = v != null },
+				{"class", "hardwire class name", v => classname = v },
+				{"namespace", "hardwire namespace", v => namespacename = v },
+			};
+			
+			List<string> extra;
+			try {
+				extra = p.Parse (args);
 			}
-
-			if (args[0] == "-H" || args[0] == "--help" || args[0] == "/?" || args[0] == "-?")
-			{
-				ShowCmdLineHelpBig();
+			catch (OptionException e) {
+				Console.Write ("WattleScript: ");
+				Console.WriteLine (e.Message);
+				Console.WriteLine ("Try `WattleScript --help' for more information.");
+				Environment.Exit(1);
+				return false; //Exits
 			}
-			else if (args[0] == "-X")
+			lang_lua = lua;
+
+			if (print_version)
 			{
-				if (args.Length == 2)
+				Console.WriteLine("WattleScript {0}", Script.VERSION);
+				return true;
+			}
+			else if (show_help)
+			{
+				Console.WriteLine(Script.GetBanner("Console"));
+				ShowUsage();
+				p.WriteOptionDescriptions(Console.Out);
+				return true;
+			}
+			else if (do_exec)
+			{
+				if (extra.Count > 0)
 				{
-					ExecuteCommand(shellContext, args[1]);
+					Script script = new Script(lua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle);
+					script.Options.Syntax = lua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
+					script.Globals["makestatic"] = (Func<string, DynValue>)(MakeStatic);	
+					ExecuteCommand(new ShellContext(script), extra[0]);
 				}
 				else
 				{
-					Console.WriteLine("Wrong syntax.");
-					ShowCmdLineHelp();
+					Console.WriteLine("Incorrect syntax");
+					ShowUsage();
+					Environment.Exit(1);
 				}
+				return true;
 			}
-			else if (args[0] == "-W")
+			else if (do_hardwire)
 			{
-				bool internals = false;
-				string dumpfile = null;
-				string destfile = null;
-				string classname = null;
-				string namespacename = null;
-				bool useVb = false;
-				bool fail = true;
-
-				for (int i = 1; i < args.Length; i++)
+				if (extra.Count >= 2)
 				{
-					if (args[i] == "--internals")
-						internals = true;
-					else if (args[i] == "--vb")
-						useVb = true;
-					else if (args[i].StartsWith("--class:"))
-						classname = args[i].Substring("--class:".Length);
-					else if (args[i].StartsWith("--namespace:"))
-						namespacename = args[i].Substring("--namespace:".Length);
-					else if (dumpfile == null)
-						dumpfile = args[i];
-					else if (destfile == null)
-					{
-						destfile = args[i];
-						fail = false;
-					}
-					else fail = true;
-				}
-
-				if (fail)
-				{
-					Console.WriteLine("Wrong syntax.");
-					ShowCmdLineHelp();
-				}
-				else
-				{
+					string dumpfile = extra[0];
+					string destfile = extra[1];
 					HardWireCommand.Generate(useVb ? "vb" : "cs", dumpfile, destfile, internals, classname, namespacename);
 				}
+				else
+				{
+					Console.WriteLine("Incorrect syntax");
+					ShowUsage();
+					Environment.Exit(1);
+				}
+				return true;
+			}
+			else if(extra.Count > 0)
+			{
+				var script = new Script(lang_lua ? CoreModules.Preset_Default : CoreModules.Preset_DefaultWattle);
+				script.Options.Syntax = lang_lua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
+				if (!File.Exists(extra[0]))
+				{
+					Console.Error.WriteLine("File not found: {0}", extra[0]);
+					Environment.Exit(2);
+				}
+				script.DoFile(extra[0]);
+				return true;
 			}
 
-			return true;
+			return false;
 		}
 
-		private static void ShowCmdLineHelpBig()
-		{
-			Console.WriteLine("usage: wattlescript [-H | --help | -X \"command\" | -W <dumpfile> <destfile> [--internals] [--vb] [--class:<name>] [--namespace:<name>] | <script>]");
-			Console.WriteLine();
-			Console.WriteLine("-H : shows this help");
-			Console.WriteLine("-X : executes the specified command");
-			Console.WriteLine("-W : creates hardwire descriptors");
-			Console.WriteLine();
-		}
-
-		private static void ShowCmdLineHelp()
-		{
-			Console.WriteLine("usage: wattlescript [-H | --help | -X \"command\" | -W <dumpfile> <destfile> [--internals] [--vb] | <script>]");
-		}
+	
 
 		private static void ExecuteCommand(ShellContext shellContext, string cmdline)
 		{
