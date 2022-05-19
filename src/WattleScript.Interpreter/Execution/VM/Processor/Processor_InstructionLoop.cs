@@ -51,7 +51,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 					if (m_Script.Options.InstructionLimit > 0 && executedInstructions > m_Script.Options.InstructionLimit)
 					{
-						throw new ScriptRuntimeException($"Maximum limit of {m_Script.Options.InstructionLimit} exceed. Script terminated.");
+						throw new ScriptRuntimeException($"Maximum limit of {m_Script.Options.InstructionLimit} exceeded. Script terminated.");
 					}
 
 					if (canAutoYield && executedInstructions > AutoYieldCounter)
