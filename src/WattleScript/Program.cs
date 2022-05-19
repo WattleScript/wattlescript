@@ -89,7 +89,7 @@ namespace WattleScript
 		{
 			Console.WriteLine(Script.GetBanner("Console"));
 			Console.WriteLine();
-			Console.WriteLine($"Type {(syntax == ScriptSyntax.Lua ? "Lua" : "Wattle")} code to execute it or type !help to see help on commands.\n");
+			Console.WriteLine($"Type {syntax} code to execute it or type !help to see help on commands.\n");
 			Console.WriteLine("Welcome.\n");
 		}
 
