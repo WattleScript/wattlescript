@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Mono.Options;
 using WattleScript.Commands;
 using WattleScript.Commands.Implementations;
 using WattleScript.Interpreter;
