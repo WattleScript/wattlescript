@@ -8,22 +8,19 @@ namespace WattleScript.Commands.Implementations
 {
 	class RegisterCommand : ICommand
 	{
-		public string Name
-		{
-			get { return "register"; }
-		}
+		public string Name => "register";
 
-		public void DisplayShortHelp()
+		public void DisplayShortHelp(Script context)
 		{
 			Console.WriteLine("register [type] - register a CLR type or prints a list of registered types");
 		}
 
-		public void DisplayLongHelp()
+		public void DisplayLongHelp(Script context)
 		{
 			Console.WriteLine("register [type] - register a CLR type or prints a list of registered types. Use makestatic('type') to make a static instance.");
 		}
 
-		public void Execute(ShellContext context, string argument)
+		public void Execute(Script context, string argument)
 		{
 			if (argument.Length > 0)
 			{

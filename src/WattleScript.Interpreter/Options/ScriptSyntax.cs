@@ -10,9 +10,9 @@ namespace WattleScript.Interpreter
         /// </summary>
         Lua,
         /// <summary>
-        /// WattleScript syntax
+        /// Wattle syntax
         /// e.g. ++ and -- operators
         /// </summary>
-        WattleScript
+        Wattle
     }
 }

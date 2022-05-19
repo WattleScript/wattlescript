@@ -60,7 +60,7 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
 				{
-					if (script.Options.Syntax == ScriptSyntax.WattleScript)
+					if (script.Options.Syntax == ScriptSyntax.Wattle)
 					{
 						var preprocess = new Preprocessor(script, source.SourceID, source.Code);
 						preprocess.Process();

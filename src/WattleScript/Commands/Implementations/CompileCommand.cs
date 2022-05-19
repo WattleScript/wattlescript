@@ -9,31 +9,27 @@ namespace WattleScript.Commands.Implementations
 {
 	class CompileCommand : ICommand
 	{
-		public string Name
-		{
-			get { return "compile"; }
-		}
+		public string Name => "compile";
 
-		public void DisplayShortHelp()
+		public void DisplayShortHelp(Script context)
 		{
 			Console.WriteLine("compile <filename> - Compiles the file in a binary format");
 		}
 
-		public void DisplayLongHelp()
+		public void DisplayLongHelp(Script context)
 		{
 			Console.WriteLine("compile <filename> - Compiles the file in a binary format.\nThe destination filename will be appended with '-compiled'.");
 		}
 
-		public void Execute(ShellContext context, string p)
+		public void Execute(Script context, string p)
 		{
 			string targetFileName = p + "-compiled";
 
-			Script S = new Script(CoreModules.None);
+			Script s = new Script(CoreModules.None);
+			DynValue chunk = s.LoadFile(p);
 
-			DynValue chunk = S.LoadFile(p);
-
-			using (Stream stream = new FileStream(targetFileName, FileMode.Create, FileAccess.Write))
-				S.Dump(chunk, stream);
+			using Stream stream = new FileStream(targetFileName, FileMode.Create, FileAccess.Write);
+			s.Dump(chunk, stream);
 		}
 	}
 }

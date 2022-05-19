@@ -2,27 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using WattleScript.Interpreter;
 
 namespace WattleScript.Commands.Implementations
 {
 	class RunCommand : ICommand
 	{
-		public string Name
+		public string Name => "run";
+
+		public void DisplayShortHelp(Script context)
 		{
-			get { return "run"; }
+			Console.WriteLine($"run <filename> - Executes the specified {context.Options.Syntax} script");
 		}
 
-		public void DisplayShortHelp()
+		public void DisplayLongHelp(Script context)
 		{
-			Console.WriteLine("run <filename> - Executes the specified Lua script");
+			Console.WriteLine($"run <filename> - Executes the specified {context.Options.Syntax} script.");
 		}
 
-		public void DisplayLongHelp()
-		{
-			Console.WriteLine("run <filename> - Executes the specified Lua script.");
-		}
-
-		public void Execute(ShellContext context, string arguments)
+		public void Execute(Script context, string arguments)
 		{
 			if (arguments.Length == 0)
 			{
@@ -30,7 +28,7 @@ namespace WattleScript.Commands.Implementations
 			}
 			else
 			{
-				context.Script.DoFile(arguments);
+				context.DoFile(arguments);
 			}
 		}
 	}

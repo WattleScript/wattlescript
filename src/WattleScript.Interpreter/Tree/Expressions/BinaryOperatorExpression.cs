@@ -316,7 +316,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_Exp1 = exp1;
 			m_Exp2 = exp2;
 			m_Operator = op;
-			if (op == Operator.Add && lcontext.Syntax == ScriptSyntax.WattleScript)
+			if (op == Operator.Add && lcontext.Syntax == ScriptSyntax.Wattle)
 				m_Operator = Operator.AddConcat;
 		}
 

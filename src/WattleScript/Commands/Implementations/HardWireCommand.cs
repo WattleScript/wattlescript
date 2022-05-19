@@ -13,8 +13,8 @@ namespace WattleScript.Commands.Implementations
 	{
 		class ConsoleLogger : ICodeGenerationLogger
 		{
-			public int Errors = 0;
-			public int Warnings = 0;
+			public int Errors;
+			public int Warnings;
 
 			public void LogError(string message)
 			{
@@ -34,24 +34,20 @@ namespace WattleScript.Commands.Implementations
 			}
 		}
 
+		public string Name => "hardwire";
 
-		public string Name
-		{
-			get { return "hardwire"; }
-		}
-
-		public void DisplayShortHelp()
+		public void DisplayShortHelp(Script context)
 		{
 			Console.WriteLine("hardwire - Creates hardwire descriptors from a dump table (interactive). ");
 		}
 
-		public void DisplayLongHelp()
+		public void DisplayLongHelp(Script context)
 		{
 			Console.WriteLine("hardwire - Creates hardwire descriptors from a dump table (interactive). ");
 			Console.WriteLine();
 		}
 
-		public void Execute(ShellContext context, string argument)
+		public void Execute(Script context, string argument)
 		{
 			Console.WriteLine("At any question, type #quit to abort.");
 			Console.WriteLine();
@@ -63,7 +59,7 @@ namespace WattleScript.Commands.Implementations
 				return;
 
 			string luafile = AskQuestion("Lua dump table file: ",
-				"", s => File.Exists(s), "File does not exists.");
+				"", File.Exists, "File does not exists.");
 
 			if (luafile == null)
 				return;
@@ -81,13 +77,13 @@ namespace WattleScript.Commands.Implementations
 				return;
 
 			string namespaceName = AskQuestion("Namespace ? [HardwiredClasses]: ",
-				"HardwiredClasses", s => IsValidIdentifier(s), "Not a valid identifier.");
+				"HardwiredClasses", IsValidIdentifier, "Not a valid identifier.");
 
 			if (namespaceName == null)
 				return;
 
 			string className = AskQuestion("Class ? [HardwireTypes]: ",
-				"HardwireTypes", s => IsValidIdentifier(s), "Not a valid identifier.");
+				"HardwireTypes", IsValidIdentifier, "Not a valid identifier.");
 
 			if (className == null)
 				return;
@@ -95,7 +91,7 @@ namespace WattleScript.Commands.Implementations
 			Generate(language, luafile, destfile, allowinternals == "y", className, namespaceName);
 		}
 
-		private bool IsValidIdentifier(string s)
+		private static bool IsValidIdentifier(string s)
 		{
 			if (string.IsNullOrEmpty(s))
 				return false;
@@ -106,10 +102,7 @@ namespace WattleScript.Commands.Implementations
 					return false;
 			}
 
-			if (char.IsDigit(s[0]))
-				return false;
-
-			return true;
+			return !char.IsDigit(s[0]);
 		}
 
 		public static void Generate(string language, string luafile, string destfile, bool allowInternals, string classname, string namespacename)
@@ -152,10 +145,14 @@ namespace WattleScript.Commands.Implementations
 				Console.Write(prompt);
 				string inp = Console.ReadLine();
 
-				if (inp == "#quit") return null;
-
-				if (inp == "")
-					inp = defval;
+				switch (inp)
+				{
+					case "#quit":
+						return null;
+					case "":
+						inp = defval;
+						break;
+				}
 
 				if (validator(inp))
 					return inp;
@@ -163,9 +160,5 @@ namespace WattleScript.Commands.Implementations
 				Console.WriteLine(errormsg);
 			}
 		}
-
-
-
-
 	}
 }

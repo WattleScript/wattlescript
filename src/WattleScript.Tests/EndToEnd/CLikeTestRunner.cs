@@ -63,7 +63,7 @@ public class CLikeTestRunner
         
         if (path.Contains("SyntaxCLike"))
         {
-            script.Options.Syntax = ScriptSyntax.WattleScript;
+            script.Options.Syntax = ScriptSyntax.Wattle;
         }
 
         if (reportErrors)
