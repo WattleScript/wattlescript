@@ -146,5 +146,11 @@ namespace WattleScript.Interpreter
 		/// Only used when <see cref="Syntax"/> is set to WattleScript
 		/// </summary>
 		public List<PreprocessorDefine> Defines { get; set; } = new List<PreprocessorDefine>();
+
+		/// <summary>
+		/// Set maximum number of instructions to be executed before forceful termination of the script.
+		/// If set to 0, this property is ignored (no limit is applied).
+		/// </summary>
+		public ulong InstructionLimit { get; set; } = 0;
 	}
 }

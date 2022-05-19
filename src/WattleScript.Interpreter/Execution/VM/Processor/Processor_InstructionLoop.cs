@@ -15,7 +15,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		const int YIELD_SPECIAL_TRAP = -99;
 		const int YIELD_SPECIAL_AWAIT = -100;
 
-		internal long AutoYieldCounter = 0;
+		internal ulong AutoYieldCounter = 0;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		string GetString(int i)
@@ -27,7 +27,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		{
 			// This is the main loop of the processor, has a weird control flow and needs to be as fast as possible.
 			// This sentence is just a convoluted way to say "don't complain about gotos".
-			long executedInstructions = 0;
+			ulong executedInstructions = 0;
 			bool canAutoYield = (AutoYieldCounter > 0) && m_CanYield && (State != CoroutineState.Main);
 
 			repeat_execution:
@@ -48,6 +48,11 @@ namespace WattleScript.Interpreter.Execution.VM
 					}
 
 					++executedInstructions;
+
+					if (m_Script.Options.InstructionLimit > 0 && executedInstructions > m_Script.Options.InstructionLimit)
+					{
+						throw new ScriptRuntimeException($"Maximum limit of {m_Script.Options.InstructionLimit} exceeded. Script terminated.");
+					}
 
 					if (canAutoYield && executedInstructions > AutoYieldCounter)
 					{
