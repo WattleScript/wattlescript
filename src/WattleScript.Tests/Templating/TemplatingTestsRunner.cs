@@ -99,7 +99,7 @@ public class TemplatingTestsRunner
             Script script = new Script(CoreModules.Preset_HardSandbox);
             script.Options.IndexTablesFrom = 0;
             script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-            script.Options.Syntax = ScriptSyntax.WattleScript;
+            script.Options.Syntax = ScriptSyntax.Wattle;
             script.Options.Directives.Add("using");
 
             HtmlModule htmlModule = new HtmlModule();
@@ -144,7 +144,7 @@ public class TemplatingTestsRunner
         Script script = new Script(CoreModules.Preset_HardSandbox);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
-        script.Options.Syntax = ScriptSyntax.WattleScript;
+        script.Options.Syntax = ScriptSyntax.Wattle;
         script.Options.Directives.Add("using");
 
         HtmlModule htmlModule = new HtmlModule();
@@ -161,7 +161,7 @@ public class TemplatingTestsRunner
         
         if (path.Contains("SyntaxCLike"))
         {
-            script.Options.Syntax = ScriptSyntax.WattleScript;
+            script.Options.Syntax = ScriptSyntax.Wattle;
         }
 
         if (reportErrors)
