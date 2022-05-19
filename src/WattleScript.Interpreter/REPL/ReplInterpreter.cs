@@ -98,7 +98,7 @@ namespace WattleScript.Interpreter.REPL
 					throw;
 				}
 
-				return DynValue.Nil;
+				return DynValue.Void;
 			}
 			catch (ScriptRuntimeException sre)
 			{

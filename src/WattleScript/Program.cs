@@ -72,7 +72,7 @@ namespace WattleScript
 			{
 				DynValue result = interpreter.Evaluate(s);
 
-				if (result.IsNotNil())
+				if (result.IsNotVoid())
 					Console.WriteLine("{0}", result);
 			}
 			catch (InterpreterException ex)
