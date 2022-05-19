@@ -18,7 +18,7 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		Basic = 0x40,
 		/// <summary>
-		/// The global constants: "_G", "_VERSION" and "_MOONSHARP".
+		/// The global constants: "_G", "_VERSION" and "_WATTLE".
 		/// </summary>
 		GlobalConsts = 0x1,
 		/// <summary>
