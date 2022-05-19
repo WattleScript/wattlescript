@@ -149,9 +149,9 @@ internal partial class Parser
         DiscardCurrentLexeme();
     }
 
-    string PeekRange(int from, int length)
+    string? PeekRange(int from, int length)
     {
-        return source.Substring(pos + from - 1, length);
+        return source?.Substring(pos + from - 1, length);
     }
     
     char Peek(int i = 1)
@@ -168,12 +168,12 @@ internal partial class Parser
             pos = 0;
         }
 
-        if (source.Length <= peekedPos)
+        if (source != null && source.Length <= peekedPos)
         {
             return source[^1];
         }
 
-        return source[peekedPos];
+        return source?[peekedPos] ?? char.MaxValue;
     }
     
     string StepN(int steps)

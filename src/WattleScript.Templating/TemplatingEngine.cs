@@ -170,7 +170,7 @@ public class TemplatingEngine
             Token nextToken = tokens[i];
             if (token.Type == nextToken.Type)
             {
-                token.Lexeme += nextToken.Lexeme;
+                token.Lexeme.Append(nextToken.Lexeme);
                 token.FromLine = Math.Min(token.FromLine, nextToken.FromLine);
                 token.ToLine = Math.Max(token.ToLine, nextToken.ToLine);
                 token.StartCol = Math.Min(token.StartCol, nextToken.StartCol);
@@ -248,7 +248,7 @@ public class TemplatingEngine
             {
                 case TokenTypes.Text:
                 {
-                    string lexeme = tkn.Lexeme;
+                    string lexeme = tkn.Lexeme.ToString();
                     if (firstClientPending)
                     {
                         lexeme = lexeme.TrimStart();
@@ -259,11 +259,12 @@ public class TemplatingEngine
                     break;
                 }
                 case TokenTypes.BlockExpr:
-                    if (string.IsNullOrWhiteSpace(tkn.Lexeme))
+                    string str = tkn.Lexeme.ToString();
+                    if (string.IsNullOrWhiteSpace(str))
                     {
                         continue;
                     }
-                    sb.AppendLine(tkn.Lexeme);
+                    sb.AppendLine(str);
                     break;
                 case TokenTypes.ImplicitExpr:
                 case TokenTypes.ExplicitExpr:

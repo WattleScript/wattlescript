@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel;
+using System.Text;
+
 namespace WattleScript.Templating;
 
 internal enum TokenTypes
@@ -21,7 +23,7 @@ internal enum TokenTypes
 internal class Token
 {
     public TokenTypes Type { get; set; }
-    public string Lexeme { get; set; }
+    public StringBuilder Lexeme { get; set; }
     public int FromLine { get; set; }
     public int ToLine { get; set; }
     public int StartCol { get; set; }
@@ -30,7 +32,7 @@ internal class Token
     public Token(TokenTypes type, string lexeme, int fromLine, int toLine, int startCol, int endCol)
     {
         Type = type;
-        Lexeme = lexeme;
+        Lexeme = new StringBuilder(lexeme);
         FromLine = fromLine;
         ToLine = toLine;
         StartCol = startCol;
