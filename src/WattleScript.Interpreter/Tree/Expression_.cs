@@ -172,7 +172,7 @@ namespace WattleScript.Interpreter.Tree
 				case TokenType.Number:
 				case TokenType.Number_Hex:
 				case TokenType.Number_HexFloat:
-				case TokenType.String when lcontext.Syntax != ScriptSyntax.WattleScript:
+				case TokenType.String when lcontext.Syntax != ScriptSyntax.Wattle:
 				case TokenType.String_Long:
 				case TokenType.Nil:
 				case TokenType.True:
@@ -237,7 +237,7 @@ namespace WattleScript.Interpreter.Tree
 						lcontext.Lexer.Next();
 						Token name = CheckTokenType(lcontext, TokenType.Name);
 						var type = lcontext.Lexer.Current.Type;
-						if (lcontext.Syntax == ScriptSyntax.WattleScript)
+						if (lcontext.Syntax == ScriptSyntax.Wattle)
 						{
 							//Implicit thiscall
 							if (type == TokenType.Brk_Open_Round ||
@@ -278,7 +278,7 @@ namespace WattleScript.Interpreter.Tree
 								ie.NilChainNext = ne;
 							e = ne;
 							if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Round &&
-							    lcontext.Syntax == ScriptSyntax.WattleScript)
+							    lcontext.Syntax == ScriptSyntax.Wattle)
 							{
 								//Function call
 								var call = new FunctionCallExpression(lcontext, ne, null, CallKind.ImplicitThisCall);
@@ -287,8 +287,8 @@ namespace WattleScript.Interpreter.Tree
 							}
 							break;
 						}
-					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.WattleScript:
-					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.WattleScript:
+					case TokenType.Colon when lcontext.Syntax != ScriptSyntax.Wattle:
+					case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.Wattle:
 						lcontext.Lexer.Next();
 						thisCallName = CheckTokenType(lcontext, TokenType.Name);
 						callKind = CallKind.ThisCall;
@@ -321,7 +321,7 @@ namespace WattleScript.Interpreter.Tree
 			Token T = lcontext.Lexer.Current;
 			switch (T.Type)
 			{
-				case TokenType.String when lcontext.Syntax == ScriptSyntax.WattleScript:
+				case TokenType.String when lcontext.Syntax == ScriptSyntax.Wattle:
 				case TokenType.String_EndTemplate:
 					return new LiteralExpression(lcontext, T);
 				case TokenType.String_TemplateFragment:

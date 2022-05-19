@@ -187,7 +187,7 @@ namespace WattleScript.Interpreter.Tree
 			{
 				case TokenType.DoubleColon when lcontext.Syntax == ScriptSyntax.Lua:
 					return new LabelStatement(lcontext);
-				case TokenType.Brk_Open_Curly when lcontext.Syntax == ScriptSyntax.WattleScript:
+				case TokenType.Brk_Open_Curly when lcontext.Syntax == ScriptSyntax.Wattle:
 					return new ScopeStatement(lcontext);
 				case TokenType.Goto:
 					return new GotoStatement(lcontext);
@@ -227,7 +227,7 @@ namespace WattleScript.Interpreter.Tree
 						//Check for labels in CLike mode
 						lcontext.Lexer.SavePos();
 						Token l = lcontext.Lexer.Current;
-						if (lcontext.Syntax == ScriptSyntax.WattleScript && l.Type == TokenType.Name)
+						if (lcontext.Syntax == ScriptSyntax.Wattle && l.Type == TokenType.Name)
 						{
 							lcontext.Lexer.Next();
 							if (lcontext.Lexer.Current.Type == TokenType.Colon) {

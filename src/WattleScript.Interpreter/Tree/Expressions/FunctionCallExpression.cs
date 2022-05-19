@@ -34,7 +34,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_DebugErr = function.GetFriendlyDebugName();
 			m_Function = function;
 			m_Kind = kind;
-			wattleCallSyntax = lcontext.Syntax == ScriptSyntax.WattleScript;
+			wattleCallSyntax = lcontext.Syntax == ScriptSyntax.Wattle;
 			
 			switch (lcontext.Lexer.Current.Type)
 			{

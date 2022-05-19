@@ -256,7 +256,7 @@ namespace WattleScript.Interpreter.Tree
                         }
                         else
                         {
-                            var type = Token.GetReservedTokenType(name, ScriptSyntax.WattleScript);
+                            var type = Token.GetReservedTokenType(name, ScriptSyntax.Wattle);
                             return CreateToken(type ?? TokenType.Name, line, fromCol, name);
                         }
                     }

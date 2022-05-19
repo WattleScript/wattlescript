@@ -112,7 +112,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			}
 
 			if (m_IsMethodCallingConvention) selfType = SelfType.Explicit;
-			else if (m_MethodName != null && lcontext.Syntax == ScriptSyntax.WattleScript)
+			else if (m_MethodName != null && lcontext.Syntax == ScriptSyntax.Wattle)
 			{
 				selfType = SelfType.Implicit;
 			}

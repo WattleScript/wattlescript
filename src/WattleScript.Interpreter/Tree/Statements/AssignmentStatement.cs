@@ -43,13 +43,13 @@ namespace WattleScript.Interpreter.Tree.Statements
 				CheckTokenType(lcontext, TokenType.Op_Assignment);
 				m_RValues = Expression.ExprList(lcontext);
 			}
-			else if (lcontext.Syntax == ScriptSyntax.WattleScript && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalescingAssignment)
+			else if (lcontext.Syntax == ScriptSyntax.Wattle && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalescingAssignment)
 			{
 				CheckTokenType(lcontext, TokenType.Op_NilCoalescingAssignment);
 				AssignmentOp = Operator.NilCoalescing;
 				m_RValues = Expression.ExprList(lcontext);
 			}
-			else if (lcontext.Syntax == ScriptSyntax.WattleScript && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalesceInverse)
+			else if (lcontext.Syntax == ScriptSyntax.Wattle && lcontext.Lexer.Current.Type == TokenType.Op_NilCoalesceInverse)
 			{
 				CheckTokenType(lcontext, TokenType.Op_NilCoalesceInverse);
 				AssignmentOp = Operator.NilCoalescingInverse;
@@ -130,7 +130,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				if (lcontext.Syntax != ScriptSyntax.Lua) {
 					switch (lcontext.Lexer.Current.Type) {
 						case TokenType.Op_AddEq:
-							if (lcontext.Syntax == ScriptSyntax.WattleScript)
+							if (lcontext.Syntax == ScriptSyntax.Wattle)
 								AssignmentOp = Operator.AddConcat;
 							else
 								AssignmentOp = Operator.Add;

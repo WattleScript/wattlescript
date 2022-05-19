@@ -34,17 +34,17 @@ namespace WattleScript.Interpreter.REPL
 		/// <summary>
 		/// Gets a value indicating whether this instance has a pending command 
 		/// </summary>
-		public virtual bool HasPendingCommand { get { return m_CurrentCommand.Length > 0; } }
+		public virtual bool HasPendingCommand => m_CurrentCommand.Length > 0;
 
 		/// <summary>
 		/// Gets the current pending command.
 		/// </summary>
-		public virtual string CurrentPendingCommand { get { return m_CurrentCommand; } }
+		public virtual string CurrentPendingCommand => m_CurrentCommand;
 
 		/// <summary>
 		/// Gets the classic prompt (">" or ">>") given the current state of the interpreter
 		/// </summary>
-		public virtual string ClassicPrompt { get { return HasPendingCommand ? ">>" : ">"; } }
+		public virtual string ClassicPrompt => HasPendingCommand ? ">>" : ">";
 
 		/// <summary>
 		/// Evaluate a REPL command.
@@ -56,8 +56,7 @@ namespace WattleScript.Interpreter.REPL
 		public virtual DynValue Evaluate(string input)
 		{
 			bool isFirstLine = !HasPendingCommand;
-
-			bool forced = (input == "");
+			bool forced = input == "";
 
 			m_CurrentCommand += input;
 
@@ -68,7 +67,7 @@ namespace WattleScript.Interpreter.REPL
 
 			try
 			{
-				DynValue result = DynValue.Nil;
+				DynValue result;
 
 				if (isFirstLine && HandleClassicExprsSyntax && m_CurrentCommand.StartsWith("="))
 				{
@@ -98,10 +97,8 @@ namespace WattleScript.Interpreter.REPL
 					ex.Rethrow();
 					throw;
 				}
-				else
-				{
-					return DynValue.Nil;
-				}
+
+				return DynValue.Void;
 			}
 			catch (ScriptRuntimeException sre)
 			{
