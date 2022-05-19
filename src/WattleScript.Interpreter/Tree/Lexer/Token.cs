@@ -35,7 +35,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public static TokenType? GetReservedTokenType(string reservedWord, ScriptSyntax syntax)
 		{
-			if (syntax == ScriptSyntax.WattleScript)
+			if (syntax == ScriptSyntax.Wattle)
 			{
 				switch (reservedWord)
 				{

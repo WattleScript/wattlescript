@@ -178,7 +178,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			// method decls with ':' must push an implicit 'self' param
 			if (self != SelfType.None)
-				paramnames.Add(lcontext.Syntax == ScriptSyntax.WattleScript ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
+				paramnames.Add(lcontext.Syntax == ScriptSyntax.Wattle ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
 			m_ImplicitThis = self == SelfType.Implicit;
 			
 			bool parsingDefaultParams = false;

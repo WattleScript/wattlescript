@@ -43,7 +43,7 @@ namespace WattleScript.Interpreter.Tree
             {
                 if (string.IsNullOrEmpty(def.Name))
                     throw new ArgumentException("Preprocessor definition name can't be empty");
-                if (Token.GetReservedTokenType(def.Name, ScriptSyntax.WattleScript) != null)
+                if (Token.GetReservedTokenType(def.Name, ScriptSyntax.Wattle) != null)
                     throw new ArgumentException($"Preprocessor definition name can't be keyword '{def.Name}'");
                 //overwrite previous entries as we are still at line 1
                 SetDefine(def.Name, def, true);

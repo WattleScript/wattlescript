@@ -46,7 +46,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_Name = nameToken.Text;
 			this.nilCheck = nilCheck;
 			//
-			if (lcontext.Syntax == ScriptSyntax.WattleScript && m_Name.Equals("length")) {
+			if (lcontext.Syntax == ScriptSyntax.Wattle && m_Name.Equals("length")) {
 				isLength = true;
 			}
 			//inc/dec expr

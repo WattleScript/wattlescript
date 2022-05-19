@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text;
 using Mono.Options;
 using WattleScript.Commands;
 using WattleScript.Commands.Implementations;
 using WattleScript.Interpreter;
-using WattleScript.Interpreter.Execution;
-using WattleScript.Interpreter.Loaders;
 using WattleScript.Interpreter.REPL;
-using WattleScript.Interpreter.Serialization;
 
 namespace WattleScript
 {
@@ -24,16 +18,20 @@ namespace WattleScript
 			CommandManager.Initialize();
 
 			Script.DefaultOptions.ScriptLoader = new ReplInterpreterScriptLoader();
-			
-			bool langLua;
-			if (CheckArgs(args, out langLua))
+
+			if (CheckArgs(args, out ScriptSyntax syntax))
 				return;
 
-			Banner(langLua);
+			Banner(syntax);
 			
-			Script script = new Script(langLua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle);
-			script.Options.Syntax = langLua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
-			script.Globals["makestatic"] = (Func<string, DynValue>)(MakeStatic);
+			Script script = new Script(syntax == ScriptSyntax.Lua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle)
+			{
+				Options = { Syntax = syntax },
+				Globals =
+				{
+					["makestatic"] = (Func<string, DynValue>) MakeStatic
+				}
+			};
 
 			ReplInterpreter interpreter = new ReplInterpreter(script)
 			{
@@ -41,10 +39,9 @@ namespace WattleScript
 				HandleClassicExprsSyntax = true
 			};
 
-
 			while (true)
 			{
-				InterpreterLoop(interpreter, new ShellContext(script));
+				InterpreterLoop(interpreter, script);
 			}
 		}
 
@@ -59,15 +56,15 @@ namespace WattleScript
 			return DynValue.Nil;
 		}
 
-		private static void InterpreterLoop(ReplInterpreter interpreter, ShellContext shellContext)
+		private static void InterpreterLoop(ReplInterpreter interpreter, Script script)
 		{
 			Console.Write(interpreter.ClassicPrompt + " ");
 
 			string s = Console.ReadLine();
 
-			if (!interpreter.HasPendingCommand && s.StartsWith("!"))
+			if (s != null && !interpreter.HasPendingCommand && s.StartsWith("!"))
 			{
-				ExecuteCommand(shellContext, s.Substring(1));
+				ExecuteCommand(script, s[1..]);
 				return;
 			}
 
@@ -75,7 +72,7 @@ namespace WattleScript
 			{
 				DynValue result = interpreter.Evaluate(s);
 
-				if (result.Type != DataType.Void)
+				if (result.IsNotNil())
 					Console.WriteLine("{0}", result);
 			}
 			catch (InterpreterException ex)
@@ -88,11 +85,11 @@ namespace WattleScript
 			}
 		}
 
-		private static void Banner(bool lua)
+		private static void Banner(ScriptSyntax syntax)
 		{
 			Console.WriteLine(Script.GetBanner("Console"));
 			Console.WriteLine();
-			Console.WriteLine($"Type {(lua ? "Lua" : "WattleScript")} code to execute it or type !help to see help on commands.\n");
+			Console.WriteLine($"Type {(syntax == ScriptSyntax.Lua ? "Lua" : "Wattle")} code to execute it or type !help to see help on commands.\n");
 			Console.WriteLine("Welcome.\n");
 		}
 
@@ -101,22 +98,23 @@ namespace WattleScript
 			Console.WriteLine("usage: wattlescript [-L | --lua] [-h | --help | -X \"command\" | -W <dumpfile> <destfile> [--internals] [--vb] | <script>]");
 		}
 		
-		private static bool CheckArgs(string[] args, out bool lang_lua)
+		private static bool CheckArgs(string[] args, out ScriptSyntax syntax)
 		{
-			lang_lua = false; //Default to Wattle
+			syntax = ScriptSyntax.Wattle;
+			const bool internals = false;
 			
-			//General options
+			// General options
 			bool show_help = false;
 			bool print_version = false;
 			bool do_hardwire = false;
 			bool do_exec = false;
-			//Hardwire Options
+			
+			// Hardwire Options
 			string classname = null;
 			string namespacename = null;
-			bool internals = false;
 			bool useVb = false;
 			bool lua = false;
-			//
+
 			var p = new OptionSet()
 			{
 				{"h|?|help", "show this message and exit", v => show_help = v != null},
@@ -138,30 +136,41 @@ namespace WattleScript
 				Console.WriteLine (e.Message);
 				Console.WriteLine ("Try `WattleScript --help' for more information.");
 				Environment.Exit(1);
-				return false; //Exits
+				return false;
 			}
-			lang_lua = lua;
+
+			if (lua)
+			{
+				syntax = ScriptSyntax.Lua;
+			}
 
 			if (print_version)
 			{
 				Console.WriteLine("WattleScript {0}", Script.VERSION);
 				return true;
 			}
-			else if (show_help)
+			
+			if (show_help)
 			{
 				Console.WriteLine(Script.GetBanner("Console"));
 				ShowUsage();
 				p.WriteOptionDescriptions(Console.Out);
 				return true;
 			}
-			else if (do_exec)
+			
+			if (do_exec)
 			{
 				if (extra.Count > 0)
 				{
-					Script script = new Script(lua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle);
-					script.Options.Syntax = lua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
-					script.Globals["makestatic"] = (Func<string, DynValue>)(MakeStatic);	
-					ExecuteCommand(new ShellContext(script), extra[0]);
+					Script script = new Script(lua ? CoreModules.Preset_Complete : CoreModules.Preset_CompleteWattle)
+					{
+						Options = { Syntax = lua ? ScriptSyntax.Lua : ScriptSyntax.Wattle },
+						Globals =
+						{
+							["makestatic"] = (Func<string, DynValue>) MakeStatic
+						}
+					};
+					ExecuteCommand(script, extra[0]);
 				}
 				else
 				{
@@ -171,7 +180,8 @@ namespace WattleScript
 				}
 				return true;
 			}
-			else if (do_hardwire)
+			
+			if (do_hardwire)
 			{
 				if (extra.Count >= 2)
 				{
@@ -187,10 +197,11 @@ namespace WattleScript
 				}
 				return true;
 			}
-			else if(extra.Count > 0)
+			
+			if (extra.Count > 0)
 			{
-				var script = new Script(lang_lua ? CoreModules.Preset_Default : CoreModules.Preset_DefaultWattle);
-				script.Options.Syntax = lang_lua ? ScriptSyntax.Lua : ScriptSyntax.WattleScript;
+				var script = new Script(syntax == ScriptSyntax.Lua ? CoreModules.Preset_Default : CoreModules.Preset_DefaultWattle);
+				script.Options.Syntax = syntax;
 				if (!File.Exists(extra[0]))
 				{
 					Console.Error.WriteLine("File not found: {0}", extra[0]);
@@ -205,39 +216,32 @@ namespace WattleScript
 
 	
 
-		private static void ExecuteCommand(ShellContext shellContext, string cmdline)
+		private static void ExecuteCommand(Script script, string cmdline)
 		{
 			StringBuilder cmd = new StringBuilder();
 			StringBuilder args = new StringBuilder();
 			StringBuilder dest = cmd;
 
-			for (int i = 0; i < cmdline.Length; i++)
+			foreach (char t in cmdline)
 			{
-				if (dest == cmd && cmdline[i] == ' ')
+				if (dest == cmd && t == ' ')
 				{
 					dest = args;
 					continue;
 				}
 
-				dest.Append(cmdline[i]);
+				dest.Append(t);
 			}
 
 			string scmd = cmd.ToString().Trim();
 			string sargs = args.ToString().Trim();
 
-			ICommand C = CommandManager.Find(scmd);
+			ICommand c = CommandManager.Find(scmd);
 
-			if (C == null)
+			if (c == null)
 				Console.WriteLine("Invalid command '{0}'.", scmd);
 			else
-				C.Execute(shellContext, sargs);
+				c.Execute(script, sargs);
 		}
-
-
-
-
-
-
-
 	}
 }

@@ -102,7 +102,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
-			if (lcontext.Syntax == ScriptSyntax.WattleScript)
+			if (lcontext.Syntax == ScriptSyntax.Wattle)
 			{
 				//Perform declaration hoisting.
 				//Define all locals upfront, then bring function definitions up

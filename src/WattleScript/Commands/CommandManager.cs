@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
+using WattleScript.Interpreter;
 
 namespace WattleScript.Commands
 {
@@ -19,11 +19,14 @@ namespace WattleScript.Commands
 			{
 				object o = Activator.CreateInstance(t);
 				ICommand cmd = (ICommand)o;
-				m_Registry.Add(cmd.Name, cmd);
+				if (cmd != null)
+				{
+					m_Registry.Add(cmd.Name, cmd);
+				}
 			}
 		}
 
-		public static void Execute(ShellContext context, string commandLine)
+		public static void Execute(Script context, string commandLine)
 		{
 
 		}
@@ -32,19 +35,15 @@ namespace WattleScript.Commands
 		{
 			yield return m_Registry["help"];
 
-			foreach (ICommand cmd in m_Registry.Values.Where(c => !(c is HelpCommand)).OrderBy(c => c.Name))
+			foreach (ICommand cmd in m_Registry.Values.Where(c => c is not HelpCommand).OrderBy(c => c.Name))
 			{
 				yield return cmd;
 			}
 		}
 
-
 		public static ICommand Find(string cmd)
 		{
-			if (m_Registry.ContainsKey(cmd))
-				return m_Registry[cmd];
-
-			return null;
+			return m_Registry.ContainsKey(cmd) ? m_Registry[cmd] : null;
 		}
 	}
 }

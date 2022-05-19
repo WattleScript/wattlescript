@@ -9,31 +9,26 @@ namespace WattleScript.Commands.Implementations
 {
     class DumpBytecodeCommand : ICommand
     {
-        public string Name
-        {
-            get { return "dumpbc"; }
-        }
+        public string Name => "dumpbc";
 
-        public void DisplayShortHelp()
+        public void DisplayShortHelp(Script context)
         {
             Console.WriteLine("dumpbc <filename> - Dumps human-readable bytecode for the file");
         }
 
-        public void DisplayLongHelp()
+        public void DisplayLongHelp(Script context)
         {
             Console.WriteLine("printbc <filename> - Dumps human-readable bytecode for the file.\nThe destination filename will be appended with '-bytecode.txt'.");
         }
 
-        public void Execute(ShellContext context, string p)
+        public void Execute(Script context, string p)
         {
             string targetFileName = p + "-bytecode.txt";
 
-            Script S = new Script(CoreModules.None);
+            Script s = new Script(CoreModules.None);
+            DynValue chunk = s.LoadFile(p);
 
-            DynValue chunk = S.LoadFile(p);
-
-            File.WriteAllText(targetFileName, S.DumpString(chunk));
-
+            File.WriteAllText(targetFileName, s.DumpString(chunk));
         }
     }
 }
