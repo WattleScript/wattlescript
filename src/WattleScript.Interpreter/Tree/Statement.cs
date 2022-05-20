@@ -222,6 +222,8 @@ namespace WattleScript.Interpreter.Tree
 					return new BreakStatement(lcontext);
 				case TokenType.Continue:
 					return new ContinueStatement(lcontext);
+				case TokenType.Enum:
+					return new EnumDefinitionStatement(lcontext);
 				default:
 				{
 						//Check for labels in CLike mode

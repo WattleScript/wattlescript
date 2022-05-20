@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -39,9 +40,6 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		ExclusiveRange = 0x98000000,
 	}
 	
-	/// <summary>
-	/// 
-	/// </summary>
 	class BinaryOperatorExpression : Expression
 	{
 		class Node
@@ -426,15 +424,15 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			bc.Emit_Operator(OperatorToOpCode(m_Operator), ShouldInvertBoolean(m_Operator));
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
 			dv = DynValue.Nil;
-			if (!m_Exp1.EvalLiteral(out var v1))
+			if (!m_Exp1.EvalLiteral(out var v1, symbols))
 				return false;
 			bool t1Neg = m_Exp1 is UnaryOperatorExpression uo &&
 			             uo.IsNegativeNumber;
 			v1 = v1.ToScalar();
-			if (!m_Exp2.EvalLiteral(out var v2))
+			if (!m_Exp2.EvalLiteral(out var v2, symbols))
 				return false;
 			v2 = v2.ToScalar();
 			if (m_Operator == Operator.NilCoalescing)

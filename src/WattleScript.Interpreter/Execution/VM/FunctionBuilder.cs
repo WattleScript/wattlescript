@@ -195,6 +195,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
+		public int Emit_ReadOnly()
+		{
+			return AppendInstruction(new Instruction(OpCode.ReadOnly));
+		}
+		
+
 		public int Emit_Pop(int num = 1)
 		{
 			return AppendInstruction(new Instruction(OpCode.Pop, num));

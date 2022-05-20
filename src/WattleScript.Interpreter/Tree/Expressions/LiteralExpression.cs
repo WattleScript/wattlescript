@@ -1,4 +1,4 @@
-﻿using WattleScript.Interpreter.DataStructs;
+﻿using System.Collections.Generic;
 using WattleScript.Interpreter.Execution;
 
 namespace WattleScript.Interpreter.Tree.Expressions
@@ -70,7 +70,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return m_Value;
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
 			dv = m_Value;
 			return true;

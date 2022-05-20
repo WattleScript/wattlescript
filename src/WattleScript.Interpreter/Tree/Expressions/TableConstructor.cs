@@ -247,7 +247,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return tval;
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
 			dv = DynValue.Nil;
 			return false;

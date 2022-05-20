@@ -315,6 +315,18 @@ namespace WattleScript.Interpreter
 
 		/// <summary>
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a table set operation was attempted on a readonly table
+		/// </summary>
+		/// <returns>
+		/// The exception to be raised.
+		/// </returns>
+		public static ScriptRuntimeException TableIsReadonly()
+		{
+			return new ScriptRuntimeException("table is readonly");
+		}
+
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
 		/// a table indexing operation used a NaN as the key.
 		/// </summary>
 		/// <returns>
