@@ -23,7 +23,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		TblInitN,	// Initializes a table named entry
 		TblInitI,	// Initializes a table positional entry
 		NewRange,   // Creates a range from the v-stack
-
+		ReadOnly,	// Sets v-stack top table to be read-only. Does not pop
+		
 		StoreLcl, Local,
 		StoreUpv, Upvalue,
 		IndexSet, Index,

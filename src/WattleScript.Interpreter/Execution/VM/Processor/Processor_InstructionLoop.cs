@@ -269,6 +269,13 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewTable:
 							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
 							break;
+						case OpCode.ReadOnly:
+						{
+							ref var top = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+							top.Table.ReadOnly = true;
+							break;
+						}
 						case OpCode.IterPrep:
 							ExecIterPrep();
 							break;
@@ -1586,6 +1593,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				{
 					case DataType.Table:
 					{
+						if (obj.Table.ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
+
 						if (!isMultiIndex)
 						{
 							//Don't do check for __newindex if there is no metatable to begin with

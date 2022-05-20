@@ -39,6 +39,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushNil:
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
+				case OpCode.ReadOnly:
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:

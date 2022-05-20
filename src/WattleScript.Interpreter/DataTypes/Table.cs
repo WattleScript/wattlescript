@@ -51,6 +51,12 @@ namespace WattleScript.Interpreter
 		/// Gets the script owning this resource.
 		/// </summary>
 		public Script OwnerScript { get; }
+		
+		/// <summary>
+		/// Gets/sets if this is a ReadOnly table.
+		/// Writing to a ReadOnly table will throw an exception
+		/// </summary>
+		public bool ReadOnly { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
@@ -314,6 +320,7 @@ namespace WattleScript.Interpreter
 		/// <param name="value">The value.</param>
 		public void Set(object key, DynValue value)
 		{
+			if (ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
 			if (key == null)
 				throw ScriptRuntimeException.TableIndexIsNil();
 
@@ -333,6 +340,7 @@ namespace WattleScript.Interpreter
 		/// <param name="value">The value.</param>
 		public void Set(object[] keys, DynValue value)
 		{
+			if (ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
 			if (keys == null || keys.Length <= 0)
 				throw ScriptRuntimeException.TableIndexIsNil();
 
