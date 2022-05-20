@@ -113,6 +113,15 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		JLclInit, // Inits a param value if a default one is specified and not provided at callsite.
 
+		// OOP
+		// AnnotX instructions, add annotation to table
+		//NumValB = annotation name string
+		AnnotI, //NumVal = int
+		AnnotN, //NumVal = number
+		AnnotS, //NumVal = string or nil
+		AnnotB, //NumVal = bool
+		AnnotT, //pop table from v-stack
+		
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

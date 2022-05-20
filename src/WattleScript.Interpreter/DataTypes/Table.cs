@@ -703,6 +703,11 @@ namespace WattleScript.Interpreter
 			set { this.CheckScriptOwnership(m_MetaTable); m_MetaTable = value; }
 		}
 		private Table m_MetaTable;
+		
+		/// <summary>
+		/// Gets/sets the annotations attached to this table.
+		/// </summary>
+		public List<Annotation> Annotations { get; set; }
 
 
 

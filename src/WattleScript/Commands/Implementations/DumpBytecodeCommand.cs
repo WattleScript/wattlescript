@@ -26,6 +26,7 @@ namespace WattleScript.Commands.Implementations
             string targetFileName = p + "-bytecode.txt";
 
             Script s = new Script(CoreModules.None);
+            s.Options.Syntax = context.Options.Syntax;
             DynValue chunk = s.LoadFile(p);
 
             File.WriteAllText(targetFileName, s.DumpString(chunk));

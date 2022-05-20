@@ -414,8 +414,18 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             assert.areequal('t is TABLE', 't is ' +  t);
             ", s => s.Options.Syntax = ScriptSyntax.Wattle);
         }
-        
-        
+
+        [Test]
+        public void EnumAnnotation()
+        {
+            var s = new Script();
+            s.Options.Syntax = ScriptSyntax.Wattle;
+            s.DoString(@"
+            @annotation ('hello')
+            enum MyEnum { }
+            ");
+            Assert.AreEqual("annotation", s.Globals.Get("MyEnum").Table.Annotations[0].Name);
+        }
 
         [Test]
         public void AndSyntax()

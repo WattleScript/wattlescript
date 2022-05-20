@@ -105,7 +105,13 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.SString:
 				case OpCode.SInteger: 
 				case OpCode.SNumber:
+				case OpCode.AnnotI:
+				case OpCode.AnnotB:
+				case OpCode.AnnotS: 
+				case OpCode.AnnotN:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumValB;
+				case OpCode.AnnotT:
+					return InstructionFieldUsage.NumValB;
 				default:
 					throw new NotImplementedException(string.Format("InstructionFieldUsage for instruction {0}", op));
 			}

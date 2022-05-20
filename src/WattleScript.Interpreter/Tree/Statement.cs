@@ -161,6 +161,17 @@ namespace WattleScript.Interpreter.Tree
 			}
 		}
 
+		private const string ANNOTATION_ERROR = @"annotations may only be applied to function or enum declarations";
+		static bool AnnotationsAllowed(TokenType type)
+		{
+			switch (type)
+			{
+				case TokenType.Function:
+				case TokenType.Enum:
+					return true;
+			}
+			return false;
+		}
 
 		protected static Statement CreateStatement(ScriptLoadingContext lcontext, out bool forceLast)
 		{
@@ -174,12 +185,12 @@ namespace WattleScript.Interpreter.Tree
 				{
 					if (lcontext.Lexer.PeekNext().Type != TokenType.Function)
 					{
-						throw new SyntaxErrorException(tkn, "function annotations may only be applied to function declarations");
+						throw new SyntaxErrorException(tkn, ANNOTATION_ERROR);
 					}
 				} 
-				else if (tkn.Type != TokenType.Function)
+				else if (!AnnotationsAllowed(tkn.Type))
 				{
-					throw new SyntaxErrorException(tkn, "function annotations may only be applied to function declarations");
+					throw new SyntaxErrorException(tkn, ANNOTATION_ERROR);
 				}
 			}
 			

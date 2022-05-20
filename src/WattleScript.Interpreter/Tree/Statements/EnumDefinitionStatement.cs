@@ -11,12 +11,15 @@ namespace WattleScript.Interpreter.Tree.Statements
         private SourceRef assignment;
         private SourceRef buildCode;
         private SymbolRefExpression globalSymbol;
-
+        private Annotation[] annotations;
+        
         private Dictionary<string, DynValue> members = new Dictionary<string, DynValue>();
 
         public EnumDefinitionStatement(ScriptLoadingContext lcontext)
             : base(lcontext)
         {
+            annotations = lcontext.FunctionAnnotations.ToArray();
+            lcontext.FunctionAnnotations = new List<Annotation>();
             //lexer is at "enum"
             var start = lcontext.Lexer.Current;
             lcontext.Lexer.Next();
@@ -90,6 +93,8 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.PopSourceRef();
             bc.PushSourceRef(assignment);
             bc.Emit_ReadOnly();
+            foreach(var annot in annotations)
+                bc.Emit_Annot(annot);
             globalSymbol.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             bc.Emit_Pop();
             bc.PopSourceRef();
