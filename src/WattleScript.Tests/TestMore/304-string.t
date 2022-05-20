@@ -108,8 +108,8 @@ is(string.format("%X %x", 126, 126), "7E 7e")
 tag, title = "h1", "a title"
 is(string.format("<%s>%s</%s>", tag, title, tag), "<h1>a title</h1>")
 
--- moonsharp : this commented out as it might fail mostly because of CRLF in windows than because of 
--- a moonsharp bug I think. Will see, surely not a blocking issue now.
+-- wattle : this commented out as it might fail mostly because of CRLF in windows than because of 
+-- a wattle bug I think. Will see, surely not a blocking issue now.
 --[==[ 
 is(string.format('%q', 'a string with "quotes" and \n new line'), [["a string with \"quotes\" and \
  new line"]], "function format %q") 

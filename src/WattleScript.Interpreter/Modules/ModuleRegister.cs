@@ -53,18 +53,18 @@ namespace WattleScript.Interpreter
 
 
 		/// <summary>
-		/// Registers the standard constants (_G, _VERSION, _MOONSHARP) to a table
+		/// Registers the standard constants (_G, _VERSION, _WATTLE) to a table
 		/// </summary>
 		/// <param name="table">The table.</param>
 		/// <returns></returns>
 		public static Table RegisterConstants(this Table table)
 		{
-			DynValue moonsharp_table = DynValue.NewTable(table.OwnerScript);
-			Table m = moonsharp_table.Table;
+			DynValue wattle_table = DynValue.NewTable(table.OwnerScript);
+			Table m = wattle_table.Table;
 
 			table.Set("_G", DynValue.NewTable(table));
 			table.Set("_VERSION", DynValue.NewString(string.Format("WattleScript {0}", Script.VERSION)));
-			table.Set("_MOONSHARP", moonsharp_table);
+			table.Set("_WATTLE", wattle_table);
 
 			m.Set("version", DynValue.NewString(Script.VERSION));
 			m.Set("luacompat", DynValue.NewString(Script.LUA_VERSION));

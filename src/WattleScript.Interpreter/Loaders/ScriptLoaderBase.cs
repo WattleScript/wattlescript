@@ -101,7 +101,7 @@ namespace WattleScript.Interpreter.Loaders
 
 			if (modulePaths == null)
 			{
-				string env = Script.GlobalOptions.Platform.GetEnvironmentVariable("MOONSHARP_PATH");
+				string env = Script.GlobalOptions.Platform.GetEnvironmentVariable("WATTLE_PATH");
 				if (!string.IsNullOrEmpty(env)) modulePaths = UnpackStringPaths(env);
 
 				if (modulePaths == null)
