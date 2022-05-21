@@ -3,13 +3,31 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using NUnit.Framework;
+using WattleScript.Interpreter.Loaders;
 using WattleScript.Templating;
 
 namespace WattleScript.Interpreter.Tests.Templating;
+
+class TemplatingTestsScriptLoader : ScriptLoaderBase
+{
+    public override bool ScriptFileExists(string name)
+    {
+        return true;
+    }
+
+    public override object LoadFile(string file, Table globalContext)
+    {
+        return "fn = () => 'Hello world'";
+    }
+
+    protected override string ResolveModuleName(string modname, string[] paths)
+    {
+        return modname;
+    }
+}
 
 [TestFixture]
 [Parallelizable(ParallelScope.All)]
@@ -96,7 +114,7 @@ public class TemplatingTestsRunner
         {
             string code = await File.ReadAllTextAsync(path);
             
-            Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
+            Script script = new Script(CoreModules.Preset_SoftSandboxWattle | CoreModules.LoadMethods);
             script.Options.IndexTablesFrom = 0;
             script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
             script.Options.Syntax = ScriptSyntax.Wattle;
@@ -120,7 +138,7 @@ public class TemplatingTestsRunner
 
         filter = Filter.Tests;
     }
-    
+
     [Test, TestCaseSource(nameof(GetTestCases))]
     public async Task RunThrowErros(string path)
     {
@@ -140,17 +158,19 @@ public class TemplatingTestsRunner
         string code = await File.ReadAllTextAsync(path);
         string output = await File.ReadAllTextAsync(outputPath);
 
-        Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
+        Script script = new Script(CoreModules.Preset_SoftSandboxWattle | CoreModules.LoadMethods);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Options.Syntax = ScriptSyntax.Wattle;
         script.Options.Directives.Add("using");
-
+        script.Options.ScriptLoader = new TemplatingTestsScriptLoader();
+        
         HtmlModule htmlModule = new HtmlModule();
         script.Globals["Html"] = htmlModule;
         
         TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers);
         TemplatingEngine.RenderResult rr = null;
+        ;
         
         if (path.Contains("flaky"))
         {

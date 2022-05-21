@@ -32,6 +32,29 @@ internal partial class Parser
         
         return false;
     }
+    
+    // @require "lib"
+    // parser has to be positioned after require
+    bool ParseKeywordRequire()
+    {
+        ParseWhitespaceAndNewlines(Sides.Server);
+        if (!MatchNextNonWhiteSpaceChar('"'))
+        {
+            return Throw("Expected \" after @require");
+        }
+
+        ParseLiteral(Sides.Server);
+
+        if (!MatchNextNonWhiteSpaceChar('"'))
+        {
+            return Throw("Expected \" after ident end at @require");
+        }
+
+        ParseWhitespaceAndNewlines(Sides.Server);
+        
+        AddToken(TokenTypes.BlockExpr);
+        return true;
+    }
 
     // enum Enum {}
     // parser has to be positioned after "enum", at name Ident

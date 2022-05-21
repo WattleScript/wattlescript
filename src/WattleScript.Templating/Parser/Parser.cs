@@ -27,7 +27,7 @@ internal partial class Parser
     private string? source;
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
-    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch", "enum"};
+    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch", "enum", "require"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
@@ -73,6 +73,7 @@ internal partial class Parser
             { "else", ParseKeywordInvalidElse },
             { "elseif", ParseKeywordInvalidElseIf },
             { "enum", ParseKeywordEnum },
+            { "require", ParseKeywordRequire },
         };
     }
     
