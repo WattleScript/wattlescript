@@ -266,8 +266,33 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecJFor(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
-						case OpCode.NewTable:
-							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
+						case OpCode.TabMeta:
+						{
+							ref var top = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+							top.Table.Kind = (TableKind)i.NumVal;
+							top.Table.ReadOnly = i.NumVal2 != 0;
+							break;
+						}
+						case OpCode.AnnotI:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewNumber(i.NumVal));
+							break;
+						case OpCode.AnnotB:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewBoolean(i.NumVal != 0));
+							break;
+						case OpCode.AnnotS: 
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], 
+								DynValue.NewString(currentFrame.Function.strings[i.NumVal]));
+							break;
+						case OpCode.AnnotN:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB],
+								DynValue.NewNumber(currentFrame.Function.numbers[i.NumVal]));
+							break;
+						case OpCode.AnnotT:
+							if (m_ValueStack.Peek().Type != DataType.Table)
+								throw new InternalErrorException("v-stack top NOT table");
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB],
+								m_ValueStack.Pop());
 							break;
 						case OpCode.IterPrep:
 							ExecIterPrep();
@@ -605,6 +630,15 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 
 			m_ValueStack.Push(DynValue.NewTuple(f, s, var));
+		}
+
+		void ExecAnnotX(string name, DynValue value)
+		{
+			ref var top = ref m_ValueStack.Peek();
+			if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+			var t = top.Table;
+			t.Annotations ??= new List<Annotation>();
+			t.Annotations.Add(new Annotation(name, value));
 		}
 		
 		private int ExecJFor(Instruction i, int instructionPtr)
@@ -1510,7 +1544,14 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitI(Instruction i)
 		{
 			// stack: tbl - val,val,val
-			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			DynValue tbl = i.NumVal3 switch
+			{
+				0 => m_ValueStack.Peek(i.NumVal),
+				1 => DynValue.NewTable(m_Script),
+				2 => DynValue.NewPrimeTable(),
+				_ => throw new InternalErrorException("TblInitI NumVal3 invalid")
+			};
+
 			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
@@ -1518,6 +1559,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
 			}
 			m_ValueStack.RemoveLast(i.NumVal);
+			
+			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
 		}
 
 		private void ExecNewRange(Instruction i)
@@ -1551,7 +1594,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitN(Instruction i)
 		{
 			// stack: tbl - key - val
-			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			DynValue tbl = i.NumVal2 switch
+			{
+				0 => m_ValueStack.Peek(i.NumVal),
+				1 => DynValue.NewTable(m_Script),
+				2 => DynValue.NewPrimeTable(),
+				_ => throw new InternalErrorException("TblInitN NumVal2 invalid")
+			};			
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
 			if (i.NumVal % 2 != 0)
@@ -1560,7 +1609,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				tbl.Table.Set(m_ValueStack.Peek(j), m_ValueStack.Peek(j - 1).ToScalar());
 			}
 			m_ValueStack.RemoveLast(i.NumVal);
-
+			
+			if (i.NumVal2 > 0) m_ValueStack.Push(tbl);
 		}
 
 		private int ExecIndexSet(Instruction i, int instructionPtr)
@@ -1586,6 +1636,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				{
 					case DataType.Table:
 					{
+						if (obj.Table.ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
+
 						if (!isMultiIndex)
 						{
 							//Don't do check for __newindex if there is no metatable to begin with

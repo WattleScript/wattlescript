@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Xml.Schema;
 using WattleScript.Interpreter.Debugging;
 
 namespace WattleScript.Interpreter.Execution.VM
@@ -195,6 +197,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
+		public int Emit_TabMeta(TableKind kind, bool isReadOnly)
+		{
+			return AppendInstruction(new Instruction(OpCode.TabMeta, (int) kind, isReadOnly ? 1 : 0));
+		}
+		
+
 		public int Emit_Pop(int num = 1)
 		{
 			return AppendInstruction(new Instruction(OpCode.Pop, num));
@@ -208,6 +216,124 @@ namespace WattleScript.Interpreter.Execution.VM
 		public void Emit_ThisCall(int argCount, string debugName)
 		{
 			AppendInstruction(new Instruction(OpCode.ThisCall, argCount, StringArg(debugName)));
+		}
+
+		private static IComparer<DynValue> arrayOrder => Comparer<DynValue>.Create((x, y) =>
+		{
+			if (x.Type == DataType.Number && y.Type == DataType.Number)
+			{
+				//Table indexing for shared tables starts at 1 and is integers only
+				//Move non-key numbers to the end
+				var l = x.Number;
+				// ReSharper disable once CompareOfFloatsByEqualityOperator
+				if(l < 1 || ((long)l) != l) l = Double.MaxValue;
+				var r = y.Number;
+				// ReSharper disable once CompareOfFloatsByEqualityOperator
+				if (r < 1 || ((long) r) != r) r = Double.MaxValue;
+				return l.CompareTo(r);
+			}
+			else
+				return 0;
+		});
+
+		void Emit_Table(Table t)
+		{
+			int itemCount = 0;
+			bool created = false;
+			double iKey = 1;
+			bool tblInitI = true;
+			//Sort the table pairs so we can minimise instructions used
+			//By emitting the array part first
+			foreach (var kvp in t.Pairs
+				         .OrderBy(x => x.Key.Type == DataType.Number ? 0 : 1)
+				         .ThenBy(x => x.Key, arrayOrder))
+			{
+				//Initialising array part
+				if (tblInitI)
+				{
+					// ReSharper disable once CompareOfFloatsByEqualityOperator
+					if (kvp.Key.Type == DataType.Number && kvp.Key.Number == iKey)
+					{
+						if (kvp.Value.Type == DataType.Table)
+							Emit_Table(kvp.Value.Table);
+						else
+							Emit_Literal(kvp.Value);
+						itemCount++;
+						iKey++;
+					}
+					else {
+						if (itemCount > 0) 
+						{
+							//We don't support tuples so we don't need lastpos
+							Emit_TblInitI(false, itemCount, 2);
+							created = true;
+						}
+						tblInitI = false;
+						Emit_Literal(kvp.Key);
+						if (kvp.Value.Type == DataType.Table)
+							Emit_Table(kvp.Value.Table);
+						else
+							Emit_Literal(kvp.Value);
+						itemCount = 1;
+					}
+				}
+				else {
+					//Named values
+					if (itemCount >= 8)
+					{
+						Emit_TblInitN(itemCount * 2, created ? 0 : 2);
+						created = true;
+						itemCount = 0;
+					}
+					Emit_Literal(kvp.Key);
+					if (kvp.Value.Type == DataType.Table)
+						Emit_Table(kvp.Value.Table);
+					else
+						Emit_Literal(kvp.Value);
+					itemCount++;
+				}
+			}
+			if (itemCount > 0 || !created) {
+				if (tblInitI && itemCount > 0)
+				{
+					Emit_TblInitI(false, itemCount, 2);
+				}
+				else {
+					Emit_TblInitN(itemCount * 2, created ? 0 : 2);
+				}
+			}
+		}
+		
+		public void Emit_Annot(Annotation annotation)
+		{
+			switch (annotation.Value.Type)
+			{
+				case DataType.Table:
+					Emit_Table(annotation.Value.Table);
+					AppendInstruction(new Instruction(OpCode.AnnotT) {NumValB = (uint) StringArg(annotation.Name)});
+					break;
+				case DataType.Nil:
+				case DataType.String:
+					AppendInstruction(new Instruction(OpCode.AnnotS, StringArg(annotation.Value.String))
+						{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				case DataType.Number:
+					// ReSharper disable once CompareOfFloatsByEqualityOperator
+					if((int)annotation.Value.Number == annotation.Value.Number)
+						AppendInstruction(new Instruction(OpCode.AnnotI, (int)annotation.Value.Number)
+							{NumValB = (uint)StringArg(annotation.Name)});
+					else
+						AppendInstruction(new Instruction(OpCode.AnnotN, NumberArg(annotation.Value.Number))
+							{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				case DataType.Boolean:
+					AppendInstruction(new Instruction(OpCode.AnnotB, annotation.Value.Boolean ? 1 : 0)
+						{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				default:
+					//Should never trigger
+					throw new InternalErrorException("Annotation value type invalid");
+			}
 		}
 
 		public int Emit_Literal(DynValue value)
@@ -352,11 +478,6 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Incr, i));
 		}
 
-		public int Emit_NewTable(bool shared)
-		{
-			return AppendInstruction(new Instruction(OpCode.NewTable, shared ? 1 : 0));
-		}
-
 		public int Emit_IterPrep()
 		{
 			return AppendInstruction(new Instruction(OpCode.IterPrep));
@@ -420,14 +541,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.ToNum, stage));
 		}
 		
-		public int Emit_TblInitN(int count)
+		public int Emit_TblInitN(int count, int create)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
+			return AppendInstruction(new Instruction(OpCode.TblInitN, count, create));
 		}
 
-		public int Emit_TblInitI(bool lastpos, int count)
+		public int Emit_TblInitI(bool lastpos, int count, int create)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0, (uint)create));
 		}
 
 		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false)

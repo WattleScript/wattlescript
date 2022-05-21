@@ -24,7 +24,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public abstract void ResolveScope(ScriptLoadingContext lcontext);
 
-		public abstract bool EvalLiteral(out DynValue dv);
+		public abstract bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null);
 
 		public void CompilePossibleLiteral(FunctionBuilder bc)
 		{
@@ -264,7 +264,7 @@ namespace WattleScript.Interpreter.Tree
 							Token openBrk = lcontext.Lexer.Current;
 							lcontext.Lexer.Next(); // skip bracket
 							Expression index = Expr(lcontext);
-							// support moonsharp multiple indexers for userdata
+							// support wattle multiple indexers for userdata
 							if (lcontext.Lexer.Current.Type == TokenType.Comma)
 							{
 								var explist = ExprListAfterFirstExpr(lcontext, index);

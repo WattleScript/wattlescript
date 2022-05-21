@@ -148,6 +148,7 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public static DynValue NewString(string str)
 		{
+			if (str == null) return new DynValue();
 			return new DynValue()
 			{
 				m_Object = str,

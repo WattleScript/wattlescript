@@ -1,5 +1,5 @@
 ﻿using System;
-using WattleScript.Interpreter.DataStructs;
+using System.Collections.Generic;
 using WattleScript.Interpreter.Execution;
 
 namespace WattleScript.Interpreter.Tree.Expressions
@@ -25,7 +25,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return m_Exp.Eval(context);
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
 			throw new InvalidOperationException();
 		}

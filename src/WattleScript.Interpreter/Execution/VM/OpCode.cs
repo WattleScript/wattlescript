@@ -19,11 +19,11 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushNumber, // Pushes a number to the v-stack
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
-		NewTable,	// Creates a new empty table on the stack
-		TblInitN,	// Initializes a table named entry
-		TblInitI,	// Initializes a table positional entry
+		TblInitN,	// Initializes NumVal named entries, NumVal2 0 = don't create, 1 = create normal, 2 = create shared
+		TblInitI,	// Initializes NumVal table positional entries, NumVal3 0 = don't create, 1 = create normal, 2 = create shared
 		NewRange,   // Creates a range from the v-stack
-
+		TabMeta,	// Sets v-stack top table kind and readonly flag. Does not pop
+		
 		StoreLcl, Local,
 		StoreUpv, Upvalue,
 		IndexSet, Index,
@@ -112,6 +112,15 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		JLclInit, // Inits a param value if a default one is specified and not provided at callsite.
 
+		// OOP
+		// AnnotX instructions, add annotation to table
+		//NumValB = annotation name string
+		AnnotI, //NumVal = int
+		AnnotN, //NumVal = number
+		AnnotS, //NumVal = string or nil
+		AnnotB, //NumVal = bool
+		AnnotT, //pop table from v-stack
+		
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}
