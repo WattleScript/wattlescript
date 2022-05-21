@@ -24,7 +24,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public abstract void ResolveScope(ScriptLoadingContext lcontext);
 
-		public abstract bool EvalLiteral(out DynValue dv);
+		public abstract bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null);
 
 		public void CompilePossibleLiteral(FunctionBuilder bc)
 		{

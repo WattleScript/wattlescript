@@ -269,6 +269,34 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewTable:
 							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
 							break;
+						case OpCode.TabMeta:
+						{
+							ref var top = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+							top.Table.Kind = (TableKind)i.NumVal;
+							top.Table.ReadOnly = i.NumVal2 != 0;
+							break;
+						}
+						case OpCode.AnnotI:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewNumber(i.NumVal));
+							break;
+						case OpCode.AnnotB:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewBoolean(i.NumVal != 0));
+							break;
+						case OpCode.AnnotS: 
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB], 
+								DynValue.NewString(currentFrame.Function.strings[i.NumVal]));
+							break;
+						case OpCode.AnnotN:
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB],
+								DynValue.NewNumber(currentFrame.Function.numbers[i.NumVal]));
+							break;
+						case OpCode.AnnotT:
+							if (m_ValueStack.Peek().Type != DataType.Table)
+								throw new InternalErrorException("v-stack top NOT table");
+							ExecAnnotX(currentFrame.Function.strings[i.NumValB],
+								m_ValueStack.Pop());
+							break;
 						case OpCode.IterPrep:
 							ExecIterPrep();
 							break;
@@ -605,6 +633,15 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 
 			m_ValueStack.Push(DynValue.NewTuple(f, s, var));
+		}
+
+		void ExecAnnotX(string name, DynValue value)
+		{
+			ref var top = ref m_ValueStack.Peek();
+			if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+			var t = top.Table;
+			t.Annotations ??= new List<Annotation>();
+			t.Annotations.Add(new Annotation(name, value));
 		}
 		
 		private int ExecJFor(Instruction i, int instructionPtr)
@@ -1586,6 +1623,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				{
 					case DataType.Table:
 					{
+						if (obj.Table.ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
+
 						if (!isMultiIndex)
 						{
 							//Don't do check for __newindex if there is no metatable to begin with

@@ -26,6 +26,7 @@ namespace WattleScript.Commands.Implementations
 			string targetFileName = p + "-compiled";
 
 			Script s = new Script(CoreModules.None);
+			s.Options.Syntax = context.Options.Syntax;
 			DynValue chunk = s.LoadFile(p);
 
 			using Stream stream = new FileStream(targetFileName, FileMode.Create, FileAccess.Write);

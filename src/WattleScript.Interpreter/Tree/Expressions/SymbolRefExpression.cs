@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -111,8 +112,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			return context.EvaluateSymbolByName(m_VarName);
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
+			//symbols argument is only used in enum construction to
+			//allow new members to use previous members.
+			if (symbols != null)
+			{
+				if (symbols.TryGetValue(m_VarName, out dv)) 
+					return true;
+				throw new SyntaxErrorException(T, "enum tried to use undefined value {0}", m_VarName);
+			}
 			dv = DynValue.Nil;
 			return false;
 		}

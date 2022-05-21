@@ -44,7 +44,7 @@ public class CLikeTestRunner
         string output = await File.ReadAllTextAsync(outputPath);
         StringBuilder stdOut = new StringBuilder();
 
-        Script script = new Script(CoreModules.Preset_HardSandboxWattle | CoreModules.PrototypeTable);
+        Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
         script.Options.InstructionLimit = 100_000_000;
         script.Options.DebugPrint = s => stdOut.AppendLine(s);
         script.Options.IndexTablesFrom = 0;
@@ -102,6 +102,11 @@ public class CLikeTestRunner
                 return;
             }
 
+            if (e is ScriptRuntimeException se)
+            {
+                Assert.Fail($"Test {path} did not pass.\nMessage: {se.DecoratedMessage}\n{e.StackTrace}");
+                return;
+            }
             Assert.Fail($"Test {path} did not pass.\nMessage: {e.Message}\n{e.StackTrace}");
         }
     }

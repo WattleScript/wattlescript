@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -122,10 +123,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 		}
 
-		public override bool EvalLiteral(out DynValue dv)
+		public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
 		{
 			dv = DynValue.Nil;
-			if (!m_Exp.EvalLiteral(out var v))
+			if (!m_Exp.EvalLiteral(out var v, symbols))
 			{
 				return false;
 			}

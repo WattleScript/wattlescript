@@ -19,7 +19,7 @@ namespace WattleScript.Interpreter.Execution
 		internal List<Annotation> ChunkAnnotations { get; set; } = new List<Annotation>();
 		internal List<Annotation> FunctionAnnotations { get; set; } = new List<Annotation>();
 
-
+		
 		public ScriptLoadingContext(Script s)
 		{
 			Script = s;

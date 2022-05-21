@@ -195,6 +195,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
+		public int Emit_TabMeta(TableKind kind, bool isReadOnly)
+		{
+			return AppendInstruction(new Instruction(OpCode.TabMeta, (int) kind, isReadOnly ? 1 : 0));
+		}
+		
+
 		public int Emit_Pop(int num = 1)
 		{
 			return AppendInstruction(new Instruction(OpCode.Pop, num));
@@ -208,6 +214,61 @@ namespace WattleScript.Interpreter.Execution.VM
 		public void Emit_ThisCall(int argCount, string debugName)
 		{
 			AppendInstruction(new Instruction(OpCode.ThisCall, argCount, StringArg(debugName)));
+		}
+
+		void Emit_Table(Table t)
+		{
+			Emit_NewTable(true);
+			int j = 0;
+			foreach (var kvp in t.Pairs)
+			{
+				if (j >= 8) {
+					Emit_TblInitN(j * 2);
+					j = 0;
+				}
+				Emit_Literal(kvp.Key);
+				if (kvp.Value.Type == DataType.Table) {
+					Emit_Table(kvp.Value.Table);
+				} else {
+					Emit_Literal(kvp.Value);
+				}
+				j++;
+			}
+			if (j > 0) {
+				Emit_TblInitN(j * 2);
+			}
+		}
+		
+		public void Emit_Annot(Annotation annotation)
+		{
+			switch (annotation.Value.Type)
+			{
+				case DataType.Table:
+					Emit_Table(annotation.Value.Table);
+					AppendInstruction(new Instruction(OpCode.AnnotT) {NumValB = (uint) StringArg(annotation.Name)});
+					break;
+				case DataType.Nil:
+				case DataType.String:
+					AppendInstruction(new Instruction(OpCode.AnnotS, StringArg(annotation.Value.String))
+						{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				case DataType.Number:
+					// ReSharper disable once CompareOfFloatsByEqualityOperator
+					if((int)annotation.Value.Number == annotation.Value.Number)
+						AppendInstruction(new Instruction(OpCode.AnnotI, (int)annotation.Value.Number)
+							{NumValB = (uint)StringArg(annotation.Name)});
+					else
+						AppendInstruction(new Instruction(OpCode.AnnotN, NumberArg(annotation.Value.Number))
+							{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				case DataType.Boolean:
+					AppendInstruction(new Instruction(OpCode.AnnotB, annotation.Value.Boolean ? 1 : 0)
+						{NumValB = (uint)StringArg(annotation.Name)});
+					break;
+				default:
+					//Should never trigger
+					throw new InternalErrorException("Annotation value type invalid");
+			}
 		}
 
 		public int Emit_Literal(DynValue value)

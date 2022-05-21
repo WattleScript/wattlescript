@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
 
@@ -54,7 +55,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
                 return exp2.Eval(context);
         }
 
-        public override bool EvalLiteral(out DynValue dv)
+        public override bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null)
         {
             if (condition.EvalLiteral(out var cond)) {
                 if (cond.CastToBool())

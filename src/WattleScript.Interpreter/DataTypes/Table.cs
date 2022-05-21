@@ -51,6 +51,18 @@ namespace WattleScript.Interpreter
 		/// Gets the script owning this resource.
 		/// </summary>
 		public Script OwnerScript { get; }
+		
+		/// <summary>
+		/// Gets/sets if this is a ReadOnly table.
+		/// Writing to a ReadOnly table will throw an exception
+		/// </summary>
+		public bool ReadOnly { get; set; }
+		
+		/// <summary>
+		/// Gets/sets the kind of table.
+		/// This is only for metadata purposes, and does not affect execution.
+		/// </summary>
+		public TableKind Kind { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
@@ -314,6 +326,7 @@ namespace WattleScript.Interpreter
 		/// <param name="value">The value.</param>
 		public void Set(object key, DynValue value)
 		{
+			if (ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
 			if (key == null)
 				throw ScriptRuntimeException.TableIndexIsNil();
 
@@ -333,6 +346,7 @@ namespace WattleScript.Interpreter
 		/// <param name="value">The value.</param>
 		public void Set(object[] keys, DynValue value)
 		{
+			if (ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
 			if (keys == null || keys.Length <= 0)
 				throw ScriptRuntimeException.TableIndexIsNil();
 
@@ -695,6 +709,11 @@ namespace WattleScript.Interpreter
 			set { this.CheckScriptOwnership(m_MetaTable); m_MetaTable = value; }
 		}
 		private Table m_MetaTable;
+		
+		/// <summary>
+		/// Gets/sets the annotations attached to this table.
+		/// </summary>
+		public List<Annotation> Annotations { get; set; }
 
 
 
