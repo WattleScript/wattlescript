@@ -218,12 +218,13 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		void Emit_Table(Table t)
 		{
-			Emit_NewTable(true);
 			int j = 0;
+			bool created = false;
 			foreach (var kvp in t.Pairs)
 			{
 				if (j >= 8) {
-					Emit_TblInitN(j * 2);
+					Emit_TblInitN(j * 2, created ? 0 : 2);
+					created = true;
 					j = 0;
 				}
 				Emit_Literal(kvp.Key);
@@ -234,8 +235,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				}
 				j++;
 			}
-			if (j > 0) {
-				Emit_TblInitN(j * 2);
+			if (j > 0 || !created) {
+				Emit_TblInitN(j * 2, created ? 0 : 2);
 			}
 		}
 		
@@ -413,11 +414,6 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Incr, i));
 		}
 
-		public int Emit_NewTable(bool shared)
-		{
-			return AppendInstruction(new Instruction(OpCode.NewTable, shared ? 1 : 0));
-		}
-
 		public int Emit_IterPrep()
 		{
 			return AppendInstruction(new Instruction(OpCode.IterPrep));
@@ -481,14 +477,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.ToNum, stage));
 		}
 		
-		public int Emit_TblInitN(int count)
+		public int Emit_TblInitN(int count, int create)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitN, count));
+			return AppendInstruction(new Instruction(OpCode.TblInitN, count, create));
 		}
 
-		public int Emit_TblInitI(bool lastpos, int count)
+		public int Emit_TblInitI(bool lastpos, int count, int create)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0, (uint)create));
 		}
 
 		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false)

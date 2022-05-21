@@ -266,9 +266,6 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecJFor(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
-						case OpCode.NewTable:
-							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
-							break;
 						case OpCode.TabMeta:
 						{
 							ref var top = ref m_ValueStack.Peek();
@@ -1547,7 +1544,14 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitI(Instruction i)
 		{
 			// stack: tbl - val,val,val
-			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			DynValue tbl = i.NumVal3 switch
+			{
+				0 => m_ValueStack.Peek(i.NumVal),
+				1 => DynValue.NewTable(m_Script),
+				2 => DynValue.NewPrimeTable(),
+				_ => throw new InternalErrorException("TblInitI NumVal3 invalid")
+			};
+
 			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
@@ -1555,6 +1559,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
 			}
 			m_ValueStack.RemoveLast(i.NumVal);
+			
+			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
 		}
 
 		private void ExecNewRange(Instruction i)
@@ -1588,7 +1594,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitN(Instruction i)
 		{
 			// stack: tbl - key - val
-			DynValue tbl = m_ValueStack.Peek(i.NumVal);
+			DynValue tbl = i.NumVal2 switch
+			{
+				0 => m_ValueStack.Peek(i.NumVal),
+				1 => DynValue.NewTable(m_Script),
+				2 => DynValue.NewPrimeTable(),
+				_ => throw new InternalErrorException("TblInitN NumVal2 invalid")
+			};			
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
 			if (i.NumVal % 2 != 0)
@@ -1597,7 +1609,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				tbl.Table.Set(m_ValueStack.Peek(j), m_ValueStack.Peek(j - 1).ToScalar());
 			}
 			m_ValueStack.RemoveLast(i.NumVal);
-
+			
+			if (i.NumVal2 > 0) m_ValueStack.Push(tbl);
 		}
 
 		private int ExecIndexSet(Instruction i, int instructionPtr)

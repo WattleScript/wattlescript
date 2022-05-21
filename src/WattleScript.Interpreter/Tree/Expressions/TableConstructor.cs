@@ -188,14 +188,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
-			bc.Emit_NewTable(m_Shared);
 			//Set pair values in groups of 8
 			int j = 0;
+			bool created = false;
+			int type = m_Shared ? 2 : 1;
 			foreach (var kvp in m_CtorArgs)
 			{
 				if (j >= 8)
 				{
-					bc.Emit_TblInitN(j * 2);
+					bc.Emit_TblInitN(j * 2, created ? 0 : type);
+					created = true;
 					j = 0;
 				}
 				kvp.Key.Compile(bc);
@@ -203,7 +205,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				j++;
 			}
 			if (j > 0) {
-				bc.Emit_TblInitN(j * 2);
+				bc.Emit_TblInitN(j * 2, created ? 0 : type);
+				created = true;
 			}
 			//Set positional values in groups of 16
 			j = 0;
@@ -211,15 +214,19 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			{
 				if ((i == m_PositionalValues.Count - 1 && j > 0)|| j >= 16)
 				{
-					bc.Emit_TblInitI(false, j);
+					bc.Emit_TblInitI(false, j, created ? 0 : type);
+					created = true;
 					j = 0;
 				}
 				m_PositionalValues[i].Compile(bc);
 				if (i == m_PositionalValues.Count - 1) {
-					bc.Emit_TblInitI(true, 1);
+					bc.Emit_TblInitI(true, 1, created ? 0 : type);
+					created = true;
 				}
 				j++;
 			}
+			//
+			if (!created) bc.Emit_TblInitN(0, type); //create empty table
 		}
 
 

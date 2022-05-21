@@ -23,7 +23,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Scalar:
 				case OpCode.IterUpd:
 				case OpCode.IterPrep:
-				case OpCode.NewTable:
 				case OpCode.Concat:
 				case OpCode.Add:
 				case OpCode.AddStr:
@@ -49,7 +48,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.MkTuple:
 				case OpCode.CloseUp:
 				case OpCode.StrFormat:
-				case OpCode.TblInitN:
 				case OpCode.LessEq:
 				case OpCode.Less:
 				case OpCode.Eq:
@@ -69,8 +67,8 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.CopyValue:
 				case OpCode.JLclInit:
 				case OpCode.Args:
-				case OpCode.TblInitI:
 				case OpCode.TabMeta:
+				case OpCode.TblInitN:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:
@@ -81,6 +79,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.StoreLcl:
 				case OpCode.StoreUpv:
 				case OpCode.NewRange:
+				case OpCode.TblInitI:
 					return InstructionFieldUsage.NumVal3 | InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Index:
 				case OpCode.IndexL:

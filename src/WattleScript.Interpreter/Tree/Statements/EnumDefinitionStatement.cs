@@ -74,13 +74,14 @@ namespace WattleScript.Interpreter.Tree.Statements
         public override void Compile(Execution.VM.FunctionBuilder bc)
         {
             bc.PushSourceRef(buildCode);
-            bc.Emit_NewTable(false);
             int j = 0;
+            bool created = false;
             foreach (var m in members)
             {
                 if (j >= 8)
                 {
-                    bc.Emit_TblInitN(j * 2);
+                    bc.Emit_TblInitN(j * 2, created ? 0 : 1);
+                    created = true;
                     j = 0;
                 }
                 bc.Emit_Literal(DynValue.NewString(m.Key));
@@ -88,8 +89,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                 j++;
             }
             if (j > 0) {
-                bc.Emit_TblInitN(j * 2);
+                bc.Emit_TblInitN(j * 2, created ? 0 : 1);
+                created = true;
             }
+            if (!created) bc.Emit_TblInitN(0, 1);
+            
             bc.PopSourceRef();
             bc.PushSourceRef(assignment);
             bc.Emit_TabMeta(TableKind.Enum, true);
