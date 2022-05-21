@@ -269,11 +269,12 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewTable:
 							m_ValueStack.Push(i.NumVal == 0 ? DynValue.NewTable(m_Script) : DynValue.NewPrimeTable());
 							break;
-						case OpCode.ReadOnly:
+						case OpCode.TabMeta:
 						{
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
-							top.Table.ReadOnly = true;
+							top.Table.Kind = (TableKind)i.NumVal;
+							top.Table.ReadOnly = i.NumVal2 != 0;
 							break;
 						}
 						case OpCode.AnnotI:

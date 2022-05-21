@@ -195,9 +195,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
-		public int Emit_ReadOnly()
+		public int Emit_TabMeta(TableKind kind, bool isReadOnly)
 		{
-			return AppendInstruction(new Instruction(OpCode.ReadOnly));
+			return AppendInstruction(new Instruction(OpCode.TabMeta, (int) kind, isReadOnly ? 1 : 0));
 		}
 		
 

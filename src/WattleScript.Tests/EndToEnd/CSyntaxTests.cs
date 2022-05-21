@@ -425,6 +425,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             enum MyEnum { }
             ");
             Assert.AreEqual("annotation", s.Globals.Get("MyEnum").Table.Annotations[0].Name);
+            Assert.AreEqual(TableKind.Enum, s.Globals.Get("MyEnum").Table.Kind);
         }
 
         [Test]

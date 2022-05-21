@@ -57,6 +57,12 @@ namespace WattleScript.Interpreter
 		/// Writing to a ReadOnly table will throw an exception
 		/// </summary>
 		public bool ReadOnly { get; set; }
+		
+		/// <summary>
+		/// Gets/sets the kind of table.
+		/// This is only for metadata purposes, and does not affect execution.
+		/// </summary>
+		public TableKind Kind { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
