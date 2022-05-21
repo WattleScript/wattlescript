@@ -27,7 +27,7 @@ internal partial class Parser
     private string? source;
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
-    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch"};
+    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch", "enum"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
@@ -72,6 +72,7 @@ internal partial class Parser
             { "switch", ParseKeywordSwitch },
             { "else", ParseKeywordInvalidElse },
             { "elseif", ParseKeywordInvalidElseIf },
+            { "enum", ParseKeywordEnum },
         };
     }
     
@@ -732,7 +733,7 @@ internal partial class Parser
          * - looking for a } in case we've entered from a code block
          * - looking for a ) when entered from an explicit expression
          */
-        void ParseCodeBlock(bool keepOpeningBrk, bool keepClosingBrk)
+        bool ParseCodeBlock(bool keepOpeningBrk, bool keepClosingBrk)
         {
             parsingBlock = true;
             bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
@@ -767,7 +768,13 @@ internal partial class Parser
                 // Safety measure. If something unexpected goes wrong we could deadlock here
                 if (lastPos == pos)
                 {
-                    Throw("Internal parser error (infinite loop detected). Please open an issue with the template you are parsing here - https://github.com/WattleScript/wattlescript. We are sorry for the inconvenience.");
+                    // If we are only one char before end of the stream, we are missing closing }
+                    if (source != null && source.Length - pos <= 1)
+                    {
+                        return Throw("Missing closing } at the of the template");
+                    }
+                    
+                    return Throw("Internal parser error (infinite loop detected). Please open an issue with the template you are parsing here - https://github.com/WattleScript/wattlescript. We are sorry for the inconvenience.");
                 }
                 
                 lastPos = pos;
@@ -780,6 +787,7 @@ internal partial class Parser
             
             AddToken(TokenTypes.BlockExpr);
             parsingBlock = false;
+            return true;
         }
         
         bool LastStoredCharMatches(params char[] chars)

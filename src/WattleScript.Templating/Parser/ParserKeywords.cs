@@ -33,6 +33,13 @@ internal partial class Parser
         return false;
     }
 
+    // enum Enum {}
+    // parser has to be positioned after "enum", at name Ident
+    bool ParseKeywordEnum()
+    {
+        return ParseGenericKeywordWithIdentBlock("enum");
+    }
+
     // for (i in a..b)
     // for (i = 0; i < x; i++) 
     // for (;;)
@@ -147,16 +154,14 @@ internal partial class Parser
     bool ParseGenericBrkKeywordWithBlock(string keyword)
     {
         bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
-        string l = GetCurrentLexeme();
-
+     
         if (!openBrkMatched)
         {
             Throw($"Expected ( after {keyword}");
         }
         
         bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);
-        l = GetCurrentLexeme();
-
+  
         if (!endExprMatched)
         {
             return false;
@@ -166,11 +171,24 @@ internal partial class Parser
         return true;
     }
     
+    // keyword IDENT {}
+    bool ParseGenericKeywordWithIdentBlock(string keyword)
+    {
+        ParseWhitespaceAndNewlines(Sides.Client);
+        string ident = ParseLiteralStartsWithAlpha(Sides.Client);
+
+        if (string.IsNullOrWhiteSpace(ident)) // ident starts with non Alpha
+        {
+            return Throw($"Expected enum name starting with Alpha, got {Peek()}");
+        }
+        
+        return ParseGenericKeywordWithBlock(keyword);
+    }
+    
     // keyword {}
     bool ParseGenericKeywordWithBlock(string keyword)
     {
         bool openBrkMatched = MatchNextNonWhiteSpaceChar('{');
-        string l = GetCurrentLexeme();
 
         if (!openBrkMatched)
         {
@@ -185,8 +203,7 @@ internal partial class Parser
     bool ParseGenericBrkKeywordWithoutBlock(string keyword)
     {
         bool openBrkMatched = MatchNextNonWhiteSpaceChar('(');
-        string l = GetCurrentLexeme();
-
+   
         if (!openBrkMatched)
         {
             Throw($"Expected ( after {keyword}");

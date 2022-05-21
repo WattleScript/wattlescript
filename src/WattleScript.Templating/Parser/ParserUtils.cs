@@ -292,7 +292,7 @@ internal partial class Parser
 
     void FatalIfInBlock(string message)
     {
-        Exception e = new Exception(message);
+        Exception e = new TemplatingEngineException(line, col, pos, message, source ?? "");
         
         if (parsingBlock)
         {
@@ -352,7 +352,7 @@ internal partial class Parser
 
     bool Throw(string message)
     {
-        throw new Exception(message);
+        throw new TemplatingEngineException(line, col, pos, message, source ?? "");
     }
 
     void SetParsingControlChars(bool enabled)

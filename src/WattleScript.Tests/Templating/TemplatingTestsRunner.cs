@@ -21,6 +21,16 @@ public class TemplatingTestsRunner
     private static Filter filter = Filter.Tests;
     private List<TagHelper> tagHelpers = new List<TagHelper>();
     
+    public static string Snippet(string str, int pivot, int n)
+    {
+        int expectedStart = pivot - n;
+        int realStart = Math.Max(0, str.Length > expectedStart ? expectedStart : str.Length);
+        int expectedLen = 2 * n;
+        int realLen = Math.Max(str.Length - realStart > expectedLen ? expectedLen : str.Length - realStart, 0);
+
+        return str.Substring(realStart, realLen);
+    }
+
     enum Filter
     {
         Tests,
@@ -40,16 +50,6 @@ public class TemplatingTestsRunner
         return index == min && s1.Length == s2.Length ? -1 : index;
     }
 
-    static string strSnippet(string str, int pivot, int n)
-    {
-        int nR = Math.Min(str.Length - pivot, n);
-        int nL = pivot - n > 0 ? pivot - n : 0;
-        int tL = pivot - n > 0 ? n : n - pivot;
-
-        return "";
-        return $"{str.Substring(nL, tL)}{str.Substring(pivot, nR)}";
-    }
-    
     static string[] GetTestCases()
     {
         string[] files = Directory.GetFiles(ROOT_FOLDER, "*.wthtml*", SearchOption.AllDirectories);
@@ -96,7 +96,7 @@ public class TemplatingTestsRunner
         {
             string code = await File.ReadAllTextAsync(path);
             
-            Script script = new Script(CoreModules.Preset_HardSandbox);
+            Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
             script.Options.IndexTablesFrom = 0;
             script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
             script.Options.Syntax = ScriptSyntax.Wattle;
@@ -130,7 +130,6 @@ public class TemplatingTestsRunner
     public async Task RunCore(string path, bool reportErrors = false)
     {
         string outputPath = path.Replace(".wthtml", ".html");
-        bool throwOnAe = true;
 
         if (!File.Exists(outputPath))
         {
@@ -141,7 +140,7 @@ public class TemplatingTestsRunner
         string code = await File.ReadAllTextAsync(path);
         string output = await File.ReadAllTextAsync(outputPath);
 
-        Script script = new Script(CoreModules.Preset_HardSandbox);
+        Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
         script.Options.IndexTablesFrom = 0;
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Options.Syntax = ScriptSyntax.Wattle;
@@ -167,14 +166,12 @@ public class TemplatingTestsRunner
         if (reportErrors)
         {
             script.Options.ParserErrorMode = ScriptOptions.ParserErrorModes.Report;
-            rr = await tmp.Render(code);
+            await tmp.Render(code);
             return;
         }
 
         try
         {
-            //string debugStr = tmp.Debug(code);
-            
             rr = await tmp.Render(code);
 
             if (string.Equals(output, rr.Output))
@@ -183,10 +180,9 @@ public class TemplatingTestsRunner
             }
             else
             {
-                throwOnAe = false;
                 int difIndex = strDifIndex(output, rr.Output);
-                string diffSnippet = strSnippet(rr.Output, difIndex, 50);
-                string expectedSnippet = strSnippet(output, difIndex, 50);
+                string diffSnippet = Snippet(rr.Output, difIndex, 50);
+                string expectedSnippet = Snippet(output, difIndex, 50);
                 
                 Assert.Fail($"Test failed. Output and expected HTML are not equal.\nFirst difference at index: {difIndex}\nOutput near diff: {diffSnippet}\nExpected near diff: {expectedSnippet}\n---------------------- Expected ----------------------\n{output}\n---------------------- But was------------------------\n{rr.Output}\n------------------------------------------------------\n");
             }
@@ -206,6 +202,12 @@ public class TemplatingTestsRunner
             
             if (path.ToLowerInvariant().Contains("invalid"))
             {
+                if (e is TemplatingEngineException tee)
+                {
+                    Assert.Pass($"Crashed as expected:\n{tee.FormatedMessage}");
+                    return;
+                }
+                
                 Assert.Pass($"Crashed as expected: {e.Message}");
                 return;
             }

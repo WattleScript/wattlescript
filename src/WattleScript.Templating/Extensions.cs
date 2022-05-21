@@ -38,4 +38,33 @@ internal static class Extensions
         int pos = text.IndexOf(search, StringComparison.Ordinal);
         return pos < 0 ? text : string.Concat(text[..pos], replace, text.AsSpan(pos + search.Length));
     }
+    
+    public static Tuple<string, bool> Snippet(this string str, int pivot, int n)
+    {
+        bool clamped = false;
+        
+        int expectedStart = pivot - n;
+        int realStart = Math.Max(0, str.Length > expectedStart ? expectedStart : str.Length);
+        int expectedLen = 2 * n;
+        int realLen = Math.Max(str.Length - realStart > expectedLen ? expectedLen : str.Length - realStart, 0);
+
+        if (str.Length - realStart < expectedLen)
+        {
+            clamped = true;
+        }
+
+        string snippet = str.Substring(realStart, realLen);
+
+        /*if (realStart > 0) // text continues before snippet
+        {
+            snippet = $"««{snippet}";
+        }
+
+        if (str.Length > realStart + realLen) // text continues after snippet
+        {
+            snippet = $"{snippet}»»";
+        }*/
+
+        return new Tuple<string, bool>(snippet, clamped);
+    }
 } 
