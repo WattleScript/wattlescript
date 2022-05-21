@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Xml.Schema;
 using WattleScript.Interpreter.Debugging;
 
 namespace WattleScript.Interpreter.Execution.VM
@@ -216,27 +218,89 @@ namespace WattleScript.Interpreter.Execution.VM
 			AppendInstruction(new Instruction(OpCode.ThisCall, argCount, StringArg(debugName)));
 		}
 
+		private static IComparer<DynValue> arrayOrder => Comparer<DynValue>.Create((x, y) =>
+		{
+			if (x.Type == DataType.Number && y.Type == DataType.Number)
+			{
+				//Table indexing for shared tables starts at 1 and is integers only
+				//Move non-key numbers to the end
+				var l = x.Number;
+				// ReSharper disable once CompareOfFloatsByEqualityOperator
+				if(l < 1 || ((long)l) != l) l = Double.MaxValue;
+				var r = y.Number;
+				// ReSharper disable once CompareOfFloatsByEqualityOperator
+				if (r < 1 || ((long) r) != r) r = Double.MaxValue;
+				return l.CompareTo(r);
+			}
+			else
+				return 0;
+		});
+
 		void Emit_Table(Table t)
 		{
-			int j = 0;
+			int itemCount = 0;
 			bool created = false;
-			foreach (var kvp in t.Pairs)
+			double iKey = 1;
+			bool tblInitI = true;
+			//Sort the table pairs so we can minimise instructions used
+			//By emitting the array part first
+			foreach (var kvp in t.Pairs
+				         .OrderBy(x => x.Key.Type == DataType.Number ? 0 : 1)
+				         .ThenBy(x => x.Key, arrayOrder))
 			{
-				if (j >= 8) {
-					Emit_TblInitN(j * 2, created ? 0 : 2);
-					created = true;
-					j = 0;
+				//Initialising array part
+				if (tblInitI)
+				{
+					// ReSharper disable once CompareOfFloatsByEqualityOperator
+					if (kvp.Key.Type == DataType.Number && kvp.Key.Number == iKey)
+					{
+						if (kvp.Value.Type == DataType.Table)
+							Emit_Table(kvp.Value.Table);
+						else
+							Emit_Literal(kvp.Value);
+						itemCount++;
+						iKey++;
+					}
+					else {
+						if (itemCount > 0) 
+						{
+							//We don't support tuples so we don't need lastpos
+							Emit_TblInitI(false, itemCount, 2);
+							created = true;
+						}
+						tblInitI = false;
+						Emit_Literal(kvp.Key);
+						if (kvp.Value.Type == DataType.Table)
+							Emit_Table(kvp.Value.Table);
+						else
+							Emit_Literal(kvp.Value);
+						itemCount = 1;
+					}
 				}
-				Emit_Literal(kvp.Key);
-				if (kvp.Value.Type == DataType.Table) {
-					Emit_Table(kvp.Value.Table);
-				} else {
-					Emit_Literal(kvp.Value);
+				else {
+					//Named values
+					if (itemCount >= 8)
+					{
+						Emit_TblInitN(itemCount * 2, created ? 0 : 2);
+						created = true;
+						itemCount = 0;
+					}
+					Emit_Literal(kvp.Key);
+					if (kvp.Value.Type == DataType.Table)
+						Emit_Table(kvp.Value.Table);
+					else
+						Emit_Literal(kvp.Value);
+					itemCount++;
 				}
-				j++;
 			}
-			if (j > 0 || !created) {
-				Emit_TblInitN(j * 2, created ? 0 : 2);
+			if (itemCount > 0 || !created) {
+				if (tblInitI && itemCount > 0)
+				{
+					Emit_TblInitI(false, itemCount, 2);
+				}
+				else {
+					Emit_TblInitN(itemCount * 2, created ? 0 : 2);
+				}
 			}
 		}
 		
