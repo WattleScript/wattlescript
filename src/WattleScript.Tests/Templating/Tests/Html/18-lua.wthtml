@@ -1,0 +1,76 @@
+@{
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+<HEAD>
+    <TITLE>Lua: demo</TITLE>
+    <BASE HREF="https://www.lua.org/">
+    <LINK REL="stylesheet" TYPE="text/css" HREF="lua.css">
+    <META HTTP-EQUIV="content-type" CONTENT="text/html; charset=utf-8">
+    <STYLE TYPE="text/css">
+        textarea {
+            font-family: monospace ;
+        }
+
+        input {
+            margin-right: 1em ;
+        }
+    </STYLE>
+</HEAD>
+
+<BODY>
+
+<H1>
+    <A HREF="home.html"><IMG SRC="images/logo.gif" ALT="Lua"></A>
+    Demo
+</H1>
+
+<P>
+    Try Lua before
+    <A HREF="download.html">downloading</A> it.
+    Enter your Lua program
+    or
+    choose one of the demo programs below.
+
+<DIV CLASS="menubar">
+    <A HREF="cgi-bin/demo?hello">hello</A>
+    &middot;
+    <A HREF="cgi-bin/demo?globals">globals</A>
+    &middot;
+    <A HREF="cgi-bin/demo?bisect">bisect</A>
+    &middot;
+    <A HREF="cgi-bin/demo?sieve">sieve</A>
+    &middot;
+    <A HREF="cgi-bin/demo?account">account</A>
+</DIV>
+
+<P>
+<FORM ACTION="cgi-bin/demo" METHOD="POST">
+<TEXTAREA ROWS="16" COLS="80" NAME="input" maxlength="2000">
+if ("sda") then
+print("yes")
+end</TEXTAREA>
+    <P>
+        <INPUT TYPE="submit" VALUE="run">
+        <INPUT TYPE="button" VALUE="clear" onclick="this.form.elements['input'].value=''">
+        <INPUT TYPE="reset" VALUE="restore">
+        <INPUT TYPE="button" VALUE="restart" onclick="window.location.href='/demo.html'">
+</FORM>
+
+<H2>Output</H2>
+<TEXTAREA ROWS="8" COLS="80">
+yes
+
+</TEXTAREA><P><IMG SRC="images/ok.png" ALIGN="absbottom">
+    Your program ran successfully.
+    <!-- 
+    </TEXTAREA><P><IMG SRC="images/alert.png" ALIGN="absbottom">
+    Your program was aborted.<!-- -->
+
+<P>
+    <SMALL>
+        Lua 5.4.4  Copyright (C) 1994-2022 Lua.org, PUC-Rio
+    </SMALL>
+
+</BODY>
+</HTML>
+}

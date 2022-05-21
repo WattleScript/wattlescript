@@ -40,7 +40,7 @@ public sealed class TemplatingEngineException : Exception
         }
         
         StringBuilder decorBuilder = new StringBuilder();
-        for (int i = 0; i < decorCol; i++)
+        for (int i = 0; i < decorCol - 1; i++)
         {
             decorBuilder.Append('-');
         }

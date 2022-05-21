@@ -1,0 +1,73 @@
+@{
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width">
+    <meta name="apple-itunes-app" content="app-id=1028024655">
+    <link rel="manifest" href="manifest.json">
+    <title rg-page-title delimiter="{{' – '}}" no-title="YouTrack"></title>
+
+
+    <base href="/">
+
+
+    <link rel="shortcut icon" href="static/favicon.ico?3c05e1a5b709165a5c4e825adf27273a?3c05e1a5b709165a5c4e825adf27273a" type="image/x-icon" sizes="16x16 32x32"/>
+    <link rel="apple-touch-icon" sizes="57x57" href="static/apple-touch-icon-57x57.png?08ad18610d33e5d80f11285969f79154?08ad18610d33e5d80f11285969f79154"/>
+    <link rel="apple-touch-icon" sizes="60x60" href="static/apple-touch-icon-60x60.png?c857bbfdd136ecb672c1c97a40a5d92a?c857bbfdd136ecb672c1c97a40a5d92a"/>
+    <link rel="apple-touch-icon" sizes="72x72" href="static/apple-touch-icon-72x72.png?c00429bb17a866c51145c64981996782?c00429bb17a866c51145c64981996782"/>
+    <link rel="apple-touch-icon" sizes="76x76" href="static/apple-touch-icon-76x76.png?2536d866794252b094fa608aeb9bba64?2536d866794252b094fa608aeb9bba64"/>
+    <link rel="apple-touch-icon" sizes="114x114" href="static/apple-touch-icon-114x114.png?5b113f013d7f100264e13737b8736ad7?5b113f013d7f100264e13737b8736ad7"/>
+    <link rel="apple-touch-icon" sizes="120x120" href="static/apple-touch-icon-120x120.png?1e13f8c25f7aac520c0e2814c41fdd23?1e13f8c25f7aac520c0e2814c41fdd23"/>
+    <link rel="apple-touch-icon" sizes="144x144" href="static/apple-touch-icon-144x144.png?1262da880e4d6fa7e1bace34c210f316?1262da880e4d6fa7e1bace34c210f316"/>
+    <link rel="apple-touch-icon" sizes="152x152" href="static/apple-touch-icon-152x152.png?ffac9edeefe8ca09d3cf0c4244afe54f?ffac9edeefe8ca09d3cf0c4244afe54f"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="static/apple-touch-icon-180x180.png?ae4b3cb0ef29fa2d45af1c1081c52da0?ae4b3cb0ef29fa2d45af1c1081c52da0"/>
+    <link rel="mask-icon" href="static/apple-mask-icon.svg?68c959aed7d5ecb39cf1ea6c4c403ae5?68c959aed7d5ecb39cf1ea6c4c403ae5" color="black"/>
+    <meta name="msapplication-TileColor" content="#000000"/>
+    <meta name="msapplication-TileImage" content="static/mstile-144x144.png?5beb0d2f9eaf3fae60258456fdf18dbe?5beb0d2f9eaf3fae60258456fdf18dbe"/>
+    <meta name="msapplication-square70x70logo" content="static/mstile-70x70.png?28910eadc2cab3c6dfd0cc64f5de5ce4?28910eadc2cab3c6dfd0cc64f5de5ce4"/>
+    <meta name="msapplication-square150x150logo" content="static/mstile-150x150.png?ee6ffc43953cfc59a448b68e0e825d59?ee6ffc43953cfc59a448b68e0e825d59"/>
+    <meta name="msapplication-wide310x150logo" content="static/mstile-310x150.png?3467f449e8b8a106c6a9a257c428cec4?3467f449e8b8a106c6a9a257c428cec4"/>
+    <meta name="msapplication-square310x310logo" content="static/mstile-310x310.png?e2e433c3175e3bfb61ad1bf7ab98b7c4?e2e433c3175e3bfb61ad1bf7ab98b7c4"/>
+</head>
+<body class="global" rg-shortcuts-app shortcuts-loop>
+
+<div class="app" ng-if="$root.isBootstrapped">
+    <div class="app__container">
+        <yt-header class="app__header"></yt-header>
+
+        <div ng-if="$root.applicationError" style="min-height: 360px;">
+            <yt-error code="{{$root.applicationError.status}}" guest="$root.applicationError.guest"></yt-error>
+        </div>
+
+        <div ng-if="!$root.applicationError" class="app__view-container">
+            <div class="app__view" ng-view></div>
+        </div>
+    </div>
+    <yt-footer class="app__footer"></yt-footer>
+</div>
+<div rg-dialog=""></div>
+
+<yt-splash-screen ng-if="!$root.isBootstrapped"></yt-splash-screen>
+<yt-page-loader></yt-page-loader>
+
+<div data-nosnippet id="ring-old-browsers-message" class="ring-old-browsers-message ring-old-browsers-message_hidden" hidden>
+    <span id="ring-old-browsers-message__smile" class="ring-old-browsers-message__smile" ng-non-bindable>{{ (&gt;_&lt;) }}</span>
+    <br/><br/>
+    <span id="ring-old-browsers-message__browser-message">This version of your browser is not supported.<br/>
+          Try upgrading to the latest stable version.</span>
+    <span id="ring-old-browsers-message__error-message">Something went seriously wrong.</span>
+    <br/><br/>
+    <!--[if IE 9]>
+    <span>When using IE9.0 or higher, make sure that compatibility mode is disabled.</span>
+    <![endif]-->
+</div>
+
+<script src="static/vendor.4c3024f55db0b9b3d903.js"></script>
+<script src="static/app.d66d27a297b7421184fb.js"></script>
+
+</body>
+</html>
+}

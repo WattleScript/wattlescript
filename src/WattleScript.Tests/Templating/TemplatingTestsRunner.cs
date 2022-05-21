@@ -34,6 +34,7 @@ class TemplatingTestsScriptLoader : ScriptLoaderBase
 public class TemplatingTestsRunner
 {
     private const bool COMPILE_TAG_HELPERS = true;
+    private const bool RUN_SLOW_TESTS = false;
     
     private const string ROOT_FOLDER = "Templating/Tests";
     private static Filter filter = Filter.Tests;
@@ -170,8 +171,16 @@ public class TemplatingTestsRunner
         
         TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers);
         TemplatingEngine.RenderResult rr = null;
-        ;
-        
+
+        if (path.Contains("slow"))
+        {
+            if (!RUN_SLOW_TESTS)
+            {
+                Assert.Pass($"Test {path} skipped due to being marked as 'slow' and RUN_SLOW_TESTS set to 'false'");
+                return;
+            }
+        }
+
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");

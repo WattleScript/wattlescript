@@ -180,7 +180,7 @@ internal partial class Parser
      
         if (!openBrkMatched)
         {
-            Throw($"Expected ( after {keyword}");
+            Throw($"Expected '(' after {keyword}");
         }
         
         bool endExprMatched = ParseUntilBalancedChar('(', ')', true, true, true);

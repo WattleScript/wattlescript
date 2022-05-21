@@ -1,0 +1,7 @@
+@#define X
+<div>test:</div>
+@#else !X
+NO
+@#else
+YES
+@#endif
