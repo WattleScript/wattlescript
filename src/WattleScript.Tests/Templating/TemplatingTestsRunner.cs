@@ -128,7 +128,7 @@ public class TemplatingTestsRunner
             
             try
             {
-                await tmp.ParseTagHelper(code);
+                DynValue tagDv = await tmp.ParseTagHelper(code);
                 tagHelpers.AddRange(tmp.tagHelpers);
             }
             catch (Exception e)

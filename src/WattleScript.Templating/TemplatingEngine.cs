@@ -280,7 +280,7 @@ public class TemplatingEngine
         return finalText;
     }
 
-    public async Task ParseTagHelper(string code)
+    public async Task<DynValue> ParseTagHelper(string code)
     {
         stdOut.Clear();
 
@@ -292,7 +292,7 @@ public class TemplatingEngine
         if (renderFn == null)
         {
             // [todo] err, mandatory Render() not found
-            return;
+            return dv;
         }
 
         IReadOnlyList<Annotation>? annots = dv.Function.Annotations;
@@ -300,7 +300,7 @@ public class TemplatingEngine
         if (annots == null)
         {
             // [todo] err, mandatory annot "name" not found
-            return;
+            return dv;
         }
         
         Annotation? nameAnnot = annots.FirstOrDefault(x => x.Name == "name");
@@ -308,13 +308,13 @@ public class TemplatingEngine
         if (nameAnnot == null)
         {
             // [todo] err, mandatory annot "name" not found
-            return;
+            return dv;
         }
 
         if (nameAnnot.Value.Type != DataType.Table)
         {
             // [todo] err, annot not valid, possibly wrong annot mode is used
-            return;
+            return dv;
         }
         
         Table tbl = nameAnnot.Value.Table;
@@ -322,7 +322,7 @@ public class TemplatingEngine
         if (tbl.Length < 1)
         {
             // [todo] err, annot "name" is empty
-            return;
+            return dv;
         }
 
         DynValue nameDv = tbl.Values.First();
@@ -330,7 +330,7 @@ public class TemplatingEngine
         if (nameDv.Type != DataType.String)
         {
             // [todo] err, annot "name" is something else than string
-            return;
+            return dv;
         }
 
         string name = nameDv.String;
@@ -338,10 +338,12 @@ public class TemplatingEngine
         if (string.IsNullOrWhiteSpace(name))
         {
             // [todo] err, annot "name" is empty
-            return;
+            return dv;
         }
         
         tagHelpers.Add(new TagHelper(nameDv.String, transpiledTemplate));
+
+        return dv;
     }
 
     public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)

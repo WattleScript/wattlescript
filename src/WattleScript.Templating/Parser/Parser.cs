@@ -221,7 +221,7 @@ internal partial class Parser
     {
         while (!IsAtEnd())
         {
-            if (Peek() == ' ' || Peek() == '\n' || Peek() == '\r')
+            if (IsWhitespaceOrNewline(Peek()))
             {
                 Step();
             }
@@ -357,7 +357,7 @@ internal partial class Parser
             {
                 Step();
                 Step();
-                RemoveLastCharFromCurrentLexeme();
+                RemoveLastCharFromCurrentLexeme(false);
                 return true;
             }
 
@@ -452,6 +452,7 @@ internal partial class Parser
                 if (Peek() == '<' && IsHtmlTagOpeningChar(Peek(2)))
                 {
                     ParseHtmlTag(null);
+                    continue;
                 }
 
                 Step();
@@ -475,8 +476,8 @@ internal partial class Parser
                 {
                     Step();
                     Step();
-                    RemoveLastCharFromCurrentLexeme();
-                    RemoveLastCharFromCurrentLexeme(); // eat and discard closing *@
+                    RemoveLastCharFromCurrentLexeme(false);
+                    RemoveLastCharFromCurrentLexeme(false); // eat and discard closing *@
                     AddToken(TokenTypes.Comment);
                     break;
                 }
@@ -485,13 +486,21 @@ internal partial class Parser
             }
         }
         
-        void RemoveLastCharFromCurrentLexeme()
+        void RemoveLastCharFromCurrentLexeme(bool discardWhitespace)
         {
             if (GetCurrentLexeme().Length > 0)
             {
                 string str = currentLexeme.ToString()[..^1];
                 currentLexeme.Clear();
                 currentLexeme.Append(str);
+
+                if (discardWhitespace)
+                {
+                    if (str.EndsWith('\n') || str.EndsWith('\r') || str.EndsWith(" ") || str.EndsWith('\t') || str.EndsWith('\v') || str.EndsWith('\f'))
+                    {
+                        RemoveLastCharFromCurrentLexeme(discardWhitespace);
+                    }
+                }
             }
         }
 
@@ -504,7 +513,7 @@ internal partial class Parser
             * @! - explicit escape expression 
             * @TKeyword - if, for, while, do...
             * @TBannedKeyword - else, elseif
-            * @ContrainedLiteral - eg. @myVar. First char has to be either alpha or underscore (eg. @8 is invalid)
+            * @ConstrainedLiteral - eg. @myVar. First char has to be either alpha or underscore (eg. @8 is invalid)
             * ---------
             * If a valid transition has not been found
             * - if we found TBannedKeyword - we stash an errror, resume parsing client side. We should report: "@ can't be followed by a reserved keyword 'else'. Please remove the @ symbol at line X, char Y."
@@ -517,8 +526,7 @@ internal partial class Parser
             
             switch (c)
             {
-                case '{':
-                    Step();
+                case '{': // code blocks expect to start at {
                     ParseCodeBlock(false, false);
                     break;
                 case '(':
@@ -737,18 +745,13 @@ internal partial class Parser
         bool ParseCodeBlock(bool keepOpeningBrk, bool keepClosingBrk)
         {
             parsingBlock = true;
-            bool matchedOpenBrk = MatchNextNonWhiteSpaceChar('{');
-            string l = GetCurrentLexeme();
-            if (l == "{")
+            bool matchBrk = MatchNextNonWhiteSpaceChar('{');
+
+            if (matchBrk && !keepOpeningBrk)
             {
-                matchedOpenBrk = true;
+                RemoveLastCharFromCurrentLexeme(false);
             }
-            
-            if (matchedOpenBrk && !keepOpeningBrk)
-            {
-                RemoveLastCharFromCurrentLexeme();
-            }
-            
+
             AddToken(TokenTypes.BlockExpr);
 
             int lastPos = pos;
@@ -783,7 +786,7 @@ internal partial class Parser
             
             if (!keepClosingBrk && currentLexeme.Length > 0)
             {
-                RemoveLastCharFromCurrentLexeme();
+                RemoveLastCharFromCurrentLexeme(false);
             }
             
             AddToken(TokenTypes.BlockExpr);
