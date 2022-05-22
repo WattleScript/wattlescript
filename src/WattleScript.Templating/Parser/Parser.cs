@@ -832,6 +832,25 @@ internal partial class Parser
             
             return false;
         }
+        
+        void HandleServerSideSingleLineComment()
+        {
+            Step();
+
+            if (LastStoredCharMatches(1, '\\')) // check that / symbol is not escaped
+            {
+                return;
+            }
+
+            while (!IsAtEnd())
+            {
+                char cc = Step();
+                if (cc == '\n')
+                {
+                    break;
+                }
+            }
+        }
 
         /* A point of transition can be
          * <Alpha where char preceding < is either semicolon or newline
@@ -842,7 +861,7 @@ internal partial class Parser
             char stringChar = ' ';
             bool inMultilineComment = false;
             int missingBrks = 1;
-            
+     
             bool InSpecialSequence()
             {
                 return inString || inMultilineComment;
@@ -875,6 +894,11 @@ internal partial class Parser
             bool allowHtml = false;
             while (!IsAtEnd())
             {
+                if (inString && (Peek() == '\n' || Peek() == '\r') && stringChar is '\"' or '\'')
+                {
+                    Throw($"Missing {stringChar} to close single line string");
+                }
+
                 if (!inMultilineComment)
                 {
                     if (Peek() == '\'')
@@ -898,14 +922,20 @@ internal partial class Parser
                 
                 if (!inString)
                 {
-                    if (Peek() == '/' && Peek() == '*')
+                    if (Peek() == '/' && Peek(2) == '/')
+                    {
+                        HandleServerSideSingleLineComment();
+                        continue;
+                    }
+                    
+                    if (Peek() == '/' && Peek(2) == '*')
                     {
                         if (!inMultilineComment)
                         {
                             inMultilineComment = true;   
                         }
                     }
-                    else if (Peek() == '*' && Peek() == '/')
+                    else if (Peek() == '*' && Peek(2) == '/')
                     {
                         if (inMultilineComment)
                         {
@@ -935,7 +965,6 @@ internal partial class Parser
                             if (allowHtml || LastStoredCharNotWhitespaceMatches('\n', '\r', ';'))
                             {
                                 StepEol();
-                                string ss = GetCurrentLexeme();
                                 AddTokenSplitRightTrim(TokenTypes.BlockExpr, TokenTypes.Text);
                                 ParseHtmlTag(null);
                             
@@ -963,10 +992,22 @@ internal partial class Parser
                         }
                     }   
                 }
-
-                GetCurrentLexeme();
+                
                 Step();
                 allowHtml = false;
+            }
+
+            if (IsAtEnd())
+            {
+                if (inMultilineComment)
+                {
+                    Throw("Missing */ to close multiline comment");
+                }
+
+                if (inString && stringChar == '`')
+                {
+                    Throw("Missing ` to close interpolated string");
+                }
             }
         }
 

@@ -372,7 +372,7 @@ internal partial class Parser
             if (Peek() == '\n' && LastStoredCharMatches('\r'))
             {
                 Step();
-                return false;
+                return true;
             }   
         }
 
