@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace WattleScript.Interpreter.DataStructs
 {
@@ -170,7 +171,7 @@ namespace WattleScript.Interpreter.DataStructs
 
 		void ICollection<T>.CopyTo(T[] array, int arrayIndex)
 		{
-			throw new NotImplementedException();
+			m_Storage.Take(m_HeadIdx).ToArray().CopyTo(array, arrayIndex);
 		}
 
 		int ICollection<T>.Count
@@ -190,7 +191,7 @@ namespace WattleScript.Interpreter.DataStructs
 
 		IEnumerator<T> IEnumerable<T>.GetEnumerator()
 		{
-			throw new NotImplementedException();
+			return (IEnumerator<T>) m_Storage.GetEnumerator();
 		}
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
