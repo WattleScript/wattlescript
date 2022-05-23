@@ -266,12 +266,21 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecJFor(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
-						case OpCode.TabMeta:
+						case OpCode.TabProps:
 						{
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
 							top.Table.Kind = (TableKind)i.NumVal;
 							top.Table.ReadOnly = i.NumVal2 != 0;
+							break;
+						}
+						case OpCode.SetMetaTab:
+						{
+							var top = m_ValueStack.Pop();
+							ref var tab = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
+							tab.Table.MetaTable = top.Table;
 							break;
 						}
 						case OpCode.AnnotI:

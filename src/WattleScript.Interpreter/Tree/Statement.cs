@@ -161,13 +161,14 @@ namespace WattleScript.Interpreter.Tree
 			}
 		}
 
-		private const string ANNOTATION_ERROR = @"annotations may only be applied to function or enum declarations";
+		private const string ANNOTATION_ERROR = @"annotations may only be applied to function, class or enum declarations";
 		static bool AnnotationsAllowed(TokenType type)
 		{
 			switch (type)
 			{
 				case TokenType.Function:
 				case TokenType.Enum:
+				case TokenType.Class:
 					return true;
 			}
 			return false;
@@ -235,6 +236,8 @@ namespace WattleScript.Interpreter.Tree
 					return new ContinueStatement(lcontext);
 				case TokenType.Enum:
 					return new EnumDefinitionStatement(lcontext);
+				case TokenType.Class:
+					return new ClassDefinitionStatement(lcontext);
 				default:
 				{
 						//Check for labels in CLike mode

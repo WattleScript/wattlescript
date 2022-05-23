@@ -197,9 +197,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
-		public int Emit_TabMeta(TableKind kind, bool isReadOnly)
+		public int Emit_TabProps(TableKind kind, bool isReadOnly)
 		{
-			return AppendInstruction(new Instruction(OpCode.TabMeta, (int) kind, isReadOnly ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TabProps, (int) kind, isReadOnly ? 1 : 0));
 		}
 		
 
@@ -544,6 +544,11 @@ namespace WattleScript.Interpreter.Execution.VM
 		public int Emit_TblInitN(int count, int create)
 		{
 			return AppendInstruction(new Instruction(OpCode.TblInitN, count, create));
+		}
+
+		public int Emit_SetMetaTab()
+		{
+			return AppendInstruction(new Instruction(OpCode.SetMetaTab));
 		}
 
 		public int Emit_TblInitI(bool lastpos, int count, int create)
