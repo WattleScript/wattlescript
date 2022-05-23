@@ -24,6 +24,7 @@ namespace WattleScript.Hardwire
 
 		public void BuildCodeModel(Table table)
 		{
+			IdGen.Reset();
 			m_Context.GenerateCode(table);
 		}
 

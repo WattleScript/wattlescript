@@ -1,33 +1,54 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Numerics;
 using System.Text;
-using System.Security.Cryptography;
 
 namespace WattleScript.Hardwire
 {
     static class IdGen
     {
         private const string ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_";
+        private static Dictionary<string, string> generated = new Dictionary<string, string>();
+        public static void Reset() => generated = new Dictionary<string, string>();
         public static string Create(string str)
         {
-            using (MD5 md5Hash = MD5.Create())  
-            {  
-                var bLen = BitConverter.GetBytes((ushort) str.Length);
-                byte[] bytes = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(str));
-                return Encode(new BigInteger(bLen.Concat(bytes).Append((byte)0).ToArray()));
+            long hash = FNV1A_56(str);
+            var id = Encode(hash);
+            while(generated.TryGetValue(id, out var str2) && str2 != str)
+            {
+                hash++;
+                id = Encode(hash);
             }
+            generated[id] = str;
+            return id;
         }
-        static string Encode(BigInteger number)
+        
+        static long FNV1A_56(string str)
         {
-            if(number < 0)
-                throw new ArgumentException();
+            const ulong fnv64Offset = 14695981039346656037;
+            const ulong fnv64Prime = 0x100000001b3;
+            ulong hash = fnv64Offset;
+            for (var i = 0; i < str.Length; i++)
+            {
+                hash ^= str[i];
+                hash *= fnv64Prime;
+            }
+            // Reduce to 56-bit hash.
+            const ulong MASK_56 = (1UL << 56) - 1;
+            hash = (hash >> 56) ^ (hash & MASK_56);
+            return unchecked((long) hash);
+        }
+        
+        static string Encode(long number)
+        {
+            if (number < 0) {
+                throw new ArgumentException("number < 0");
+            }
             var builder = new StringBuilder();
-            var divisor = new BigInteger(ALPHABET.Length);
+            var divisor = ALPHABET.Length;
             while (number > 0)
             {
-                number = BigInteger.DivRem(number, divisor, out var rem);
+                number = Math.DivRem(number, divisor, out var rem);
                 builder.Append(ALPHABET[(int) rem]);
             }
             return new string(builder.ToString().Reverse().ToArray());
