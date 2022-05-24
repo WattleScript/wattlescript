@@ -10,7 +10,7 @@ using WattleScript.Interpreter.Debugging;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing basic Lua functions (print, type, tostring, etc) as a WattleScript module.
+	/// Class implementing basic Wattle & Lua functions (print, type, tostring, etc) as a WattleScript module.
 	/// </summary>
 	[WattleScriptModule]
 	public class BasicModule

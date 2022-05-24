@@ -7,7 +7,7 @@ using WattleScript.Interpreter.Interop;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing math Lua functions 
+	/// Class implementing math Wattle & Lua functions 
 	/// </summary>
 	[WattleScriptModule(Namespace = "math")]
 	public class MathModule

@@ -5,7 +5,7 @@
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing metatable related Lua functions (xxxmetatable and rawxxx).
+	/// Class implementing metatable related Wattle & Lua functions (xxxmetatable and rawxxx).
 	/// </summary>
 	[WattleScriptModule]
 	public class MetaTableModule

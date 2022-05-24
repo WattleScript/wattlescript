@@ -9,7 +9,7 @@ using WattleScript.Interpreter.CoreLib.StringLib;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing string Lua functions 
+	/// Class implementing string Wattle & Lua functions 
 	/// </summary>
 	[WattleScriptModule(Namespace = "string")]
 	public class StringModule
