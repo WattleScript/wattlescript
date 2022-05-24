@@ -9,7 +9,7 @@ using WattleScript.Interpreter.REPL;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing debug Lua functions. Support for the debug module is partial. 
+	/// Class implementing debug Wattle & Lua functions. Support for the debug module is partial. 
 	/// </summary>
 	[WattleScriptModule(Namespace = "debug")]
 	public class DebugModule

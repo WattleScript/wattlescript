@@ -5,7 +5,7 @@
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing dynamic expression evaluations at runtime (a WattleScript addition).
+	/// Class implementing dynamic expression evaluations at runtime (not a part of standard Lua lib).
 	/// </summary>
 	[WattleScriptModule(Namespace = "dynamic")]
 	public class DynamicModule

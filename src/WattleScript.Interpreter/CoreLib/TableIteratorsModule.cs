@@ -5,7 +5,7 @@
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing table Lua iterators (pairs, ipairs, next)
+	/// Class implementing table Wattle & Lua iterators (pairs, ipairs, next)
 	/// </summary>
 	[WattleScriptModule]
 	public class TableIteratorsModule
