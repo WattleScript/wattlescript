@@ -12,7 +12,6 @@ namespace WattleScript.Interpreter.Tree.Statements
         //Class construction related
         private SymbolRefExpression classStoreGlobal;
         private SymbolRefExpression classStoreLocal;
-        private SymbolRefExpression baseGlobal;
         private SymbolRefExpression baseLocal;
         private SymbolRefExpression constructorLocal;
         private SymbolRefExpression initLocal;
@@ -116,7 +115,6 @@ namespace WattleScript.Interpreter.Tree.Statements
             lcontext.Scope.PushBlock();
             //
             if (baseName != null) {
-                baseGlobal = new SymbolRefExpression(lcontext, lcontext.Scope.Find(baseName));
                 var baseLocalRef = lcontext.Scope.DefineLocal(localName + ".Base");
                 baseLocal = new SymbolRefExpression(lcontext, baseLocalRef);
             }
@@ -130,7 +128,11 @@ namespace WattleScript.Interpreter.Tree.Statements
             }
             //resolve init
             initClosure.DefineLocal("table"); //arg 0
-            if(baseName != null) initClosure.AddSymbol(localName + ".Base");
+            if (baseName != null) {
+                initClosure.AddSymbol(localName);
+                initClosure.AddSymbol(localName + ".Base");
+                initClosure.AddSymbol(baseName);
+            }
             initClosure.ResolveScope(lcontext);
             initLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(localName + ".__init"));
             //resolve new
@@ -152,7 +154,27 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Args(1, false);
                 if (baseName != null)
                 {
-                    sym[localName + ".Base"].Compile(bc);
+                    var baseSym = sym[localName + ".Base"];
+                    baseSym.Compile(bc);
+                    int jp = bc.Emit_Jump(OpCode.JNilChk, -1);
+                    int jp2 = bc.Emit_Jump(OpCode.Jump, -1);
+                    bc.SetNumVal(jp, bc.GetJumpPointForNextInstruction());
+                    //Store to closure
+                    //Todo: type check
+                    sym[baseName].Compile(bc);
+                    baseSym.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                    //Set __index metatable
+                    sym[localName].Compile(bc);
+                    bc.Emit_Index("__index");
+                    bc.Emit_Swap(0, 1);
+                    bc.Emit_SetMetaTab();
+                    bc.Emit_Pop();
+                    //Set Base member + leave on stack
+                    baseSym.Compile(bc);
+                    sym[localName].Compile(bc);
+                    bc.Emit_IndexSet(0, 0, "Base");
+                    //Base resolved, call __init
+                    bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
                     bc.Emit_Index("__init");
                     sym["table"].Compile(bc);
                     bc.Emit_Call(1, "base.__init(table)");
@@ -205,25 +227,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 fn.exp.Compile(bc, () => 0, fn.name);
             }
             bc.Emit_TblInitN(functions.Count * 2, 1);
-            //add Base and store in local as needed
-            if (baseName != null)
-            {
-                //set local
-                baseGlobal.Compile(bc);
-                baseLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0); //doesn't pop
-                bc.Emit_SetMetaTab(); //set __index metatable to Base, pops
-                //Make entry
-                bc.Emit_Literal(DynValue.NewString("Base"));
-                baseLocal.Compile(bc);
-            }
-            //create class table & store in local
-            //we need to have this object available for closure creation
-            bc.Emit_TblInitN(baseName != null ? 4 : 2, 1);
-            foreach(var annot in annotations)
-                bc.Emit_Annot(annot);
-            bc.Emit_TabProps(TableKind.Class, false);
-            classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-            //compile __init function
+            //compile __init function, closing over class + base
             bc.Emit_Literal(DynValue.NewString("__init"));
             CompileInit(bc);
             initLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
@@ -236,7 +240,12 @@ namespace WattleScript.Interpreter.Tree.Statements
             //make new() function closing over class, ctor and __init
             bc.Emit_Literal(DynValue.NewString("new"));
             CompileNew(bc);
-            bc.Emit_TblInitN(constructor != null ? 6 : 4, 0);
+            bc.Emit_TblInitN(constructor != null ? 8 : 6, 1);
+            //set metadata and store to local
+            foreach(var annot in annotations)
+                bc.Emit_Annot(annot);
+            bc.Emit_TabProps(TableKind.Class, false);
+            classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
             classStoreGlobal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             bc.Emit_Pop();
