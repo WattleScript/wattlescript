@@ -89,7 +89,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
 			
-			if(isLambda)
+			if(isLambda || arrowFunc)
 				m_Statement = CreateLambdaBody(lcontext, arrowFunc);
 			else
 				m_Statement = CreateBody(lcontext, openCurly);
