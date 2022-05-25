@@ -28,6 +28,8 @@ namespace WattleScript.Interpreter.Tree.Statements
         //
         private GeneratedClosure newClosure;
         private GeneratedClosure initClosure;
+        private GeneratedClosure tostringClosure;
+        private bool tostringImpl;
 
         //Class members
         private List<(string name, FunctionDefinitionExpression exp)> functions =
@@ -54,6 +56,8 @@ namespace WattleScript.Interpreter.Tree.Statements
             newClosure = new GeneratedClosure($"{className}.new", defSource, FunctionFlags.None, true);
             //__init()
             initClosure = new GeneratedClosure($"{className}.__init", defSource, FunctionFlags.None, false);
+            //__tostring()
+            tostringClosure = new GeneratedClosure($"{className}.__tostring", defSource, FunctionFlags.TakesSelf, false);
             //parse members
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
@@ -67,6 +71,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     {
                         lcontext.Lexer.Next();
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
+                        if (funcName.Text == "tostring") tostringImpl = true;
                         functions.Add((funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
                         break;
                     }
@@ -89,6 +94,9 @@ namespace WattleScript.Interpreter.Tree.Statements
                         lcontext.Lexer.Next();
                         switch (lcontext.Lexer.Current.Type)
                         {
+                            case TokenType.Brk_Open_Round:
+                                functions.Add((T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+                                break;
                             case TokenType.Op_Assignment:
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
@@ -140,6 +148,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             newClosure.AddSymbol(localName);
             newClosure.AddSymbol(localName + ".__init");
             newClosure.ResolveScope(lcontext);
+            //resolve tostring
+            tostringClosure.DefineLocal("this");
+            tostringClosure.ResolveScope(lcontext);
             //functions
             foreach(var fn in functions)
                 fn.exp.ResolveScope(lcontext);
@@ -191,6 +202,32 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Ret(0);
             });
         }
+
+        void CompileToString(FunctionBuilder parent)
+        {
+            tostringClosure.Compile(parent, (bc, sym) =>
+            {
+                bc.Emit_Args(1, false);
+                sym["this"].Compile(bc);
+                bc.Emit_Copy(0);
+                bc.Emit_Index("tostring");
+                //tostring may still be present in our base class, only optimise out check
+                //if we know for sure it's implemented
+                int nilCheck = -1;
+                if (!tostringImpl) {
+                    nilCheck = bc.Emit_Jump(OpCode.JNilChk, -1);
+                }
+                bc.Emit_Swap(0, 1);
+                bc.Emit_ThisCall(-1, "tostring");
+                bc.Emit_Ret(1);
+                if (!tostringImpl) {
+                    bc.SetNumVal(nilCheck, bc.GetJumpPointForNextInstruction());
+                    bc.Emit_Literal(DynValue.NewString($"< {className} >"));
+                    bc.Emit_Ret(1);
+                }
+            });
+        }
+        
         void CompileNew(FunctionBuilder parent)
         {
             newClosure.Compile(parent, (bc, sym) =>
@@ -227,6 +264,9 @@ namespace WattleScript.Interpreter.Tree.Statements
                 fn.exp.Compile(bc, () => 0, fn.name);
             }
             bc.Emit_TblInitN(functions.Count * 2, 1);
+            //compile __tostring metamethod
+            bc.Emit_Literal(DynValue.NewString("__tostring"));
+            CompileToString(bc);
             //compile __init function, closing over class + base
             bc.Emit_Literal(DynValue.NewString("__init"));
             CompileInit(bc);
@@ -240,7 +280,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             //make new() function closing over class, ctor and __init
             bc.Emit_Literal(DynValue.NewString("new"));
             CompileNew(bc);
-            bc.Emit_TblInitN(constructor != null ? 8 : 6, 1);
+            bc.Emit_TblInitN(constructor != null ? 10 : 8, 1);
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
