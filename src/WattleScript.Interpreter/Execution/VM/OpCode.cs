@@ -121,6 +121,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		AnnotS, //NumVal = string or nil
 		AnnotB, //NumVal = bool
 		AnnotT, //pop table from v-stack
+		LoopChk, //Checks if local in NumVal is < threshold. If not, throw error using NumValB as the class name
+		BaseChk, //Checks if v-stack top is a class. If not, throw error using NumVal as the base class name
 		
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum

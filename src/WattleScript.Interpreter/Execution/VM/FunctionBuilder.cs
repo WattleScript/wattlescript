@@ -391,6 +391,17 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.MkTuple, cnt));
 		}
 
+		public int Emit_LoopChk(SymbolRef sym, string className)
+		{
+			if(sym.Type != SymbolRefType.Local) throw new InternalErrorException("Unexpected symbol type : {0}", sym);
+			return AppendInstruction(new Instruction(OpCode.LoopChk, sym.i_Index) { NumValB = (uint)StringArg(className) });
+		}
+
+		public int Emit_BaseChk(string className)
+		{
+			return AppendInstruction(new Instruction(OpCode.BaseChk, StringArg(className)));
+		}
+
 		public int Emit_Operator(OpCode opcode, bool invert = false)
 		{
 			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode, invert ? 1 : 0);

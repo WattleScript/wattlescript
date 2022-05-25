@@ -283,6 +283,23 @@ namespace WattleScript.Interpreter.Execution.VM
 							tab.Table.MetaTable = top.Table;
 							break;
 						}
+						case OpCode.LoopChk:
+						{
+							if (!m_ValueStack[currentFrame.BasePointer + i.NumVal].TryGetNumber(out var n))
+								throw new InternalErrorException("LoopChk operand NOT number");
+							if (n > 100)
+								throw ScriptRuntimeException.CyclicReference(currentFrame.Function.strings[i.NumValB]);
+							break;
+						}
+						case OpCode.BaseChk:
+						{
+							ref var cls = ref m_ValueStack.Peek();
+							if (cls.Type != DataType.Table ||
+							    cls.Table.Kind != TableKind.Class) {
+								throw ScriptRuntimeException.NotAClass(currentFrame.Function.strings[i.NumVal], cls);
+							}
+							break;
+						}
 						case OpCode.AnnotI:
 							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewNumber(i.NumVal));
 							break;

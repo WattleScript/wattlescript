@@ -54,6 +54,41 @@ namespace WattleScript.Interpreter
 
 		/// <summary>
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a class hierarchy contains a cycle
+		/// </summary>
+		/// <param name="cls">The class in which it was detected</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException CyclicReference(string cls)
+		{
+			return new ScriptRuntimeException($"class hierarchy contains cyclic reference ({cls})");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The value that is not a class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NotAClass(string name, DynValue value)
+		{
+			string typestr;
+			if (value.Type == DataType.Table)
+			{
+				typestr = value.Table.Kind switch {
+					TableKind.Enum => "enum",
+					_ => "table"
+				};
+			}
+			else
+			{
+				typestr = value.Type.ToLuaTypeString();
+			}
+			throw new ScriptRuntimeException($"'{name}' is invalid class (expected class, got {typestr})");
+		}
+
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
 		/// an arithmetic operation was attempted on non-numbers
 		/// </summary>
 		/// <param name="l">The left operand.</param>
