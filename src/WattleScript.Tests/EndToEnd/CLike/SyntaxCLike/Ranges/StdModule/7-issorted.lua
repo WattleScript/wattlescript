@@ -1,0 +1,6 @@
+x = (10..20).issorted()
+y = (2..1).issorted()
+z = (1..1).issorted()
+print(x)
+print(y)
+print(z)
