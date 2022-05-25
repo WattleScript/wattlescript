@@ -8,7 +8,7 @@ using System.Text;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing table Lua functions 
+	/// Class implementing table Wattle & Lua functions 
 	/// </summary>
 	[WattleScriptModule(Namespace = "table")]
 	public class TableModule

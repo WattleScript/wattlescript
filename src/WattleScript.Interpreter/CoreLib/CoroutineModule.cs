@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing coroutine Lua functions 
+	/// Class implementing coroutine Wattle & Lua functions 
 	/// </summary>
 	[WattleScriptModule(Namespace = "coroutine")]
 	public class CoroutineModule

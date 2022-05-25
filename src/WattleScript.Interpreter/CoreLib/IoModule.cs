@@ -12,7 +12,7 @@ using WattleScript.Interpreter.Platforms;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing io Lua functions. Proper support requires a compatible IPlatformAccessor
+	/// Class implementing io Wattle & Lua functions. Proper support requires a compatible IPlatformAccessor
 	/// </summary>
 	[WattleScriptModule(Namespace = "io")]
 	public class IoModule
