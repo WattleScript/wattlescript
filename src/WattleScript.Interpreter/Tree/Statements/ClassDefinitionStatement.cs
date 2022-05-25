@@ -66,6 +66,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 {
                     case TokenType.Comma: //skip extras
                     case TokenType.SemiColon:
+                        lcontext.Lexer.Next();
                         break;
                     case TokenType.Function:
                     {
