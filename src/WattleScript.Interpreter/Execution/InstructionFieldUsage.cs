@@ -100,6 +100,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.ThisCall:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Switch:
+				case OpCode.NewCall:
 					return InstructionFieldUsage.NumVal1Hex | InstructionFieldUsage.NumValB;
 				case OpCode.SSpecial:
 				case OpCode.SString:

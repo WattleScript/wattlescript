@@ -402,6 +402,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.BaseChk, StringArg(className)));
 		}
 
+		public int Emit_NewCall(int argCount, string className)
+		{
+			return AppendInstruction(new Instruction(OpCode.NewCall, argCount) {NumValB = (uint) StringArg(className)});
+		}
+
 		public int Emit_Operator(OpCode opcode, bool invert = false)
 		{
 			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode, invert ? 1 : 0);

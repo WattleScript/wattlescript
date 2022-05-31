@@ -179,6 +179,11 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
 							break;
+						case OpCode.NewCall:
+							instructionPtr = ExecNewCall(i, instructionPtr, canAwait);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
+							break;
 						case OpCode.Scalar:
 							m_ValueStack.Push(m_ValueStack.Pop().ToScalar());
 							break;
@@ -1587,6 +1592,16 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.RemoveLast(i.NumVal);
 			
 			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
+		}
+
+		private int ExecNewCall(Instruction i, int instructionPtr, bool canAwait)
+		{
+			ref var cls = ref m_ValueStack.Peek(i.NumVal);
+			if (cls.Type != DataType.Table ||
+			    cls.Table.Kind != TableKind.Class)
+				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
+			cls = cls.Table.Get("new");
+			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
 		}
 
 		private void ExecNewRange(Instruction i)

@@ -118,6 +118,7 @@ namespace WattleScript.Interpreter.Tree
 		
 		Enum,
 		Class,
+		New,
 		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}
