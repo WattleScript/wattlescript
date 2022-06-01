@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing error handling Lua functions (pcall and xpcall)
+	/// Class implementing error handling Wattle & Lua functions (pcall and xpcall)
 	/// </summary>
 	[WattleScriptModule]
 	public class ErrorHandlingModule

@@ -149,6 +149,7 @@ namespace WattleScript.HardwireGen
         public void Execute(GeneratorExecutionContext context)
         {
             var sw = Stopwatch.StartNew();
+            IdGen.Reset();
             try
             {
                 var receiver = (UserDataSyntaxReceiver) context.SyntaxReceiver;

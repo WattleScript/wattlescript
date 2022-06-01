@@ -5,7 +5,7 @@
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing loading Lua functions like 'require', 'load', etc.
+	/// Class implementing loading Wattle & Lua functions like 'require', 'load', etc.
 	/// </summary>
 	[WattleScriptModule]
 	public class LoadModule

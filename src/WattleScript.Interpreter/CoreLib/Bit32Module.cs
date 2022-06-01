@@ -6,7 +6,7 @@ using System;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing bit32 Lua functions 
+	/// Class implementing bit32 Wattle & Lua functions 
 	/// </summary>
 	[WattleScriptModule(Namespace = "bit32")]
 	public class Bit32Module

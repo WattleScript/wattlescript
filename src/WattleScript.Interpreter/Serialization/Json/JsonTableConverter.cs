@@ -15,16 +15,27 @@ namespace WattleScript.Interpreter.Serialization.Json
 	/// </summary>
 	public static class JsonTableConverter
 	{
+		private const int DEPTH_LIMIT = 100;
 		/// <summary>
 		/// Converts a table to a json string
 		/// </summary>
 		/// <param name="table">The table.</param>
+		/// <param name="throwException">Throw an exception on invalid input</param>
 		/// <returns></returns>
-		public static string TableToJson(this Table table)
+		public static string TableToJson(this Table table, bool throwException = true)
 		{
-			StringBuilder sb = new StringBuilder();
-			TableToJson(sb, table);
-			return sb.ToString();
+			try
+			{
+				StringBuilder sb = new StringBuilder();
+				int d = 0;
+				TableToJson(sb, table, ref d);
+				return sb.ToString();
+			}
+			catch (Exception e)
+			{
+				if (throwException) throw;
+				else return $"ERROR: {e.Message}";
+			}
 		}
 
 		/// <summary>
@@ -32,8 +43,12 @@ namespace WattleScript.Interpreter.Serialization.Json
 		/// </summary>
 		/// <param name="sb">The sb.</param>
 		/// <param name="table">The table.</param>
-		private static void TableToJson(StringBuilder sb, Table table)
+		private static void TableToJson(StringBuilder sb, Table table, ref int depth)
 		{
+			//Stack overflow protection
+			depth++;
+			if (depth > DEPTH_LIMIT) { throw new ScriptRuntimeException("maximum depth exceeded"); }
+			
 			bool first = true;
 
 			if (table.Length == 0)
@@ -46,9 +61,9 @@ namespace WattleScript.Interpreter.Serialization.Json
 						if (!first)
 							sb.Append(',');
 
-						ValueToJson(sb, pair.Key);
+						ValueToJson(sb, pair.Key, ref depth);
 						sb.Append(':');
-						ValueToJson(sb, pair.Value);
+						ValueToJson(sb, pair.Value, ref depth);
 
 						first = false;
 					}
@@ -66,7 +81,7 @@ namespace WattleScript.Interpreter.Serialization.Json
 						if (!first)
 							sb.Append(',');
 
-						ValueToJson(sb, value);
+						ValueToJson(sb, value, ref depth);
 
 						first = false;
 					}
@@ -86,7 +101,7 @@ namespace WattleScript.Interpreter.Serialization.Json
 
 
 
-		private static void ValueToJson(StringBuilder sb, DynValue value)
+		private static void ValueToJson(StringBuilder sb, DynValue value, ref int depth)
 		{
 			switch (value.Type)
 			{
@@ -100,7 +115,7 @@ namespace WattleScript.Interpreter.Serialization.Json
 					sb.Append(EscapeString(value.String ?? ""));
 					break;
 				case DataType.Table:
-					TableToJson(sb, value.Table);
+					TableToJson(sb, value.Table, ref depth);
 					break;
 				case DataType.Nil:
 				case DataType.Void:

@@ -90,6 +90,8 @@ namespace WattleScript.Interpreter
 		/// <exception cref="System.ArgumentException">If the module contains some incompatibility</exception>
 		public static Table RegisterModuleType(this Table gtable, Type t)
 		{
+			const string WATTLE_SCRIPT_INIT = "WattleScriptInit";
+			
 			Table table = CreateModuleNamespace(gtable, t);
 
 			foreach (MethodInfo mi in t.GetAllMethods().Where(__mi => __mi.IsStatic))
@@ -112,7 +114,7 @@ namespace WattleScript.Interpreter
 
 					table.Set(name, DynValue.NewCallback(func, name));
 				}
-				else if (mi.Name == "WattleScriptInit")
+				else if (mi.Name == WATTLE_SCRIPT_INIT)
 				{
 					object[] args = new object[2] { gtable, table };
 					mi.Invoke(null, args);

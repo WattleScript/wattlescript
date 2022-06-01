@@ -6,7 +6,7 @@ using System;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing system related Lua functions from the 'os' module.
+	/// Class implementing system related Wattle & Lua functions from the 'os' module.
 	/// Proper support requires a compatible IPlatformAccessor
 	/// </summary>
 	[WattleScriptModule(Namespace = "os")]

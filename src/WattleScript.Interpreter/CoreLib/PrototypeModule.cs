@@ -1,6 +1,9 @@
 
 namespace WattleScript.Interpreter.CoreLib
 {
+    /// <summary>
+    /// Class implementing prototype Wattle & Lua functions 
+    /// </summary>
     [WattleScriptModule(Namespace = "prototype")]
     public class PrototypeModule
     {
@@ -23,40 +26,35 @@ namespace WattleScript.Interpreter.CoreLib
         {
             var sc = globalTable.OwnerScript;
             var stringTable = globalTable.Get("string").Table;
+            
+            void Register(string prototableIdent, DataType protoType)
+            {
+                //register
+                var tab = new Table(sc);
+                var funcs = new Table(sc);
+                tab.Set("__index", DynValue.NewTable(funcs));
+                sc.SetTypeMetatable(protoType, tab);
+                sc.Registry.Set(prototableIdent, DynValue.NewTable(funcs));
+                //functions
+                funcs.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
+            }
+            
             if (sc.Registry.Get(NUMBER_PROTOTABLE).IsNil())
             {
-                //register
-                var nTab = new Table(sc);
-                var nFuncs = new Table(sc);
-                nTab.Set("__index", DynValue.NewTable(nFuncs));
-                sc.SetTypeMetatable(DataType.Number, nTab);
-                sc.Registry.Set(NUMBER_PROTOTABLE, DynValue.NewTable(nFuncs));
-                //functions
-                nFuncs.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
+                Register(NUMBER_PROTOTABLE, DataType.Number);
             }
+            
             if (sc.Registry.Get(BOOLEAN_PROTOTABLE).IsNil())
             {
-                //register
-                var bTab = new Table(sc);
-                var bFuncs = new Table(sc);
-                bTab.Set("__index", DynValue.NewTable(bFuncs));
-                sc.SetTypeMetatable(DataType.Boolean, bTab);
-                sc.Registry.Set(BOOLEAN_PROTOTABLE, DynValue.NewTable(bFuncs));
-                //functions
-                bFuncs.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
+                Register(BOOLEAN_PROTOTABLE, DataType.Boolean);
             }
+            
             if (sc.Registry.Get(RANGE_PROTOTABLE).IsNil())
             {
-                //register
-                var rTab = new Table(sc);
-                var rFuncs = new Table(sc);
-                rTab.Set("__index", DynValue.NewTable(rFuncs));
-                sc.SetTypeMetatable(DataType.Range, rTab);
-                sc.Registry.Set(RANGE_PROTOTABLE, DynValue.NewTable(rFuncs));
-                //functions
-                rFuncs.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));
+                Register(RANGE_PROTOTABLE, DataType.Range);
             }
-            if(sc.GetTablePrototype() == null)
+            
+            if (sc.GetTablePrototype() == null)
                 sc.SetTablePrototype(new Table(sc));
             //Copy tostring to string table
             stringTable.Set("tostring", DynValue.NewCallback(BasicModule.tostring, "tostring"));

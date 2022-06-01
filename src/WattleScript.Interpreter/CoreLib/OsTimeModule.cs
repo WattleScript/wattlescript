@@ -8,7 +8,7 @@ using System.Text;
 namespace WattleScript.Interpreter.CoreLib
 {
 	/// <summary>
-	/// Class implementing time related Lua functions from the 'os' module.
+	/// Class implementing time related Wattle & Lua functions from the 'os' module.
 	/// </summary>
 	[WattleScriptModule(Namespace = "os")]
 	public class OsTimeModule
