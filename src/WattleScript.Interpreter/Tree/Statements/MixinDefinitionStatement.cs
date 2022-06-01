@@ -76,7 +76,8 @@ namespace WattleScript.Interpreter.Tree.Statements
                         break;
                     }
                     default:
-                        throw new SyntaxErrorException(lcontext.Lexer.Current, "unexpected symbol near {0}");
+                        UnexpectedTokenType(lcontext.Lexer.Current);
+                        break;
                 }
             }
             init = new GeneratedClosure(name + ".init(table)", sourceRef, FunctionFlags.None, false);
