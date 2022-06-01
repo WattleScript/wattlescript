@@ -334,6 +334,8 @@ namespace WattleScript.Interpreter.Tree
 					return e;
 				case TokenType.Name:
 					return new SymbolRefExpression(T, lcontext);
+				case TokenType.New:
+					return new NewExpression(lcontext);
 				case TokenType.Brk_Open_Curly:
 				case TokenType.Brk_Open_Curly_Shared:
 					return new TableConstructor(lcontext, T.Type == TokenType.Brk_Open_Curly_Shared);

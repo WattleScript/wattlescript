@@ -11,11 +11,13 @@ namespace WattleScript.Interpreter.Execution
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
 
-		public void PushFunction(IClosureBuilder closureBuilder)
+		public void PushFunction(IClosureBuilder closureBuilder, bool isConstructor = false)
 		{
 			m_ClosureBuilders.Add(closureBuilder);
-			m_Frames.Add(new BuildTimeScopeFrame());
+			m_Frames.Add(new BuildTimeScopeFrame(isConstructor));
 		}
+
+		public bool InConstructor => m_Frames.Last().IsConstructor;
 
 		public void SetHasVarArgs()
 		{
@@ -85,18 +87,45 @@ namespace WattleScript.Interpreter.Execution
 		private SymbolRef CreateUpValue(BuildTimeScope buildTimeScope, SymbolRef symb, int closuredFrame, int currentFrame)
 		{
 			// it's a 0-level upvalue. Just create it and we're done.
-			if (closuredFrame == currentFrame)
-				return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
+			if (closuredFrame == currentFrame) {
+				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
+				uv.IsBaseClass = symb.IsBaseClass;
+				uv.Placeholder = symb.Placeholder;
+				return uv;
+			}
+			else
+			{
 
-			SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
-
-			return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
+				SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
+				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
+				uv.IsBaseClass = symb.IsBaseClass;
+				uv.Placeholder = symb.Placeholder;
+				return uv;
+			}
 		}
 
 		public SymbolRef DefineLocal(string name)
 		{
 			return m_Frames.Last().DefineLocal(name);
 		}
+
+		public SymbolRef DefineBaseRef()
+		{
+			var retVal = DefineLocal("base");
+			retVal.IsBaseClass = true;
+			return retVal;
+		}
+		
+		//Defines a placeholder symbol for base that will error if used
+		public SymbolRef DefineBaseEmpty()
+		{
+			var retVal = DefineLocal("base");
+			retVal.IsBaseClass = true;
+			retVal.Placeholder = true;
+			return retVal;
+		}
+		
+		
 
 		public SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
 		{

@@ -69,6 +69,7 @@ namespace WattleScript.Interpreter.Execution.Scopes
 
 			foreach (SymbolRef lref in m_DefinedNames.Values)
 			{
+				if (lref.Placeholder) continue; //Don't allocated placeholder var
 				int pos = buildTimeScopeFrame.AllocVar(lref);
 
 				if (firstVal < 0)
