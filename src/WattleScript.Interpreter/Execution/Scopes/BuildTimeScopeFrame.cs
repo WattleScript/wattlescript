@@ -11,9 +11,11 @@ namespace WattleScript.Interpreter.Execution.Scopes
 		RuntimeScopeFrame m_ScopeFrame = new RuntimeScopeFrame();
 
 		public bool HasVarArgs { get; set;}
+		public bool IsConstructor { get; private set; }
 
-		internal BuildTimeScopeFrame()
+		internal BuildTimeScopeFrame(bool isConstructor)
 		{
+			IsConstructor = isConstructor;
 			m_ScopeTreeHead = m_ScopeTreeRoot = new BuildTimeScopeBlock(null);
 		}
 

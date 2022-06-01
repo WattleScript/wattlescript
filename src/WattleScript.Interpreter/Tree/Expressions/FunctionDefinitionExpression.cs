@@ -33,6 +33,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		SourceRef m_Begin, m_End;
 		private ScriptLoadingContext lcontext;
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
+		private bool m_IsConstructor;
 
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool usesGlobalEnv)
 			: this(lcontext, SelfType.None, usesGlobalEnv, false)
@@ -42,11 +43,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			: this(lcontext, self, false, isLambda)
 		{ }
 		
-		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda)
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false)
 			: base(lcontext)
 		{
 			this.lcontext = lcontext;
-			
+			this.m_IsConstructor = isConstructor;
 			if (m_UsesGlobalEnv = usesGlobalEnv)
 				CheckTokenType(lcontext, TokenType.Function);
 
@@ -89,7 +90,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
 			
-			if(isLambda)
+			if(isLambda || arrowFunc)
 				m_Statement = CreateLambdaBody(lcontext, arrowFunc);
 			else
 				m_Statement = CreateBody(lcontext, openCurly);
@@ -103,7 +104,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
 			resolved = true;
-			lcontext.Scope.PushFunction(this);
+			lcontext.Scope.PushFunction(this, m_IsConstructor);
 
 			m_ParamNames = DefineArguments(paramnames, lcontext);
 			
@@ -134,11 +135,28 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 			else
 			{
-				Expression e = Expression.Expr(lcontext);
-				Token end = lcontext.Lexer.Current;
-				SourceRef sref = start.GetSourceRefUpTo(end);
-				Statement s = new ReturnStatement(lcontext, e, sref);
-				return s;
+				Expression e = Expr(lcontext);
+				switch (lcontext.Lexer.Current.Type)
+				{
+					//Lambda body can be a single-value assignment. Returns nil
+					case TokenType.Op_Assignment:
+					case TokenType.Op_AddEq:
+					case TokenType.Op_SubEq:
+					case TokenType.Op_MulEq:
+					case TokenType.Op_DivEq:
+					case TokenType.Op_ModEq:
+					case TokenType.Op_PwrEq:
+					case TokenType.Op_ConcatEq:
+					case TokenType.Op_NilCoalescingAssignment:
+					case TokenType.Op_NilCoalescingAssignmentInverse:
+						return new AssignmentStatement(lcontext, e, lcontext.Lexer.Current);
+					//Lambda body is an expression.
+					default:
+						Token end = lcontext.Lexer.Current;
+						SourceRef sref = start.GetSourceRefUpTo(end);
+						Statement s = new ReturnStatement(lcontext, e, sref);
+						return s;
+				}
 			}
 		}
 

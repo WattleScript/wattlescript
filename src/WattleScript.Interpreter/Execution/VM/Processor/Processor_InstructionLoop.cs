@@ -179,6 +179,11 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
 							break;
+						case OpCode.NewCall:
+							instructionPtr = ExecNewCall(i, instructionPtr, canAwait);
+							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
+							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
+							break;
 						case OpCode.Scalar:
 							m_ValueStack.Push(m_ValueStack.Pop().ToScalar());
 							break;
@@ -266,7 +271,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							instructionPtr = ExecJFor(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							break;
-						case OpCode.TabMeta:
+						case OpCode.TabProps:
 						{
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
@@ -274,6 +279,35 @@ namespace WattleScript.Interpreter.Execution.VM
 							top.Table.ReadOnly = i.NumVal2 != 0;
 							break;
 						}
+						case OpCode.SetMetaTab:
+						{
+							var top = m_ValueStack.Pop();
+							ref var tab = ref m_ValueStack.Peek();
+							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
+							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
+							tab.Table.MetaTable = top.Table;
+							break;
+						}
+						case OpCode.LoopChk:
+						{
+							if (!m_ValueStack[currentFrame.BasePointer + i.NumVal].TryGetNumber(out var n))
+								throw new InternalErrorException("LoopChk operand NOT number");
+							if (n > 100)
+								throw ScriptRuntimeException.CyclicReference(currentFrame.Function.strings[i.NumValB]);
+							break;
+						}
+						case OpCode.BaseChk:
+						{
+							ref var cls = ref m_ValueStack.Peek();
+							if (cls.Type != DataType.Table ||
+							    cls.Table.Kind != TableKind.Class) {
+								throw ScriptRuntimeException.NotAClass(currentFrame.Function.strings[i.NumVal], cls);
+							}
+							break;
+						}
+						case OpCode.MixInit:
+							ExecMixInit(i);
+							break;
 						case OpCode.AnnotI:
 							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewNumber(i.NumVal));
 							break;
@@ -1561,6 +1595,35 @@ namespace WattleScript.Interpreter.Execution.VM
 			m_ValueStack.RemoveLast(i.NumVal);
 			
 			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
+		}
+
+		private int ExecNewCall(Instruction i, int instructionPtr, bool canAwait)
+		{
+			ref var cls = ref m_ValueStack.Peek(i.NumVal);
+			if (cls.Type != DataType.Table ||
+			    cls.Table.Kind != TableKind.Class)
+				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
+			cls = cls.Table.Get("new");
+			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
+		}
+
+		private void ExecMixInit(Instruction i)
+		{
+			ref var cls_index = ref m_ValueStack.Peek(2);
+			ref var mixin_tab = ref m_ValueStack.Peek(1);
+			var mix = m_ValueStack.Pop();
+			if (mix.Type != DataType.Table ||
+			    mix.Table.Kind != TableKind.Mixin)
+				throw ScriptRuntimeException.NotAMixin(GetString((int) i.NumVal), mix);
+			//copy functions into table
+			var funcs = mix.Table.Get("functions").Table;
+			foreach (var f in funcs.Pairs) {
+				if (cls_index.Table.Get(f.Key).IsNil()) {
+					cls_index.Table.Set(f.Key, f.Value);
+				}
+			}
+			//copy init() into mixin table
+			mixin_tab.Table.Set(GetString((int) i.NumVal), mix.Table.Get("init"));
 		}
 
 		private void ExecNewRange(Instruction i)

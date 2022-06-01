@@ -38,6 +38,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushNil:
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
+				case OpCode.SetMetaTab:
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:
@@ -67,7 +68,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.CopyValue:
 				case OpCode.JLclInit:
 				case OpCode.Args:
-				case OpCode.TabMeta:
+				case OpCode.TabProps:
 				case OpCode.TblInitN:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
@@ -90,6 +91,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Nop:
 				case OpCode.Debug:
 				case OpCode.Invalid:
+				case OpCode.MixInit:
 				case OpCode.PushString:
 				case OpCode.PushInt:
 					return InstructionFieldUsage.NumVal;
@@ -99,6 +101,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.ThisCall:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Switch:
+				case OpCode.NewCall:
 					return InstructionFieldUsage.NumVal1Hex | InstructionFieldUsage.NumValB;
 				case OpCode.SSpecial:
 				case OpCode.SString:

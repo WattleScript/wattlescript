@@ -52,8 +52,14 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Switch;
 					case "case":
 						return TokenType.Case;
+					case "class":
+						return TokenType.Class;
 					case "enum":
 						return TokenType.Enum;
+					case "new":
+						return TokenType.New;
+					case "mixin":
+						return TokenType.Mixin;
 				}
 			}
 

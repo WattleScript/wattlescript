@@ -1,0 +1,1 @@
+chunk_0:(7,6-11): class hierarchy contains cyclic reference (B)

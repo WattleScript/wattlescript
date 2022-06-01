@@ -197,9 +197,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.Invalid));
 		}
 
-		public int Emit_TabMeta(TableKind kind, bool isReadOnly)
+		public int Emit_TabProps(TableKind kind, bool isReadOnly)
 		{
-			return AppendInstruction(new Instruction(OpCode.TabMeta, (int) kind, isReadOnly ? 1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TabProps, (int) kind, isReadOnly ? 1 : 0));
 		}
 		
 
@@ -391,6 +391,27 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.MkTuple, cnt));
 		}
 
+		public int Emit_LoopChk(SymbolRef sym, string className)
+		{
+			if(sym.Type != SymbolRefType.Local) throw new InternalErrorException("Unexpected symbol type : {0}", sym);
+			return AppendInstruction(new Instruction(OpCode.LoopChk, sym.i_Index) { NumValB = (uint)StringArg(className) });
+		}
+
+		public int Emit_BaseChk(string className)
+		{
+			return AppendInstruction(new Instruction(OpCode.BaseChk, StringArg(className)));
+		}
+
+		public int Emit_MixInit(string mixinName)
+		{
+			return AppendInstruction(new Instruction(OpCode.MixInit, StringArg(mixinName)));
+		}
+
+		public int Emit_NewCall(int argCount, string className)
+		{
+			return AppendInstruction(new Instruction(OpCode.NewCall, argCount) {NumValB = (uint) StringArg(className)});
+		}
+
 		public int Emit_Operator(OpCode opcode, bool invert = false)
 		{
 			Instruction instr = opcode == OpCode.NewRange ? new Instruction(opcode, 0, 0, 1) : new Instruction(opcode, invert ? 1 : 0);
@@ -544,6 +565,11 @@ namespace WattleScript.Interpreter.Execution.VM
 		public int Emit_TblInitN(int count, int create)
 		{
 			return AppendInstruction(new Instruction(OpCode.TblInitN, count, create));
+		}
+
+		public int Emit_SetMetaTab()
+		{
+			return AppendInstruction(new Instruction(OpCode.SetMetaTab));
 		}
 
 		public int Emit_TblInitI(bool lastpos, int count, int create)
