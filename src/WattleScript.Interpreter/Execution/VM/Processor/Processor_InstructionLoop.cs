@@ -305,6 +305,9 @@ namespace WattleScript.Interpreter.Execution.VM
 							}
 							break;
 						}
+						case OpCode.MixInit:
+							ExecMixInit(i);
+							break;
 						case OpCode.AnnotI:
 							ExecAnnotX(currentFrame.Function.strings[i.NumValB], DynValue.NewNumber(i.NumVal));
 							break;
@@ -1602,6 +1605,25 @@ namespace WattleScript.Interpreter.Execution.VM
 				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
 			cls = cls.Table.Get("new");
 			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
+		}
+
+		private void ExecMixInit(Instruction i)
+		{
+			ref var cls_index = ref m_ValueStack.Peek(2);
+			ref var mixin_tab = ref m_ValueStack.Peek(1);
+			var mix = m_ValueStack.Pop();
+			if (mix.Type != DataType.Table ||
+			    mix.Table.Kind != TableKind.Mixin)
+				throw ScriptRuntimeException.NotAMixin(GetString((int) i.NumVal), mix);
+			//copy functions into table
+			var funcs = mix.Table.Get("functions").Table;
+			foreach (var f in funcs.Pairs) {
+				if (cls_index.Table.Get(f.Key).IsNil()) {
+					cls_index.Table.Set(f.Key, f.Value);
+				}
+			}
+			//copy init() into mixin table
+			mixin_tab.Table.Set(GetString((int) i.NumVal), mix.Table.Get("init"));
 		}
 
 		private void ExecNewRange(Instruction i)

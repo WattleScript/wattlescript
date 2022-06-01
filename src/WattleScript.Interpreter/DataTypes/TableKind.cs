@@ -13,6 +13,10 @@ namespace WattleScript.Interpreter
         /// <summary>
         /// Table initialised as a class
         /// </summary>
-        Class
+        Class,
+        /// <summary>
+        /// Table initialised as a mixin
+        /// </summary>
+        Mixin
     }
 }

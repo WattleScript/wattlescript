@@ -15,9 +15,11 @@ namespace WattleScript.Interpreter.Tree.Statements
         private SymbolRefExpression baseLocal;
         private SymbolRefExpression constructorLocal;
         private SymbolRefExpression initLocal;
+        private SymbolRefExpression mixinLocal;
         private string initName;
         
         private SymbolRef classLocalRef;
+        private SymbolRefExpression mixinRef;
         private SymbolRefExpression varargsRef;
         private SourceRef defSource;
         private string className;
@@ -37,18 +39,34 @@ namespace WattleScript.Interpreter.Tree.Statements
         private List<(string name, Expression exp)> fields 
             = new List<(string name, Expression exp)>();
         private FunctionDefinitionExpression constructor;
-        
+
+        private List<string> mixinNames = new List<string>();
+        private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
             lcontext.Lexer.Next();
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
             className = nameToken.Text;
             localName = $"$class:{className}";
+            //base class
             if (lcontext.Lexer.Current.Type == TokenType.Colon)
             {
                 lcontext.Lexer.Next();
                 var baseToken = CheckTokenType(lcontext, TokenType.Name);
                 baseName = baseToken.Text;
+            }
+            //mixins
+            if (lcontext.Lexer.Current.Type == TokenType.Name &&
+                lcontext.Lexer.Current.Text == "with")
+            {
+                do
+                {
+                    lcontext.Lexer.Next();
+                    var mName = CheckTokenType(lcontext, TokenType.Name);
+                    if (mixinNames.Contains(mName.Text))
+                        throw new SyntaxErrorException(mName, "class already uses mixin {0}");
+                    mixinNames.Add(mName.Text);
+                } while (lcontext.Lexer.Current.Type == TokenType.Comma);
             }
             defSource = nameToken.GetSourceRefUpTo(CheckTokenType(lcontext, TokenType.Brk_Open_Curly));
             annotations = lcontext.FunctionAnnotations.ToArray();
@@ -62,6 +80,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
             {
+                ParseAnnotations(lcontext);
                 switch (lcontext.Lexer.Current.Type)
                 {
                     case TokenType.Comma: //skip extras
@@ -113,6 +132,9 @@ namespace WattleScript.Interpreter.Tree.Statements
                         }
                         break;
                     }
+                    default:
+                        throw new SyntaxErrorException(lcontext.Lexer.Current,
+                            "unexpected symbol near {0}");
                 }
             }
             
@@ -135,15 +157,27 @@ namespace WattleScript.Interpreter.Tree.Statements
                 constructorLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(conName));
                 newClosure.AddSymbol(conName);
             }
+            //mixin init array
+            if (mixinNames.Count > 0) {
+                mixinLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(localName + ".__mixins"));
+                initClosure.AddSymbol(localName + ".__mixins");
+            }
             //resolve init
+            initClosure.AddSymbol(localName);
             initClosure.DefineLocal("table"); //arg 0
             initClosure.DefineLocal("depth"); //arg 1
             if (baseName != null) {
-                initClosure.AddSymbol(localName);
                 initClosure.AddSymbol(localName + ".Base");
                 initClosure.AddSymbol(baseName);
             }
-            initClosure.ResolveScope(lcontext);
+            initClosure.ResolveScope(lcontext, (l2) =>
+            {
+                foreach (var n in mixinNames) {
+                    var exp = new SymbolRefExpression(lcontext, lcontext.Scope.CreateGlobalReference(n));
+                    initClosure.AddExpression(exp);
+                    mixinRefs[n] = exp;
+                }
+            });
             initLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(localName + ".__init"));
             //resolve new
             newClosure.DefineLocal(WellKnownSymbols.VARARGS); //arg 0
@@ -165,6 +199,37 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure.Compile(parent, (bc, sym) =>
             {
                 bc.Emit_Args(2, false);
+                if (mixinNames.Count > 0)
+                {
+                    var mixinSym = sym[localName + ".__mixins"];
+                    mixinSym.Compile(bc);
+                    int mixInit = bc.Emit_Jump(OpCode.JtOrPop, -1);
+                    sym[localName].Compile(bc);
+                    bc.Emit_Index("__index");
+                    bc.Emit_TblInitN(0, 1);
+                    mixinSym.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                    foreach (var n in mixinNames) {
+                        //stack:
+                        //class __index table
+                        //mixin init table
+                        //mixin ref
+                        mixinRefs[n].Compile(bc);
+                        bc.Emit_MixInit(n);
+                    }
+                    //stack: __index, init table
+                    bc.Emit_Swap(0, 1);
+                    bc.Emit_Pop(); //remove __index, just have init table
+                    bc.SetNumVal(mixInit, bc.GetJumpPointForNextInstruction());
+                    foreach (var n in mixinNames)
+                    {
+                        bc.Emit_Copy(0);
+                        bc.Emit_Index(n);
+                        sym["table"].Compile(bc);
+                        bc.Emit_Call(1, "mixin.init");
+                        bc.Emit_Pop();
+                    }
+                    bc.Emit_Pop();
+                }
                 if (baseName != null)
                 {
                     bc.Emit_LoopChk(sym["depth"].Symbol, className);
@@ -263,6 +328,14 @@ namespace WattleScript.Interpreter.Tree.Statements
         {
             bc.PushSourceRef(defSource);
             bc.Emit_Enter(classBlock);
+            //mixin names
+            if (mixinNames.Count > 0) {
+                bc.Emit_Literal(DynValue.Nil);
+                mixinLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                bc.Emit_Pop();
+            }
+            //class table
+            int tCount = 10;
             //class name
             bc.Emit_Literal(DynValue.NewString("Name"));
             bc.Emit_Literal(DynValue.NewString(className));
@@ -283,6 +356,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             initLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //make ctor function 
             if (constructor != null) {
+                tCount += 2;
                 bc.Emit_Literal(DynValue.NewString("__ctor"));
                 constructor.Compile(bc, () => 0, className + ".ctor");   
                 constructorLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
@@ -290,7 +364,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             //make new() function closing over class, ctor and __init
             bc.Emit_Literal(DynValue.NewString("new"));
             CompileNew(bc);
-            bc.Emit_TblInitN(constructor != null ? 12 : 10, 1);
+            bc.Emit_TblInitN(tCount, 1);
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);

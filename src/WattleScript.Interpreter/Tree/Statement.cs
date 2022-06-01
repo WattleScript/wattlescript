@@ -161,7 +161,7 @@ namespace WattleScript.Interpreter.Tree
 			}
 		}
 
-		private const string ANNOTATION_ERROR = @"annotations may only be applied to function, class or enum declarations";
+		private const string ANNOTATION_ERROR = @"annotations may only be applied to function, class, mixin or enum declarations";
 		static bool AnnotationsAllowed(TokenType type)
 		{
 			switch (type)
@@ -169,6 +169,7 @@ namespace WattleScript.Interpreter.Tree
 				case TokenType.Function:
 				case TokenType.Enum:
 				case TokenType.Class:
+				case TokenType.Mixin:
 					return true;
 			}
 			return false;
@@ -238,6 +239,8 @@ namespace WattleScript.Interpreter.Tree
 					return new EnumDefinitionStatement(lcontext);
 				case TokenType.Class:
 					return new ClassDefinitionStatement(lcontext);
+				case TokenType.Mixin:
+					return new MixinDefinitionStatement(lcontext);
 				default:
 				{
 						//Check for labels in CLike mode

@@ -91,6 +91,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Nop:
 				case OpCode.Debug:
 				case OpCode.Invalid:
+				case OpCode.MixInit:
 				case OpCode.PushString:
 				case OpCode.PushInt:
 					return InstructionFieldUsage.NumVal;

@@ -402,6 +402,11 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.BaseChk, StringArg(className)));
 		}
 
+		public int Emit_MixInit(string mixinName)
+		{
+			return AppendInstruction(new Instruction(OpCode.MixInit, StringArg(mixinName)));
+		}
+
 		public int Emit_NewCall(int argCount, string className)
 		{
 			return AppendInstruction(new Instruction(OpCode.NewCall, argCount) {NumValB = (uint) StringArg(className)});

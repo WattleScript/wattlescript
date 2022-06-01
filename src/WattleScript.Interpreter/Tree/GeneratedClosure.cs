@@ -44,7 +44,7 @@ namespace WattleScript.Interpreter.Tree
             locals.Add(symbol);
         }
         
-        public void ResolveScope(ScriptLoadingContext lcontext)
+        public void ResolveScope(ScriptLoadingContext lcontext, Action<ScriptLoadingContext> extra = null)
         {
             lcontext.Scope.PushFunction(this);
             lcontext.Scope.ForceEnvUpValue();
@@ -58,6 +58,7 @@ namespace WattleScript.Interpreter.Tree
                 referenced[s] = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(s));
             }
             foreach(var e in toResolve) e.ResolveScope(lcontext);
+            extra?.Invoke(lcontext);
             frame = lcontext.Scope.PopFunction();
         }
 

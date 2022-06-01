@@ -62,6 +62,20 @@ namespace WattleScript.Interpreter
 		{
 			return new ScriptRuntimeException($"class hierarchy contains cyclic reference ({cls})");
 		}
+
+		static string ExtTypeStr(DynValue value)
+		{
+			if (value.Type == DataType.Table)
+			{
+				return value.Table.Kind switch {
+					TableKind.Enum => "enum",
+					TableKind.Mixin => "mixin",
+					TableKind.Class => "class",
+					_ => "table"
+				};
+			}
+			return value.Type.ToLuaTypeString();
+		}
 		
 		/// <summary>
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
@@ -72,19 +86,20 @@ namespace WattleScript.Interpreter
 		/// <returns>The exception to be raised</returns>
 		public static ScriptRuntimeException NotAClass(string name, DynValue value)
 		{
-			string typestr;
-			if (value.Type == DataType.Table)
-			{
-				typestr = value.Table.Kind switch {
-					TableKind.Enum => "enum",
-					_ => "table"
-				};
-			}
-			else
-			{
-				typestr = value.Type.ToLuaTypeString();
-			}
-			throw new ScriptRuntimeException($"'{name}' is invalid class (expected class, got {typestr})");
+			throw new ScriptRuntimeException($"'{name}' is invalid class (expected class, got {ExtTypeStr(value)})");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a mixin
+		/// </summary>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The value that is not a class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NotAMixin(string name, DynValue value)
+		{
+			
+			throw new ScriptRuntimeException($"'{name}' is invalid mixin (expected mixin, got {ExtTypeStr(value)})");
 		}
 
 		/// <summary>

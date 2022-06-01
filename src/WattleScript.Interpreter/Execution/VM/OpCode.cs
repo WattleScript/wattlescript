@@ -125,6 +125,8 @@ namespace WattleScript.Interpreter.Execution.VM
 		BaseChk, //Checks if v-stack top is a class. If not, throw error using NumVal as the base class name
 		NewCall, //Calls the new() function stored in table at v-stack offset NumVal with NumVal arguments.
 				 //Throws error using class name in NumValB if type check fails
+		MixInit, //Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
+		         //Error check uses NumVal for mixin name
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

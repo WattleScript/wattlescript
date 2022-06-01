@@ -119,6 +119,7 @@ namespace WattleScript.Interpreter.Tree
 		Enum,
 		Class,
 		New,
+		Mixin,
 		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}
