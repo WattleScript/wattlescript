@@ -56,6 +56,84 @@ internal partial class Parser
         return true;
     }
 
+    // class A : B with C, D {}
+    // parser has to be positioned after "class"
+    bool ParseKeywordClass()
+    {
+        ParseWhitespaceAndNewlines(Sides.Server);
+        string className = ParseLiteralStartsWithAlpha(Sides.Server); // class name
+        ParseWhitespaceAndNewlines(Sides.Server);
+
+        if (string.IsNullOrWhiteSpace(className))
+        {
+            Throw("Class name has to start with ALPHA character");
+        }
+
+        if (NextNonWhiteSpaceCharMatches(':'))
+        {
+            Step(); // :
+            ParseWhitespaceAndNewlines(Sides.Server);
+            string baseName = ParseLiteralStartsWithAlpha(Sides.Server); // base name
+            
+            if (string.IsNullOrWhiteSpace(baseName))
+            {
+                Throw("Base name in class definition has to start with ALPHA character");
+            }
+        }
+
+        if (NextNonWhiteSpaceCharMatches('{'))
+        {
+            AddToken(TokenTypes.BlockExpr);
+            ParseGenericKeywordWithBlock("class");
+            AddToken(TokenTypes.BlockExpr);
+            return true;
+        }
+        
+        ParseWhitespaceAndNewlines(Sides.Server);
+        string withCandidate = ParseLiteralStartsWithAlpha(Sides.Server); // with
+
+        if (withCandidate != "with")
+        {
+            Throw("Expected \"with\" in class declaration");
+        }
+
+        void ParseMixin()
+        {
+            ParseWhitespaceAndNewlines(Sides.Server);
+            string mixinName = ParseLiteralStartsWithAlpha(Sides.Server); // mixin n   
+
+            if (string.IsNullOrWhiteSpace(mixinName))
+            {
+                Throw("Mixin name in class definition has to start with ALPHA character");
+            }
+            
+            if (NextNonWhiteSpaceCharMatches(','))
+            {
+                Step(); // ,
+                ParseMixin();
+            }
+        }
+        
+        ParseMixin();
+        
+        if (NextNonWhiteSpaceCharMatches('{'))
+        {
+            ParseGenericKeywordWithBlock("class");
+            AddToken(TokenTypes.BlockExpr);
+            return true;
+        }
+        
+        Throw($"Malformated class definition: {source?.Substring(lastKeywordStartPos, pos) ?? ""}");
+        return false;
+    }
+
+    // mixin Mixin {}
+    // parser has to be positioned after "mixin"
+    bool ParseKeywordMixin()
+    {
+        return ParseGenericKeywordWithIdentBlock("mixin");
+    }
+
     // enum Enum {}
     // parser has to be positioned after "enum", at name Ident
     bool ParseKeywordEnum()

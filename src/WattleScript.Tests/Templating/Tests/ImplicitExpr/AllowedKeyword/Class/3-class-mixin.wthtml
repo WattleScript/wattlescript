@@ -1,0 +1,14 @@
+@mixin M1 { }
+@mixin M2 {}
+@class MyClassA {
+    X = () => {
+        return "hello"
+    }    
+}
+@class MyClassB : MyClassA with M1, M2 {
+
+}
+@{
+    myClass = new MyClassB()
+}
+<div>@myClass.X()</div>

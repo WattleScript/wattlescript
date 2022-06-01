@@ -27,7 +27,7 @@ internal partial class Parser
     private string? source;
     private List<Token> Tokens { get; set; } = new List<Token>();
     private List<string> Messages { get; set; } = new List<string>();
-    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch", "enum", "require"};
+    private List<string> AllowedTransitionKeywords = new List<string>() {"if", "for", "do", "while", "require", "function", "switch", "enum", "require", "class", "mixin"};
     private List<string> BannedTransitionKeywords = new List<string>() {"else", "elseif"};
     private Dictionary<string, Func<bool>?> KeywordsMap;
     private StringBuilder Buffer = new StringBuilder();
@@ -40,6 +40,7 @@ internal partial class Parser
     private int storedLine;
     private int storedCol;
     private char storedC;
+    private string storedLexeme;
     private StringBuilder currentLexeme = new StringBuilder();
     private int line = 1;
     private Script? script;
@@ -54,6 +55,7 @@ internal partial class Parser
     private HtmlTagParsingModes tagParsingMode = HtmlTagParsingModes.Native;
     internal Table tagHelpersSharedTable;
     private string friendlyName;
+    private int lastKeywordStartPos = 0;
 
     public Parser(TemplatingEngine engine, Script? script, Table? tagHelpersSharedTable)
     {
@@ -74,6 +76,8 @@ internal partial class Parser
             { "elseif", ParseKeywordInvalidElseIf },
             { "enum", ParseKeywordEnum },
             { "require", ParseKeywordRequire },
+            { "class", ParseKeywordClass },
+            { "mixin", ParseKeywordMixin },
         };
     }
     
@@ -614,7 +618,6 @@ internal partial class Parser
             
         string ParseLiteralStartsWithAlpha(Sides currentSide)
         {
-            ClearPooledBuilder();
             bool first = true;
                 
             while (!IsAtEnd())
@@ -720,6 +723,7 @@ internal partial class Parser
 
         bool ParseKeyword()
         {
+            lastKeywordStartPos = pos;
             string keyword = GetCurrentLexeme();
 
             // if keyword is from a know list of keywords we invoke a handler method of that keyword

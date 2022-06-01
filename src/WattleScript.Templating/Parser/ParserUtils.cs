@@ -66,6 +66,11 @@ internal partial class Parser
     
     char Step(int i = 1)
     {
+        if (source == null)
+        {
+            return ' ';
+        }
+        
         if (pos >= source.Length)
         {
             return ' ';
@@ -128,6 +133,7 @@ internal partial class Parser
         storedPos = pos;
         storedCol = col;
         storedLine = line;
+        storedLexeme = currentLexeme.ToString();
     }
 
     void RestorePos()
@@ -147,6 +153,7 @@ internal partial class Parser
         col = storedCol;
         line = storedLine;
         DiscardCurrentLexeme();
+        currentLexeme.Append(storedLexeme);
     }
 
     string? PeekRange(int from, int length)
