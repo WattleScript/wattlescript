@@ -10,6 +10,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 	{
 		Expression m_BaseExp;
 		Expression m_IndexExp;
+		Expression m_ThisExp;
 		string m_Name;
 		private bool inc;
 		private bool dec;
@@ -72,6 +73,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			m_BaseExp.ResolveScope(lcontext);
 			m_IndexExp?.ResolveScope(lcontext);
+			if (m_BaseExp is SymbolRefExpression se && (se.Symbol?.IsBaseClass ?? false))
+			{
+				m_ThisExp = new SymbolRefExpression(lcontext, lcontext.Scope.Find("this"));
+			}
 		}
 
 
@@ -81,8 +86,20 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 		public void Compile(FunctionBuilder bc, bool duplicate, bool isMethodCall = false)
 		{
-			m_BaseExp.Compile(bc);
-			if (duplicate) bc.Emit_Copy(0);
+			if (duplicate && m_ThisExp != null)
+			{
+				m_ThisExp.Compile(bc);
+				m_BaseExp.Compile(bc);
+				bc.Emit_Index("__index");
+			} 
+			else if (duplicate) 
+			{
+				m_BaseExp.Compile(bc);
+				bc.Emit_Copy(0);
+			}
+			else {
+				m_BaseExp.Compile(bc);
+			}
 			if (isLength) {
 				if (nilCheck) {
 					bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));

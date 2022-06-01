@@ -31,6 +31,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         private GeneratedClosure newClosure;
         private GeneratedClosure initClosure;
         private GeneratedClosure tostringClosure;
+        private GeneratedClosure emptyConstructor;
         private bool tostringImpl;
 
         //Class members
@@ -146,7 +147,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             lcontext.Scope.PushBlock();
             //
             if (baseName != null) {
-                var baseLocalRef = lcontext.Scope.DefineLocal(localName + ".Base");
+                var baseLocalRef = lcontext.Scope.DefineBaseRef();
                 baseLocal = new SymbolRefExpression(lcontext, baseLocalRef);
             }
             classLocalRef = lcontext.Scope.DefineLocal(localName);
@@ -157,6 +158,12 @@ namespace WattleScript.Interpreter.Tree.Statements
                 constructorLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(conName));
                 newClosure.AddSymbol(conName);
             }
+            else
+            {
+                emptyConstructor =
+                    new GeneratedClosure(localName + ".ctor [BLANK]", defSource, FunctionFlags.None, false);
+                emptyConstructor.ResolveScope(lcontext);
+            }
             //mixin init array
             if (mixinNames.Count > 0) {
                 mixinLocal = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(localName + ".__mixins"));
@@ -166,8 +173,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure.AddSymbol(localName);
             initClosure.DefineLocal("table"); //arg 0
             initClosure.DefineLocal("depth"); //arg 1
-            if (baseName != null) {
-                initClosure.AddSymbol(localName + ".Base");
+            if (baseName != null)
+            {
+                initClosure.AddSymbol("base");
                 initClosure.AddSymbol(baseName);
             }
             initClosure.ResolveScope(lcontext, (l2) =>
@@ -233,7 +241,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 if (baseName != null)
                 {
                     bc.Emit_LoopChk(sym["depth"].Symbol, className);
-                    var baseSym = sym[localName + ".Base"];
+                    var baseSym = sym["base"];
                     baseSym.Compile(bc);
                     int jp = bc.Emit_Jump(OpCode.JNilChk, -1);
                     int jp2 = bc.Emit_Jump(OpCode.Jump, -1);
@@ -241,6 +249,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     //Store to closure
                     sym[baseName].Compile(bc);
                     bc.Emit_BaseChk(baseName);
+                    baseSym.ForceWrite = true;
                     baseSym.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                     //Set __index metatable
                     sym[localName].Compile(bc);
@@ -335,7 +344,6 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Pop();
             }
             //class table
-            int tCount = 10;
             //class name
             bc.Emit_Literal(DynValue.NewString("Name"));
             bc.Emit_Literal(DynValue.NewString(className));
@@ -355,16 +363,18 @@ namespace WattleScript.Interpreter.Tree.Statements
             CompileInit(bc);
             initLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //make ctor function 
+            bc.Emit_Literal(DynValue.NewString("__ctor"));
             if (constructor != null) {
-                tCount += 2;
-                bc.Emit_Literal(DynValue.NewString("__ctor"));
                 constructor.Compile(bc, () => 0, className + ".ctor");   
                 constructorLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            }
+            else {
+                emptyConstructor.Compile(bc, (fn, sym) => fn.Emit_Ret(0));
             }
             //make new() function closing over class, ctor and __init
             bc.Emit_Literal(DynValue.NewString("new"));
             CompileNew(bc);
-            bc.Emit_TblInitN(tCount, 1);
+            bc.Emit_TblInitN(12, 1);
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);

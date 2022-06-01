@@ -85,17 +85,31 @@ namespace WattleScript.Interpreter.Execution
 		private SymbolRef CreateUpValue(BuildTimeScope buildTimeScope, SymbolRef symb, int closuredFrame, int currentFrame)
 		{
 			// it's a 0-level upvalue. Just create it and we're done.
-			if (closuredFrame == currentFrame)
-				return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
+			if (closuredFrame == currentFrame) {
+				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
+				uv.IsBaseClass = symb.IsBaseClass;
+				return uv;
+			}
+			else
+			{
 
-			SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
-
-			return m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
+				SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
+				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
+				uv.IsBaseClass = symb.IsBaseClass;
+				return uv;
+			}
 		}
 
 		public SymbolRef DefineLocal(string name)
 		{
 			return m_Frames.Last().DefineLocal(name);
+		}
+
+		public SymbolRef DefineBaseRef()
+		{
+			var retVal = DefineLocal("base");
+			retVal.IsBaseClass = true;
+			return retVal;
 		}
 
 		public SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)

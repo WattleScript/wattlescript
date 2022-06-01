@@ -17,6 +17,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public bool IsAssignment => inc || dec;
 		public SymbolRef Symbol => m_Ref;
+		
+		public bool ForceWrite { get; set; }
 
 		public SymbolRefExpression(Token T, ScriptLoadingContext lcontext)
 			: base(lcontext)
@@ -94,6 +96,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public void CompileAssignment(Execution.VM.FunctionBuilder bc, Operator op, int stackofs, int tupleidx)
 		{
+			if (m_Ref.IsBaseClass && !ForceWrite) 
+			{
+				throw new SyntaxErrorException(T, "cannot write to base class variable");
+			}
 			if (op != Operator.NotAnOperator)
 			{				
 				bc.Emit_Load(m_Ref); //left
