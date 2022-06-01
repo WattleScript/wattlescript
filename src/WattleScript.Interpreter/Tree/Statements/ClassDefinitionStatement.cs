@@ -106,7 +106,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.Name when lcontext.Lexer.Current.Text == className:
                     {
                         lcontext.Lexer.Next();
-                        constructor = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false);
+                        constructor = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, false, true);
                         break;
                     }
                     case TokenType.Name:
@@ -149,6 +149,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             if (baseName != null) {
                 var baseLocalRef = lcontext.Scope.DefineBaseRef();
                 baseLocal = new SymbolRefExpression(lcontext, baseLocalRef);
+            }
+            else {
+                lcontext.Scope.DefineBaseEmpty();
             }
             classLocalRef = lcontext.Scope.DefineLocal(localName);
             classStoreGlobal = new SymbolRefExpression(lcontext, lcontext.Scope.Find(className));

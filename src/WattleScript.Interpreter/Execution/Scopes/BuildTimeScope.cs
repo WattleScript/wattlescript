@@ -11,11 +11,13 @@ namespace WattleScript.Interpreter.Execution
 		List<BuildTimeScopeFrame> m_Frames = new List<BuildTimeScopeFrame>();
 		List<IClosureBuilder> m_ClosureBuilders = new List<IClosureBuilder>();
 
-		public void PushFunction(IClosureBuilder closureBuilder)
+		public void PushFunction(IClosureBuilder closureBuilder, bool isConstructor = false)
 		{
 			m_ClosureBuilders.Add(closureBuilder);
-			m_Frames.Add(new BuildTimeScopeFrame());
+			m_Frames.Add(new BuildTimeScopeFrame(isConstructor));
 		}
+
+		public bool InConstructor => m_Frames.Last().IsConstructor;
 
 		public void SetHasVarArgs()
 		{
@@ -88,6 +90,7 @@ namespace WattleScript.Interpreter.Execution
 			if (closuredFrame == currentFrame) {
 				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
 				uv.IsBaseClass = symb.IsBaseClass;
+				uv.Placeholder = symb.Placeholder;
 				return uv;
 			}
 			else
@@ -96,6 +99,7 @@ namespace WattleScript.Interpreter.Execution
 				SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
 				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
 				uv.IsBaseClass = symb.IsBaseClass;
+				uv.Placeholder = symb.Placeholder;
 				return uv;
 			}
 		}
@@ -111,6 +115,17 @@ namespace WattleScript.Interpreter.Execution
 			retVal.IsBaseClass = true;
 			return retVal;
 		}
+		
+		//Defines a placeholder symbol for base that will error if used
+		public SymbolRef DefineBaseEmpty()
+		{
+			var retVal = DefineLocal("base");
+			retVal.IsBaseClass = true;
+			retVal.Placeholder = true;
+			return retVal;
+		}
+		
+		
 
 		public SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
 		{

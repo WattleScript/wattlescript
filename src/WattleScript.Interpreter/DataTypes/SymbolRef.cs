@@ -40,6 +40,11 @@ namespace WattleScript.Interpreter
 		/// This option is not serialized.
 		/// </summary>
 		public bool IsBaseClass { get; set; }
+		
+		/// <summary>
+		/// Set to true if this symbol is a placeholder (no allocation)
+		/// </summary>
+		public bool Placeholder { get; set; }
 
 
 		/// <summary>

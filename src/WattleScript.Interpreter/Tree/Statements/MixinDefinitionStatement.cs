@@ -20,6 +20,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             = new List<(string name, Expression exp)>();
 
         private SourceRef sourceRef;
+        private RuntimeScopeBlock scopeBlock;
         
         public MixinDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
@@ -103,6 +104,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         public override void Compile(FunctionBuilder bc)
         {
             bc.PushSourceRef(sourceRef);
+            bc.Emit_Enter(scopeBlock);
             bc.Emit_Literal(DynValue.NewString("init"));
             CompileInit(bc);
             bc.Emit_Literal(DynValue.NewString("functions"));
@@ -118,11 +120,14 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Annot(annot);
             bc.Emit_TabProps(TableKind.Mixin, true);
             storeValue.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            bc.Emit_Leave(scopeBlock);
             bc.PopSourceRef();
         }
 
         public override void ResolveScope(ScriptLoadingContext lcontext)
         {
+            lcontext.Scope.PushBlock();
+            lcontext.Scope.DefineBaseEmpty();
             storeValue = new SymbolRefExpression(lcontext, lcontext.Scope.CreateGlobalReference(name));
             init.DefineLocal("table");
             foreach(var f in fields)
@@ -130,6 +135,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             init.ResolveScope(lcontext);
             foreach(var f in functions)
                 f.exp.ResolveScope(lcontext);
+            scopeBlock = lcontext.Scope.PopBlock();
         }
     }
 }

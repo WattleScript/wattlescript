@@ -33,6 +33,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		SourceRef m_Begin, m_End;
 		private ScriptLoadingContext lcontext;
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
+		private bool m_IsConstructor;
 
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, bool usesGlobalEnv)
 			: this(lcontext, SelfType.None, usesGlobalEnv, false)
@@ -42,11 +43,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			: this(lcontext, self, false, isLambda)
 		{ }
 		
-		private FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda)
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false)
 			: base(lcontext)
 		{
 			this.lcontext = lcontext;
-			
+			this.m_IsConstructor = isConstructor;
 			if (m_UsesGlobalEnv = usesGlobalEnv)
 				CheckTokenType(lcontext, TokenType.Function);
 
@@ -103,7 +104,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
 			resolved = true;
-			lcontext.Scope.PushFunction(this);
+			lcontext.Scope.PushFunction(this, m_IsConstructor);
 
 			m_ParamNames = DefineArguments(paramnames, lcontext);
 			

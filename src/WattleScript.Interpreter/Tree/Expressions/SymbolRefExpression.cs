@@ -74,6 +74,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public override void Compile(Execution.VM.FunctionBuilder bc)
 		{
+			if (m_Ref.Placeholder) {
+				throw new SyntaxErrorException(T, "base class not defined");
+			}
 			bc.Emit_Load(m_Ref);
 			if (inc)
 			{

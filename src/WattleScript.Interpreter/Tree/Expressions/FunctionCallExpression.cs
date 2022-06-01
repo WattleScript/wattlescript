@@ -85,6 +85,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			m_Function.ResolveScope(lcontext);
 			if (m_Function is SymbolRefExpression se && (se.Symbol?.IsBaseClass ?? false)) {
 				m_This = new SymbolRefExpression(lcontext, lcontext.Scope.Find("this"));
+				if (m_Name == null && !lcontext.Scope.InConstructor)
+				{
+					throw new SyntaxErrorException(lcontext.Script, SourceRef,
+						"cannot call base() outside of constructor");
+				}
 			}
 			foreach(var arg in m_Arguments)
 				arg.ResolveScope(lcontext);
