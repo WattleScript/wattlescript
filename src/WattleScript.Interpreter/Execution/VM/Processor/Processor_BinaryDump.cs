@@ -224,7 +224,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			proto.code = new Instruction[br.ReadVarUInt32()];
 			proto.sourceRefs = new SourceRef[proto.code.Length];
 			for (int i = 0; i < proto.code.Length; i++) proto.code[i] = Instruction.ReadBinary(br);
-			SourceRef sourceRef = new SourceRef(sourceID, 0, 0, 0, 0, false);
+			SourceRef sourceRef = new SourceRef(sourceID);
 			if (br.ReadBoolean())
 			{
 				//Debug info!

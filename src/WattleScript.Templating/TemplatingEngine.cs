@@ -28,7 +28,7 @@ public class TemplatingEngine
         stdOutTagHelperTmp = parent.stdOutTagHelperTmp;
 
         tagHelpersSharedTbl = tbl;
-        
+
         SharedSetup();
     }
 
@@ -72,14 +72,14 @@ public class TemplatingEngine
     {
         if (args.Count > 0)
         {
-            Table? tbl= null;
-            
+            Table? tbl = null;
+
             if (parser != null)
             {
                 tbl = script.Globals.Get("__tagData").Table;
                 parser.tagHelpersSharedTable = tbl;
             }
-            
+
             DynValue arg = args[0];
             string str = arg.String;
             string transpiled = new TemplatingEngine(this, tbl).Transpile(str);
@@ -90,14 +90,14 @@ public class TemplatingEngine
 
             string output = stdOutTagHelperTmp.ToString();
             stdOutTagHelper.Append(output);
-            
+
             script.Globals["stdout"] = Print;
             return DynValue.NewString(output);
         }
-        
+
         return DynValue.Nil;
     }
-    
+
     string EncodeJsString(string s)
     {
         pooledSb.Clear();
@@ -137,9 +137,11 @@ public class TemplatingEngine
                     {
                         pooledSb.Append(c);
                     }
+
                     break;
             }
         }
+
         pooledSb.Append('"');
         return pooledSb.ToString();
     }
@@ -155,7 +157,7 @@ public class TemplatingEngine
         {
             return tokens;
         }
-        
+
         int i = 0;
         Token token = tokens[i];
 
@@ -165,8 +167,8 @@ public class TemplatingEngine
             if (i > tokens.Count - 1)
             {
                 break;
-            } 
-            
+            }
+
             Token nextToken = tokens[i];
             if (token.Type == nextToken.Type)
             {
@@ -175,16 +177,16 @@ public class TemplatingEngine
                 token.ToLine = Math.Max(token.ToLine, nextToken.ToLine);
                 token.StartCol = Math.Min(token.StartCol, nextToken.StartCol);
                 token.EndCol = Math.Max(token.EndCol, nextToken.EndCol);
-                
+
                 tokens.RemoveAt(i);
                 i--;
                 continue;
             }
-            
+
             // move to next token
             token = tokens[i];
         }
-        
+
         return tokens;
     }
 
@@ -194,11 +196,11 @@ public class TemplatingEngine
         {
             return "";
         }
-        
+
         parser = new Parser(this, script, tagHelpersSharedTbl);
         List<Token> tokens = parser.Parse(code, "");
         pooledSb.Clear();
-        
+
         if (options.Optimise)
         {
             tokens = Optimise(tokens);
@@ -208,7 +210,7 @@ public class TemplatingEngine
         {
             pooledSb.AppendLine(tkn.ToString());
         }
-        
+
         string finalText = pooledSb.ToString();
         return finalText;
     }
@@ -219,7 +221,7 @@ public class TemplatingEngine
         {
             return "";
         }
-        
+
         parser = new Parser(this, script, tagHelpersSharedTbl);
         List<Token> tokens = parser.Parse(code, friendlyName);
 
@@ -236,7 +238,7 @@ public class TemplatingEngine
         {
             tokens = Optimise(tokens);
         }
-        
+
         foreach (Token tkn in tokens)
         {
             if (options.RunMode == TemplatingEngineOptions.RunModes.Debug)
@@ -254,7 +256,7 @@ public class TemplatingEngine
                         lexeme = lexeme.TrimStart();
                         firstClientPending = false;
                     }
-                
+
                     sb.AppendLine($"stdout({EncodeJsString(lexeme)})");
                     break;
                 }
@@ -264,6 +266,7 @@ public class TemplatingEngine
                     {
                         continue;
                     }
+
                     sb.AppendLine(str);
                     break;
                 case TokenTypes.ImplicitExpr:
@@ -280,70 +283,42 @@ public class TemplatingEngine
         return finalText;
     }
 
-    public async Task<DynValue> ParseTagHelper(string code)
+    DynValue ParseTagHelperAsFunc(string code, Script sc)
     {
-        stdOut.Clear();
-
         string transpiledTemplate = Transpile(code, "tagHelperDefinition");
         DynValue dv = script.LoadString(transpiledTemplate);
 
-        FunctionProto? renderFn = dv.Function.Function.Functions.FirstOrDefault(x => x.Name == "Render");
-
-        if (renderFn == null)
+        foreach (FunctionProto? fn in dv.Function.Function.Functions)
         {
-            // [todo] err, mandatory Render() not found
-            return dv;
-        }
+            var annot = fn.Annotations?.FirstOrDefault(x => x.Name == "tagHelper");
+            
+            if (annot == null)
+            {
+                continue;
+            }
+            
+            string snip = fn.GetSourceCode(transpiledTemplate);
+            string[] snipLines = snip.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            List<string> outLines = new List<string>();
+            foreach (string snipLine in snipLines)
+            {
+                if (!snipLine.StartsWith("#line"))
+                {
+                    outLines.Add(snipLine);
+                }
+            }
 
-        IReadOnlyList<Annotation>? annots = dv.Function.Annotations;
-
-        if (annots == null)
-        {
-            // [todo] err, mandatory annot "name" not found
-            return dv;
-        }
-        
-        Annotation? nameAnnot = annots.FirstOrDefault(x => x.Name == "name");
-
-        if (nameAnnot == null)
-        {
-            // [todo] err, mandatory annot "name" not found
-            return dv;
-        }
-
-        if (nameAnnot.Value.Type != DataType.Table)
-        {
-            // [todo] err, annot not valid, possibly wrong annot mode is used
-            return dv;
+            snip = string.Join("\n", outLines); // get rid of generated #line
+            tagHelpers.Add(new TagHelper(annot.Value.Table.Values.First().String, snip, fn.Name));
         }
         
-        Table tbl = nameAnnot.Value.Table;
-
-        if (tbl.Length < 1)
-        {
-            // [todo] err, annot "name" is empty
-            return dv;
-        }
-
-        DynValue nameDv = tbl.Values.First();
-
-        if (nameDv.Type != DataType.String)
-        {
-            // [todo] err, annot "name" is something else than string
-            return dv;
-        }
-
-        string name = nameDv.String;
-
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            // [todo] err, annot "name" is empty
-            return dv;
-        }
-        
-        tagHelpers.Add(new TagHelper(nameDv.String, transpiledTemplate));
-
         return dv;
+    }
+
+    public void ParseTagHelper(string code, Script sc)
+    {
+        stdOut.Clear();
+        ParseTagHelperAsFunc(code, sc);
     }
 
     public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)
@@ -353,26 +328,26 @@ public class TemplatingEngine
         string transpiledTemplate = Transpile(code);
         await script.DoStringAsync(transpiledTemplate, globalContext, friendlyCodeName);
         string htmlText = stdOut.ToString();
-        
+
         return new RenderResult() {Output = htmlText, Transpiled = transpiledTemplate};
     }
-    
+
     private void PrintLine(Script script, CallbackArguments args)
     {
         stdOut.AppendLine(args[0].CastToString());
     }
-        
+
     public void Print(Script script, CallbackArguments args)
     {
         stdOut.Append(args[0].CastToString());
     }
-    
+
     public void PrintTaghelper(Script script, CallbackArguments args)
     {
         string str = args[0].CastToString();
         stdOutTagHelper.Append(str);
     }
-    
+
     public void PrintTaghelperTmp(Script script, CallbackArguments args)
     {
         string str = args[0].CastToString();

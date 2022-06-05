@@ -4,6 +4,8 @@ namespace WattleScript.Templating;
 
 internal partial class Parser
 {
+    private Dictionary<TokenTypes, Action> AddTokenActions = new Dictionary<TokenTypes, Action>();
+
     internal enum HtmlAttrEnclosingModes
     {
         Unknown,
@@ -112,9 +114,7 @@ internal partial class Parser
         
         return cc;
     }
-
-    private Dictionary<TokenTypes, Action> AddTokenActions = new Dictionary<TokenTypes, Action>();
-
+    
     void SetAddTokenAction(TokenTypes tokenType, Action action)
     {
         if (AddTokenActions.ContainsKey(tokenType))

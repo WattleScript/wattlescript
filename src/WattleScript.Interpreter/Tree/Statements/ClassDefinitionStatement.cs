@@ -123,6 +123,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 var exp = Expression.Expr(lcontext, true);
                                 initClosure.AddExpression(exp);
                                 fields.Add((T.Text, exp));
+                                string str = ((FunctionDefinitionExpression) exp).ToString();
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -355,7 +356,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             foreach (var fn in functions)
             {
                 bc.Emit_Literal(DynValue.NewString(fn.name));
-                fn.exp.Compile(bc, () => 0, fn.name);
+                fn.exp.Compile(bc, fn.name);
             }
             bc.Emit_TblInitN(functions.Count * 2, 1);
             //compile __tostring metamethod
@@ -368,7 +369,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             //make ctor function 
             bc.Emit_Literal(DynValue.NewString("__ctor"));
             if (constructor != null) {
-                constructor.Compile(bc, () => 0, className + ".ctor");   
+                constructor.Compile(bc, className + ".ctor");   
                 constructorLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             }
             else {

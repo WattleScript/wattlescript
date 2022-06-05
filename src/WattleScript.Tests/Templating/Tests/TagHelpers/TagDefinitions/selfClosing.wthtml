@@ -1,6 +1,5 @@
 @{
-    @@name("self-closing")
-    
+    @tagHelper("self-closing")
     function Render(ctx) {
       
         var n1 = ctx["attributes"]["n1"];

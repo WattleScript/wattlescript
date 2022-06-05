@@ -1,6 +1,5 @@
 @{
-    @@name("ignore")
-    
+    @tagHelper("ignore")
     function Render(ctx) {
         
     }

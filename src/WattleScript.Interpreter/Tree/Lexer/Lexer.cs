@@ -1157,16 +1157,12 @@ namespace WattleScript.Interpreter.Tree
 		{
 			//Make sure negative values aren't created in tokens
 			//Breaks other things
-			Token t = new Token(tokenType, m_SourceId, 
-				fromLine < 1 ? 1 : fromLine, 
-				fromCol < 0 ? 0 : fromCol, 
-				m_Line < 1 ? 1 : m_Line, 
+			Token t = new Token(tokenType, m_SourceId,
+				fromLine < 1 ? 1 : fromLine,
+				fromCol < 0 ? 0 : fromCol,
+				m_Line < 1 ? 1 : m_Line,
 				m_Col < 0 ? 0 : m_Col,
-				m_PrevLineTo, m_PrevColTo)
-			{
-				Text = text
-				
-			};
+				m_PrevLineTo, m_PrevColTo, m_Cursor - (text?.Length ?? 0), m_Cursor, text);
 			m_PrevLineTo = m_Line < 1 ? 1 : m_Line;
 			m_PrevColTo = m_Col < 0 ? 0 : m_Col;
 			return t;

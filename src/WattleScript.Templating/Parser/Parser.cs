@@ -1202,10 +1202,10 @@ internal partial class Parser
             engine.script.Call(pVal);
             
             Tokens.Clear();
-
+            
             engine.script.DoString(helper.Template);
-            engine.script.Globals.Get("Render").Function.Call(ctxTable);
-            engine.script.Globals["stdout"] = engine.Print;
+            engine.script.Globals.Get(helper.FunctionName).Function.Call(ctxTable);
+            engine.script.Globals["stdout"] = engine.Print;   
             
             // tag output is already in stdout
             tagParsingMode = HtmlTagParsingModes.Native;

@@ -1,6 +1,5 @@
 @{
-    @@name("radio-button")
-    
+    @tagHelper("radio-button")
     function Render(ctx) {
     
         var name = ctx["data"]["radio-name"];
