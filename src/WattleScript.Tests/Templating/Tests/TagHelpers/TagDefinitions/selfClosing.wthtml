@@ -1,6 +1,6 @@
 @{
     @tagHelper("self-closing")
-    function Render(ctx) {
+    function TagSelfClosing(ctx) {
       
         var n1 = ctx["attributes"]["n1"];
         var n2 = ctx["attributes"]["n2"];

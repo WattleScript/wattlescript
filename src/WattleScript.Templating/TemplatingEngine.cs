@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 using WattleScript.Interpreter;
 using WattleScript.Interpreter.Execution.VM;
 
@@ -16,7 +17,21 @@ public class TemplatingEngine
     private StringBuilder stdOutTagHelperTmp = new StringBuilder();
     private Parser? parser;
     private Table? tagHelpersSharedTbl;
+    private Dictionary<string, byte[]>? tagHelperHints;
+    internal TranspileModes transpileMode = TranspileModes.Run;
 
+    public enum TranspileModes
+    {
+        Run,
+        Dump
+    }
+
+    internal enum TranspileModesExt
+    {
+        None,
+        DumpRecursive
+    }
+    
     public TemplatingEngine(TemplatingEngine parent, Table? tbl)
     {
         options = parent.options;
@@ -32,13 +47,14 @@ public class TemplatingEngine
         SharedSetup();
     }
 
-    public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null)
+    public TemplatingEngine(Script script, TemplatingEngineOptions? options = null, List<TagHelper>? tagHelpers = null, Dictionary<string, byte[]>? tagHelperHints = null)
     {
         options ??= TemplatingEngineOptions.Default;
         this.options = options;
         this.script = script ?? throw new ArgumentNullException(nameof(script));
         this.tagHelpers = tagHelpers ?? new List<TagHelper>();
-
+        this.tagHelperHints = tagHelperHints;
+        
         SharedSetup();
     }
 
@@ -68,6 +84,20 @@ public class TemplatingEngine
         }
     }
 
+    DynValue RenderTagContentDumped(Script s, CallbackArguments args)
+    {
+        if (args.Count > 0)
+        {
+            DynValue ctx = args[0];
+            if (ctx.IsNotNil() && ctx.Type == DataType.Function)
+            {
+                ctx.Function.Call();
+            }
+        }
+        
+        return DynValue.Void;
+    }
+    
     DynValue RenderTagContent(Script s, CallbackArguments args)
     {
         if (args.Count > 0)
@@ -82,7 +112,7 @@ public class TemplatingEngine
 
             DynValue arg = args[0];
             string str = arg.String;
-            string transpiled = new TemplatingEngine(this, tbl).Transpile(str);
+            string transpiled = new TemplatingEngine(this, tbl).Transpile(str, transpileMode);
 
             stdOutTagHelperTmp.Clear();
             script.Globals["stdout"] = PrintTaghelperTmp;
@@ -197,8 +227,8 @@ public class TemplatingEngine
             return "";
         }
 
-        parser = new Parser(this, script, tagHelpersSharedTbl);
-        List<Token> tokens = parser.Parse(code, "");
+        parser = new Parser(this, script, tagHelpersSharedTbl, null);
+        List<Token> tokens = parser.Parse(code, transpileMode, "");
         pooledSb.Clear();
 
         if (options.Optimise)
@@ -215,15 +245,24 @@ public class TemplatingEngine
         return finalText;
     }
 
-    public string Transpile(string code, string friendlyName = "")
+    internal string TranspileRecursive(string code, Dictionary<TagHelper, bool> loadedTagHelpers)
+    {
+        Parser locParser = new Parser(this, script, tagHelpersSharedTbl, tagHelperHints);
+        List<Token> tokens = locParser.Parse(code, TranspileModes.Dump, "", TranspileModesExt.DumpRecursive, loadedTagHelpers);
+
+        string str = Transform(tokens);
+        return str;
+    }
+    
+    public string Transpile(string code, TranspileModes mode = TranspileModes.Run, string friendlyName = "")
     {
         if (string.IsNullOrWhiteSpace(code))
         {
             return "";
         }
 
-        parser = new Parser(this, script, tagHelpersSharedTbl);
-        List<Token> tokens = parser.Parse(code, friendlyName);
+        parser = new Parser(this, script, tagHelpersSharedTbl, tagHelperHints);
+        List<Token> tokens = parser.Parse(code, mode, friendlyName);
 
         string str = Transform(tokens);
         return str;
@@ -285,7 +324,7 @@ public class TemplatingEngine
 
     DynValue ParseTagHelperAsFunc(string code, Script sc)
     {
-        string transpiledTemplate = Transpile(code, "tagHelperDefinition");
+        string transpiledTemplate = Transpile(code, transpileMode, "tagHelperDefinition");
         DynValue dv = script.LoadString(transpiledTemplate);
 
         foreach (FunctionProto? fn in dv.Function.Function.Functions)
@@ -298,7 +337,7 @@ public class TemplatingEngine
             }
             
             string snip = fn.GetSourceCode(transpiledTemplate);
-            string[] snipLines = snip.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            string[] snipLines = snip.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
             List<string> outLines = new List<string>();
             foreach (string snipLine in snipLines)
             {
@@ -309,6 +348,9 @@ public class TemplatingEngine
             }
 
             snip = string.Join("\n", outLines); // get rid of generated #line
+
+            string proxyName = $"__tagHelper_{Guid.NewGuid().ToString().Replace("-", "")}";
+
             tagHelpers.Add(new TagHelper(annot.Value.Table.Values.First().String, snip, fn.Name));
         }
         
@@ -319,6 +361,56 @@ public class TemplatingEngine
     {
         stdOut.Clear();
         ParseTagHelperAsFunc(code, sc);
+    }
+
+    public async Task<Dictionary<string, byte[]>> GetAfterRenderHints()
+    {
+        Dictionary<string, byte[]> dict = new Dictionary<string, byte[]>();
+
+        if (parser != null)
+        {
+            if (parser.pendingTemplateParts.Count > 0)
+            {
+                foreach (KeyValuePair<string, DynValue> pair in parser.pendingTemplateParts)
+                {
+                    await using MemoryStream ms = new MemoryStream();
+                    script.Dump(pair.Value, ms);
+                    byte[] arr = ms.ToArray();
+                    
+                    dict.Add(pair.Key, arr);
+                }
+            }
+        }
+
+        return dict;
+    }
+
+    public byte[] Dump(string code, Table? globalContext = null, string? friendlyCodeName = null, bool writeSourceRefs = true)
+    {
+        transpileMode = TranspileModes.Dump;
+        stdOut.Clear();
+
+        string transpiledTemplate = Transpile(code, transpileMode);
+
+        DynValue dv = script.LoadString(transpiledTemplate, globalContext, friendlyCodeName);
+
+        using MemoryStream ms = new MemoryStream();
+        script.Dump(dv, ms, writeSourceRefs);
+        return ms.ToArray();
+    }
+    
+    public async Task<RenderResult> Render(byte[] bytecode, Table? globalContext = null, string? friendlyCodeName = null)
+    {
+        transpileMode = TranspileModes.Run;
+        stdOut.Clear();
+        
+        script.Globals["render_tag_content"] = RenderTagContentDumped;
+
+        using MemoryStream ms = new MemoryStream(bytecode);
+        await script.DoStreamAsync(ms, globalContext, friendlyCodeName);
+        string htmlText = stdOut.ToString();
+
+        return new RenderResult() {Output = htmlText, Transpiled = ""};
     }
 
     public async Task<RenderResult> Render(string code, Table? globalContext = null, string? friendlyCodeName = null)

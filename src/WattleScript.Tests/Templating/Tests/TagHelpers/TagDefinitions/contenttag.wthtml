@@ -1,6 +1,6 @@
 @{
     @tagHelper("content-tag")
-    function Render(ctx) {
+    function TagContentTag(ctx) {
         <div class="content-tag">@render_tag_content(ctx["content"])</div>
     }
 }

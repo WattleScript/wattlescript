@@ -1152,7 +1152,6 @@ namespace WattleScript.Interpreter.Tree
 			return CreateToken(TokenType.Directive, fromLine, fromCol, builder.ToString());
 		}
 
-
 		private Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null)
 		{
 			//Make sure negative values aren't created in tokens

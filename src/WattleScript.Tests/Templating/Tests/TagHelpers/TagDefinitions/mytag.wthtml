@@ -1,6 +1,6 @@
 @{
     @tagHelper("my-tag")
-    function Render(ctx) {
+    function TagMyTag(ctx) {
         <div>My tag!</div>
     }
 }

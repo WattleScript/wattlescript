@@ -396,6 +396,21 @@ namespace WattleScript.Interpreter
 			DynValue func = LoadStream(stream, globalContext, codeFriendlyName);
 			return Call(func);
 		}
+		
+		/// <summary>
+		/// Loads and executes a stream containing a Lua/WattleScript script.
+		/// </summary>
+		/// <param name="stream">The stream.</param>
+		/// <param name="globalContext">The global context.</param>
+		/// <param name="codeFriendlyName">Name of the code - used to report errors, etc. Also used by debuggers to locate the original source file.</param>
+		/// <returns>
+		/// A DynValue containing the result of the processing of the loaded chunk.
+		/// </returns>
+		public Task<DynValue> DoStreamAsync(Stream stream, Table globalContext = null, string codeFriendlyName = null)
+		{
+			DynValue func = LoadStream(stream, globalContext, codeFriendlyName);
+			return CallAsync(func);
+		}
 
 
 		/// <summary>

@@ -259,6 +259,14 @@ internal partial class Parser
 
         return any;
     }
+
+    Token AddAdHocToken(TokenTypes type, string content)
+    {
+        Token token = new Token(type, content, 0, 0, 0, 0);
+        Tokens.Add(token);
+
+        return token;
+    }
     
     bool AddToken(TokenTypes type)
     {

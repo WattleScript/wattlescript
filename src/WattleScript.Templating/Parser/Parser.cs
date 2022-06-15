@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using System.Dynamic;
+using System.Text;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 using WattleScript.Interpreter;
 
 namespace WattleScript.Templating;
@@ -56,12 +59,18 @@ internal partial class Parser
     internal Table tagHelpersSharedTable;
     private string friendlyName;
     private int lastKeywordStartPos = 0;
+    private Dictionary<TagHelper, bool> loadedTagHelpers = new Dictionary<TagHelper, bool>();
+    internal Dictionary<string, DynValue> pendingTemplateParts = new Dictionary<string, DynValue>();
+    internal Dictionary<string, byte[]>? tagHelperHints;
+    private TemplatingEngine.TranspileModes transpileMode => engine.transpileMode;
+    private TemplatingEngine.TranspileModesExt transpileModeExt = TemplatingEngine.TranspileModesExt.None;
 
-    public Parser(TemplatingEngine engine, Script? script, Table? tagHelpersSharedTable)
+    public Parser(TemplatingEngine engine, Script? script, Table? tagHelpersSharedTable, Dictionary<string, byte[]>? tagHelperHints)
     {
         this.engine = engine;
         this.script = script;
         this.tagHelpersSharedTable = tagHelpersSharedTable ?? new Table(this.script);
+        this.tagHelperHints = tagHelperHints;
         document = new Document();
 
         KeywordsMap = new Dictionary<string, Func<bool>?>
@@ -80,8 +89,17 @@ internal partial class Parser
             { "mixin", ParseKeywordMixin },
         };
     }
+
+    internal List<Token> Parse(string templateSource, TemplatingEngine.TranspileModes mode, string friendlyName, TemplatingEngine.TranspileModesExt modeExt, Dictionary<TagHelper, bool> loadedTagHelpers)
+    {
+        transpileModeExt = modeExt;
+        this.loadedTagHelpers = loadedTagHelpers;
+        List<Token> tokens = Parse(templateSource, mode, friendlyName);
+        transpileModeExt = TemplatingEngine.TranspileModesExt.None;
+        return tokens;
+    }
     
-    public List<Token> Parse(string templateSource, string friendlyName)
+    public List<Token> Parse(string templateSource, TemplatingEngine.TranspileModes mode, string friendlyName)
     {
         source = templateSource;
         this.friendlyName = friendlyName;
@@ -1195,21 +1213,116 @@ internal partial class Parser
             DynValue fAttrTable = DynValue.NewTable(attrTable);
             ctxTable.Set("attributes", fAttrTable);
             
-            // 3. before resolving tag helper, we need to resolve the part of template currently transpiled
+            // 3. before resolving a tag-helper, we need to resolve the part of template currently transpiled
+            Token t = null;
+            
             string pendingTemplate = engine.Transform(Tokens);
-            
-            DynValue pVal = engine.script.LoadString(pendingTemplate);
-            engine.script.Call(pVal);
-            
+            if (!string.IsNullOrWhiteSpace(pendingTemplate))
+            {
+                if (transpileMode == TemplatingEngine.TranspileModes.Run)
+                {
+                    if (tagHelperHints?.ContainsKey(pendingTemplate) ?? false)
+                    {
+                        using MemoryStream ms = new MemoryStream(tagHelperHints[pendingTemplate]);
+                        engine.script.DoStream(ms);
+                    }
+                    else
+                    {
+                        DynValue dv = engine.script.LoadString(pendingTemplate);
+                        engine.script.Call(dv);
+                
+                        if (!pendingTemplateParts.ContainsKey(pendingTemplate))
+                        {
+                            pendingTemplateParts.Add(pendingTemplate, dv);
+                        }   
+                    }   
+                }
+                else
+                {
+                    t = AddAdHocToken(TokenTypes.BlockExpr, pendingTemplate);
+                }
+            }
+
             Tokens.Clear();
+
+            if (t != null)
+            {
+                Tokens.Add(t); // in case we are dumping
+            }
+
+            void DumpTagHelper()
+            {
+                if (loadedTagHelpers.Count == 0)
+                {
+                    AddAdHocToken(TokenTypes.BlockExpr, "__tagHelperCtxTable = {data: [], content: \"\", attributes: []};\n"); // shared table between tag helpers
+                }
+
+                StringBuilder attrBuilder = new StringBuilder();
+                attrBuilder.Append('{');
+                int i = 0;
+                foreach (HtmlAttribute attr in el.Attributes)
+                {
+                    attrBuilder.Append($"{attr.Name}: `{attr.Value.Replace("`", "\\`")}`");
+
+                    if (i < el.Attributes.Count - 1)
+                    {
+                        attrBuilder.Append(',');
+                    }
+                    
+                    i++;
+                }
+
+                attrBuilder.Append('}');
+
+                if (!loadedTagHelpers.ContainsKey(helper))
+                {
+                    AddAdHocToken(TokenTypes.BlockExpr, $"{helper.Template}");
+                    loadedTagHelpers.Add(helper, true);
+                }
+
+                string dumpedContent = engine.TranspileRecursive(contentStr, loadedTagHelpers);
+                
+                // update context for this tag instance
+                AddAdHocToken(TokenTypes.BlockExpr, $"__tagHelperCtxTable[\"content\"] = () => {{\n{dumpedContent}\n}};");
+                AddAdHocToken(TokenTypes.BlockExpr, $"__tagHelperCtxTable[\"attributes\"] = {attrBuilder};");
+
+                AddAdHocToken(TokenTypes.BlockExpr, $"{helper.FunctionName}(__tagHelperCtxTable);");
+            }
+
+            // 4. if dispatching method is not yet loaded, we load it. Then we call it
+            if (loadedTagHelpers.ContainsKey(helper))
+            {
+                if (transpileMode == TemplatingEngine.TranspileModes.Dump)
+                {
+                    DumpTagHelper();
+                }
+                else
+                {
+                    engine.script.Globals.Get(helper.FunctionName).Function.Call(ctxTable);   
+                }
+            }
+            else
+            {
+                if (transpileMode == TemplatingEngine.TranspileModes.Dump)
+                {
+                    DumpTagHelper();
+                }
+                else
+                {
+                    engine.script.DoString(helper.Template);
+                    engine.script.Globals.Get(helper.FunctionName).Function.Call(ctxTable);      
+                }
+
+                if (!loadedTagHelpers.ContainsKey(helper))
+                {
+                    loadedTagHelpers.Add(helper, true);
+                }
+            }
             
-            engine.script.DoString(helper.Template);
-            engine.script.Globals.Get(helper.FunctionName).Function.Call(ctxTable);
             engine.script.Globals["stdout"] = engine.Print;   
             
             // tag output is already in stdout
             tagParsingMode = HtmlTagParsingModes.Native;
-            
             return true;
         }
         

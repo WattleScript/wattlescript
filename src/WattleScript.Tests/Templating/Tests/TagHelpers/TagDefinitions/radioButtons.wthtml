@@ -1,6 +1,6 @@
 @{
     @tagHelper("radio-buttons")
-    function Render(ctx) {
+    function TagRadioButtons(ctx) {
     
         var name = ctx["attributes"]["name"];
         ctx["data"]["radio-name"] = name;

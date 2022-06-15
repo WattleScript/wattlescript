@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using NUnit.Framework;
@@ -146,8 +147,13 @@ public class TemplatingTestsRunner
         await RunCore(path);
     }
     
-    public async Task RunCore(string path, bool reportErrors = false)
+    public async Task RunCore(string path, bool reportErrors = false, bool runningFromDump = false)
     {
+        if (path.Contains("TagHintsGenerated"))
+        {
+            return;
+        }
+        
         string outputPath = path.Replace(".wthtml", ".html");
 
         if (!File.Exists(outputPath))
@@ -155,7 +161,10 @@ public class TemplatingTestsRunner
             Assert.Inconclusive($"Missing output file for test {path}");
             return;
         }
-
+        
+        string testName = Path.GetFileName(path);
+        string currentDir = Directory.GetParent(Environment.CurrentDirectory)?.Parent?.Parent?.FullName;
+        
         string code = await File.ReadAllTextAsync(path);
         string output = await File.ReadAllTextAsync(outputPath);
 
@@ -168,8 +177,29 @@ public class TemplatingTestsRunner
         
         HtmlModule htmlModule = new HtmlModule();
         script.Globals["Html"] = htmlModule;
+
+        Dictionary<string, byte[]> hintsDict = new Dictionary<string, byte[]>();
+        /*if (runningFromDump)
+        {
+            string[] hints = Directory.GetFiles($"{currentDir}\\Templating\\Tests\\TagHelpers\\TagHintsGenerated\\{testName}");
+            foreach (string hint in hints)
+            {
+                if (!hint.Contains(".txt"))
+                {
+                    continue;
+                }
+
+                string hintText = await File.ReadAllTextAsync(hint);
+                byte[] hintDump = await File.ReadAllBytesAsync(hint.Replace(".txt", ".bin"));
+
+                if (!hintsDict.ContainsKey(hintText))
+                {
+                    hintsDict.Add(hintText, hintDump);
+                }
+            }
+        }*/
         
-        TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers);
+        TemplatingEngine tmp = new TemplatingEngine(script, null, tagHelpers, hintsDict);
         TemplatingEngine.RenderResult rr = null;
 
         if (path.Contains("slow"))
@@ -201,10 +231,50 @@ public class TemplatingTestsRunner
 
         try
         {
-            rr = await tmp.Render(code);
+            if (!runningFromDump)
+            {
+                rr = await tmp.Render(code);
+            }
+            else
+            {
+                byte[] dumpedBc = tmp.Dump(code);
+                rr = await tmp.Render(dumpedBc);
+
+                if (!string.Equals(output, rr.Output))
+                {
+                    int difIndex = strDifIndex(output, rr.Output);
+                    string diffSnippet = Snippet(rr.Output, difIndex, 50);
+                    string expectedSnippet = Snippet(output, difIndex, 50);
+                    
+                    Assert.Fail($"Test failed from dumped BC, ok when running from string. Output and expected HTML are not equal.\nFirst difference at index: {difIndex}\nOutput near diff: {diffSnippet}\nExpected near diff: {expectedSnippet}\n---------------------- Expected ----------------------\n{output}\n---------------------- But was------------------------\n{rr.Output}\n------------------------------------------------------\n");
+                }
+            }
 
             if (string.Equals(output, rr.Output))
             {
+                /*if (hints.Any() && !runningFromDump)
+                {
+                    if (!string.IsNullOrWhiteSpace(currentDir))
+                    {
+                        Directory.CreateDirectory( $"{currentDir}\\Templating\\Tests\\TagHelpers\\TagHintsGenerated\\{testName}");
+                        int i = 0;
+                        foreach (KeyValuePair<string, byte[]> hint in hints)
+                        {
+                            await File.WriteAllTextAsync($"{currentDir}\\Templating\\Tests\\TagHelpers\\TagHintsGenerated\\{testName}\\hint{i}.txt", hint.Key);
+                            await File.WriteAllBytesAsync($"{currentDir}\\Templating\\Tests\\TagHelpers\\TagHintsGenerated\\{testName}\\hint{i}.bin", hint.Value);
+
+                            i++;
+                        }   
+                    }
+
+                    await RunCore(path, false, true);
+                }*/
+
+                if (!runningFromDump)
+                {
+                    await RunCore(path, false, true);
+                }
+
                 Assert.Pass();
             }
             else

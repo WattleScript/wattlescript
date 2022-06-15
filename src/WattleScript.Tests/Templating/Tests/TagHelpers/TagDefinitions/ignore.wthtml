@@ -1,6 +1,6 @@
 @{
     @tagHelper("ignore")
-    function Render(ctx) {
+    function TagIgnore(ctx) {
         
     }
 }
