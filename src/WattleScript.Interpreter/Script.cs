@@ -66,12 +66,12 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public const string LUA_VERSION = "5.2";
 
-		Processor m_MainProcessor = null;
-		List<SourceCode> m_Sources = new List<SourceCode>();
-		Table m_GlobalTable;
-		IDebugger m_Debugger;
-		Table[] m_TypeMetatables = new Table[(int)LuaTypeExtensions.MaxMetaTypes];
-		Table m_TablePrototype;
+		private Processor m_MainProcessor;
+		private List<SourceCode> m_Sources = new List<SourceCode>();
+		private Table m_GlobalTable;
+		private IDebugger m_Debugger;
+		private Table[] m_TypeMetatables = new Table[(int)LuaTypeExtensions.MaxMetaTypes];
+		private Table m_TablePrototype;
 		internal List<ScriptParserMessage> i_ParserMessages { get; set; } = new List<ScriptParserMessage>();
 
 		/// <summary>
@@ -83,14 +83,14 @@ namespace WattleScript.Interpreter
 
 			DefaultOptions = new ScriptOptions()
 			{
-				DebugPrint = s => { Script.GlobalOptions.Platform.DefaultPrint(s); },
-				DebugInput = s => { return Script.GlobalOptions.Platform.DefaultInput(s); },
+				DebugPrint = s => { GlobalOptions.Platform.DefaultPrint(s); },
+				DebugInput = s => GlobalOptions.Platform.DefaultInput(s),
 				CheckThreadAccess = true,
 				ScriptLoader = PlatformAutoDetector.GetDefaultScriptLoader(),
 				TailCallOptimizationThreshold = 65536
 			};
 
-			var ver = typeof(Script).Assembly.GetName().Version;
+			Version ver = typeof(Script).Assembly.GetName().Version;
 			VERSION = ver.ToString();
 			VERSION_NUMBER = ver.Major + ver.Minor / Math.Pow(10, Math.Floor(Math.Log10(ver.Minor) + 1));
 		}
@@ -143,10 +143,7 @@ namespace WattleScript.Interpreter
 		/// Gets the default global table for this script. Unless a different table is intentionally passed (or setfenv has been used)
 		/// execution uses this table.
 		/// </summary>
-		public Table Globals
-		{
-			get { return m_GlobalTable; }
-		}
+		public Table Globals => m_GlobalTable;
 
 		/// <summary>
 		/// Loads a string containing a Lua/WattleScript function.
@@ -174,6 +171,9 @@ namespace WattleScript.Interpreter
 			return MakeClosure(func, globalTable ?? m_GlobalTable);
 		}
 
+		/// <summary>
+		/// no-op
+		/// </summary>
 		private void SignalByteCodeChange()
 		{
 			if (m_Debugger != null)
@@ -189,7 +189,6 @@ namespace WattleScript.Interpreter
 				m_Debugger.SetSourceCode(source);
 			}
 		}
-
 
 		/// <summary>
 		/// Loads a string containing a Lua/WattleScript script.
@@ -208,8 +207,8 @@ namespace WattleScript.Interpreter
 			{
 				code = code.Substring(StringModule.BASE64_DUMP_HEADER.Length);
 				byte[] data = Convert.FromBase64String(code);
-				using (MemoryStream ms = new MemoryStream(data))
-					return LoadStream(ms, globalTable, codeFriendlyName);
+				using MemoryStream ms = new MemoryStream(data);
+				return LoadStream(ms, globalTable, codeFriendlyName);
 			}
 
 			string chunkName = string.Format("{0}", codeFriendlyName ?? "chunk_" + m_Sources.Count.ToString());
@@ -218,7 +217,7 @@ namespace WattleScript.Interpreter
 
 			m_Sources.Add(source);
 
-			var func = Loader_Fast.LoadChunk(this, source);
+			FunctionProto func = Loader_Fast.LoadChunk(this, source);
 
 			SignalSourceCodeChange(source);
 			SignalByteCodeChange();
@@ -241,29 +240,25 @@ namespace WattleScript.Interpreter
 			
 			if (!Processor.IsDumpStream(stream))
 			{
-				using (StreamReader sr = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
-				{
-					string scriptCode = sr.ReadToEnd();
-					return LoadString(scriptCode, globalTable, codeFriendlyName);
-				}
+				using StreamReader sr = new StreamReader(stream, Encoding.UTF8, true, 4096, true);
+				string scriptCode = sr.ReadToEnd();
+				return LoadString(scriptCode, globalTable, codeFriendlyName);
 			}
-			else
-			{
-				string chunkName = string.Format("{0}", codeFriendlyName ?? "dump_" + m_Sources.Count.ToString());
+			
+			string chunkName = string.Format("{0}", codeFriendlyName ?? "dump_" + m_Sources.Count);
 
-				SourceCode source = new SourceCode(codeFriendlyName ?? chunkName,
-					string.Format("-- This script was decoded from a binary dump - dump_{0}", m_Sources.Count),
-					m_Sources.Count, this);
+			SourceCode source = new SourceCode(codeFriendlyName ?? chunkName,
+				string.Format("-- This script was decoded from a binary dump - dump_{0}", m_Sources.Count),
+				m_Sources.Count, this);
 
-				m_Sources.Add(source);
+			m_Sources.Add(source);
 
-				var func = m_MainProcessor.Undump(stream, m_Sources.Count - 1);
+			FunctionProto func = m_MainProcessor.Undump(stream, m_Sources.Count - 1);
 
-				SignalSourceCodeChange(source);
-				SignalByteCodeChange();
+			SignalSourceCodeChange(source);
+			SignalByteCodeChange();
 
-				return MakeClosure(func, globalTable ?? m_GlobalTable);
-			}
+			return MakeClosure(func, globalTable ?? m_GlobalTable);
 		}
 
 		/// <summary>
@@ -298,6 +293,36 @@ namespace WattleScript.Interpreter
 		}
 
 		/// <summary>
+		/// Dumps bytecode to byte[]
+		/// </summary>
+		/// <param name="function">The function.</param>
+		/// <param name="writeSourceRefs">Write referenced line numbers</param>
+		/// <exception cref="System.ArgumentException">
+		/// function arg is not a function!
+		/// or
+		/// stream is readonly!
+		/// or
+		/// function arg has upvalues other than _ENV
+		/// </exception>
+		public byte[] Dump(DynValue function, bool writeSourceRefs = true)
+		{
+			this.CheckScriptOwnership(function);
+
+			if (function.Type != DataType.Function)
+				throw new ArgumentException("function arg is not a function!");
+			
+			Closure.UpvaluesType upvaluesType = function.Function.GetUpvaluesType();
+
+			if (upvaluesType == Closure.UpvaluesType.Closure)
+				throw new ArgumentException("function arg has upvalues other than _ENV");
+			
+			using MemoryStream ms = new MemoryStream();
+			m_MainProcessor.Dump(ms, function.Function.Function, writeSourceRefs);
+
+			return ms.ToArray();
+		}
+
+		/// <summary>
 		/// Dumps the bytecode for a function to a human-readable string
 		/// </summary>
 		/// <param name="function"></param>
@@ -309,7 +334,6 @@ namespace WattleScript.Interpreter
 				throw new ArgumentException("function arg is not a function!");
 			return m_MainProcessor.DumpString(function.Function.Function);
 		}
-
 
 		/// <summary>
 		/// Loads a string containing a Lua/WattleScript script.
@@ -330,31 +354,30 @@ namespace WattleScript.Interpreter
 
 			object code = Options.ScriptLoader.LoadFile(filename, globalContext ?? m_GlobalTable);
 
-			if (code is string)
+			switch (code)
 			{
-				return LoadString((string)code, globalContext, friendlyFilename ?? filename);
-			}
-			else if (code is byte[])
-			{
-				using (MemoryStream ms = new MemoryStream((byte[])code))
+				case string s:
+					return LoadString(s, globalContext, friendlyFilename ?? filename);
+				case byte[] bytes:
+				{
+					using MemoryStream ms = new MemoryStream(bytes);
 					return LoadStream(ms, globalContext, friendlyFilename ?? filename);
-			}
-			else if (code is Stream)
-			{
-				try
-				{
-					return LoadStream((Stream)code, globalContext, friendlyFilename ?? filename);
 				}
-				finally
+				case Stream stream:
 				{
-					((Stream)code).Dispose();
+					try
+					{
+						return LoadStream(stream, globalContext, friendlyFilename ?? filename);
+					}
+					finally
+					{
+						stream.Dispose();
+					}
 				}
-			}
-			else
-			{
-				if (code == null)
+
+				case null:
 					throw new InvalidCastException("Unexpected null from IScriptLoader.LoadFile");
-				else
+				default:
 					throw new InvalidCastException(string.Format("Unsupported return type from IScriptLoader.LoadFile : {0}", code.GetType()));
 			}
 		}
@@ -375,12 +398,20 @@ namespace WattleScript.Interpreter
 			return Call(func);
 		}
 
+		/// <summary>
+		/// Loads and asynchronously executes a string containing a Lua/WattleScript script. 
+		/// </summary>
+		/// <param name="code">The code.</param>
+		/// <param name="globalContext">The global context.</param>
+		/// <param name="codeFriendlyName">Name of the code - used to report errors, etc. Also used by debuggers to locate the original source file.</param>
+		/// <returns>
+		/// A DynValue containing the result of the processing of the loaded chunk.
+		/// </returns>
 		public Task<DynValue> DoStringAsync(string code, Table globalContext = null, string codeFriendlyName = null)
 		{
 			DynValue func = LoadString(code, globalContext, codeFriendlyName);
 			return CallAsync(func);
 		}
-
 
 		/// <summary>
 		/// Loads and executes a stream containing a Lua/WattleScript script.
@@ -396,7 +427,53 @@ namespace WattleScript.Interpreter
 			DynValue func = LoadStream(stream, globalContext, codeFriendlyName);
 			return Call(func);
 		}
-
+		
+		/// <summary>
+		/// Loads and asynchronously executes a stream containing a Lua/WattleScript script.
+		/// </summary>
+		/// <param name="stream">The stream.</param>
+		/// <param name="globalContext">The global context.</param>
+		/// <param name="codeFriendlyName">Name of the code - used to report errors, etc. Also used by debuggers to locate the original source file.</param>
+		/// <returns>
+		/// A DynValue containing the result of the processing of the loaded chunk.
+		/// </returns>
+		public Task<DynValue> DoStreamAsync(Stream stream, Table globalContext = null, string codeFriendlyName = null)
+		{
+			DynValue func = LoadStream(stream, globalContext, codeFriendlyName);
+			return CallAsync(func);
+		}
+		
+		/// <summary>
+		/// Loads and asynchronously executes a bytecode array containing a Lua/WattleScript script.
+		/// </summary>
+		/// <param name="bytecode">The bytecode.</param>
+		/// <param name="globalContext">The global context.</param>
+		/// <param name="codeFriendlyName">Name of the code - used to report errors, etc. Also used by debuggers to locate the original source file.</param>
+		/// <returns>
+		/// A DynValue containing the result of the processing of the loaded chunk.
+		/// </returns>
+		public Task<DynValue> DoBytecodeAsync(byte[] bytecode, Table globalContext = null, string codeFriendlyName = null)
+		{
+			using MemoryStream ms = new MemoryStream(bytecode);
+			DynValue func = LoadStream(ms, globalContext, codeFriendlyName);
+			return CallAsync(func);
+		}
+		
+		/// <summary>
+		/// Loads and executes a bytecode array containing a Lua/WattleScript script.
+		/// </summary>
+		/// <param name="bytecode">The bytecode.</param>
+		/// <param name="globalContext">The global context.</param>
+		/// <param name="codeFriendlyName">Name of the code - used to report errors, etc. Also used by debuggers to locate the original source file.</param>
+		/// <returns>
+		/// A DynValue containing the result of the processing of the loaded chunk.
+		/// </returns>
+		public DynValue DoBytecode(byte[] bytecode, Table globalContext = null, string codeFriendlyName = null)
+		{
+			using MemoryStream ms = new MemoryStream(bytecode);
+			DynValue func = LoadStream(ms, globalContext, codeFriendlyName);
+			return Call(func);
+		}
 
 		/// <summary>
 		/// Loads and executes a file containing a Lua/WattleScript script.
@@ -412,8 +489,7 @@ namespace WattleScript.Interpreter
 			DynValue func = LoadFile(filename, globalContext, codeFriendlyName);
 			return Call(func);
 		}
-
-
+		
 		/// <summary>
 		/// Runs the specified file with all possible defaults for quick experimenting.
 		/// </summary>
@@ -432,14 +508,13 @@ namespace WattleScript.Interpreter
 		/// A DynValue containing the result of the processing of the executed script.
 		public static DynValue RunString(string code)
 		{
-			Script S = new Script();
-			return S.DoString(code);
+			return new Script().DoString(code);
 		}
 
 		/// <summary>
 		/// Creates a closure from a bytecode address.
 		/// </summary>
-		/// <param name="address">The address.</param>
+		/// <param name="proto">The function prototype.</param>
 		/// <param name="envTable">The env table to create a 0-upvalue</param>
 		/// <returns></returns>
 		private DynValue MakeClosure(FunctionProto proto, Table envTable = null)
@@ -485,12 +560,12 @@ namespace WattleScript.Interpreter
 		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public DynValue Call(DynValue function)
 		{
-			return Call(function, new DynValue[0]);
+			return Call(function, Array.Empty<DynValue>());
 		}
 
 		public Task<DynValue> CallAsync(DynValue function)
 		{
-			return CallAsync(function, new DynValue[0]);
+			return CallAsync(function, Array.Empty<DynValue>());
 		}
 		
 		/// <summary>
@@ -532,12 +607,21 @@ namespace WattleScript.Interpreter
 			}
 			else if (function.Type == DataType.ClrFunction)
 			{
-				return function.Callback.ClrCallback(this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true));
+				return function.Callback.ClrCallback(CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true));
 			}
 
 			return m_MainProcessor.ThisCall(function, args);
 		}
 		
+		/// <summary>
+		/// Calls the specified function.
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called</param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns>
+		/// The return value(s) of the function call.
+		/// </returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> ThisCallAsync(DynValue function, params DynValue[] args)
 		{
 			this.CheckScriptOwnership(function);
@@ -568,13 +652,11 @@ namespace WattleScript.Interpreter
 			else if (function.Type == DataType.ClrFunction)
 			{
 				return Task.FromResult(function.Callback.ClrCallback(
-					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true)));
+					CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, true)));
 			}
 
 			return m_MainProcessor.ThisCallAsync(function, args);
 		}
-		
-		
 		
 		/// <summary>
 		/// Calls the specified function.
@@ -611,12 +693,21 @@ namespace WattleScript.Interpreter
 			}
 			else if (function.Type == DataType.ClrFunction)
 			{
-				return function.Callback.ClrCallback(this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false));
+				return function.Callback.ClrCallback(CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false));
 			}
 
 			return m_MainProcessor.Call(function, args);
 		}
 
+		/// <summary>
+		/// Calls the specified function.
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called</param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns>
+		/// The return value(s) of the function call.
+		/// </returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> CallAsync(DynValue function, params DynValue[] args)
 		{
 			this.CheckScriptOwnership(function);
@@ -644,7 +735,7 @@ namespace WattleScript.Interpreter
 			else if (function.Type == DataType.ClrFunction)
 			{
 				return Task.FromResult(function.Callback.ClrCallback(
-					this.CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false)));
+					CreateDynamicExecutionContext(function.Callback), new CallbackArguments(args, DynValue.Nil, false)));
 			}
 
 			return m_MainProcessor.CallAsync(function, args);
@@ -716,11 +807,25 @@ namespace WattleScript.Interpreter
 			return ThisCall(DynValue.FromObject(this, function), args);
 		}
 		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public DynValue ThisCall(object function, params object[] args)
 		{
 			return ThisCall(DynValue.FromObject(this, function), args);
 		}
 		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public DynValue ThisCall(DynValue function, params object[] args)
 		{
 			DynValue[] dargs = new DynValue[args.Length];
@@ -731,16 +836,37 @@ namespace WattleScript.Interpreter
 			return ThisCall(function, dargs);
 		}
 		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function.</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> ThisCallAsync(object function, params DynValue[] args)
 		{
 			return ThisCallAsync(DynValue.FromObject(this, function), args);
 		}
 		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> ThisCallAsync(object function, params object[] args)
 		{
 			return ThisCallAsync(DynValue.FromObject(this, function), args);
 		}
 		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> ThisCallAsync(DynValue function, params object[] args)
 		{
 			DynValue[] dargs = new DynValue[args.Length];
@@ -751,7 +877,13 @@ namespace WattleScript.Interpreter
 			return ThisCallAsync(function, dargs);
 		}
 
-
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> CallAsync(DynValue function, params object[] args)
 		{
 			DynValue[] dargs = new DynValue[args.Length];
@@ -762,13 +894,24 @@ namespace WattleScript.Interpreter
 			return CallAsync(function, dargs);
 		}
 
-	
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called.</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public  Task<DynValue> CallAsync(object function)
 		{
 			return CallAsync(DynValue.FromObject(this, function));
 		}
 
-		
+		/// <summary>
+		/// Calls the specified function, passing the first parameter as this
+		/// </summary>
+		/// <param name="function">The Lua/WattleScript function to be called </param>
+		/// <param name="args">The arguments to pass to the function. Converted to DynValue[] via DynValue.FromObject()</param>
+		/// <returns></returns>
+		/// <exception cref="System.ArgumentException">Thrown if function is not of DataType.Function</exception>
 		public Task<DynValue> CallAsync(object function, params object[] args)
 		{
 			return CallAsync(DynValue.FromObject(this, function), args);
@@ -786,12 +929,12 @@ namespace WattleScript.Interpreter
 		{
 			this.CheckScriptOwnership(function);
 
-			if (function.Type == DataType.Function)
-				return m_MainProcessor.Coroutine_Create(function.Function);
-			else if (function.Type == DataType.ClrFunction)
-				return DynValue.NewCoroutine(new Coroutine(function.Callback));
-			else
-				throw new ArgumentException("function is not of DataType.Function or DataType.ClrFunction");
+			return function.Type switch
+			{
+				DataType.Function => m_MainProcessor.Coroutine_Create(function.Function),
+				DataType.ClrFunction => DynValue.NewCoroutine(new Coroutine(function.Callback)),
+				_ => throw new ArgumentException("function is not of DataType.Function or DataType.ClrFunction")
+			};
 		}
 
 		/// <summary>
@@ -816,8 +959,8 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public bool DebuggerEnabled
 		{
-			get { return m_MainProcessor.DebuggerEnabled; }
-			set { m_MainProcessor.DebuggerEnabled = value; }
+			get => m_MainProcessor.DebuggerEnabled;
+			set => m_MainProcessor.DebuggerEnabled = value;
 		}
 
 
@@ -847,19 +990,13 @@ namespace WattleScript.Interpreter
 			return m_Sources[sourceCodeID];
 		}
 
-
 		/// <summary>
 		/// Gets the source code count.
 		/// </summary>
 		/// <value>
 		/// The source code count.
 		/// </value>
-		public int SourceCodeCount
-		{
-			get { return m_Sources.Count; }
-		}
-
-
+		public int SourceCodeCount => m_Sources.Count;
 
 		/// <summary>
 		/// Loads a module as per the "require" Lua function. http://www.lua.org/pil/8.1.html
@@ -881,8 +1018,6 @@ namespace WattleScript.Interpreter
 			DynValue func = LoadFile(filename, globalContext, filename);
 			return func;
 		}
-
-
 
 		/// <summary>
 		/// Gets a type metatable.
@@ -927,8 +1062,7 @@ namespace WattleScript.Interpreter
 		}
 
 		internal Table GetTablePrototype() => m_TablePrototype;
-
-
+		
 		/// <summary>
 		/// Warms up the parser/lexer structures so that WattleScript operations start faster.
 		/// </summary>
@@ -937,8 +1071,7 @@ namespace WattleScript.Interpreter
 			Script s = new Script(CoreModules.Basic);
 			s.LoadString("return 1;");
 		}
-
-
+		
 		/// <summary>
 		/// Creates a new dynamic expression.
 		/// </summary>
@@ -995,17 +1128,13 @@ namespace WattleScript.Interpreter
 			subproduct = (subproduct != null) ? (subproduct + " ") : "";
 
 			StringBuilder sb = new StringBuilder();
-			sb.AppendLine(string.Format("WattleScript {0}{1} [{2}]", subproduct, Script.VERSION, Script.GlobalOptions.Platform.GetPlatformName()));
+			sb.AppendLine(string.Format("WattleScript {0}{1} [{2}]", subproduct, VERSION, GlobalOptions.Platform.GetPlatformName()));
 			sb.AppendLine("Copyright (C) 2014-2022 WattleScript Contributors");
 			sb.AppendLine("https://wattlescript.github.io");
 			return sb.ToString();
 		}
 
-		Script IScriptPrivateResource.OwnerScript
-		{
-			get { return this; }
-		}
-
+		Script IScriptPrivateResource.OwnerScript => this;
 		public List<ScriptParserMessage> ParserMessages => i_ParserMessages;
 	}
 }

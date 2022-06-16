@@ -57,18 +57,21 @@ namespace WattleScript.Interpreter.Tree.Statements
 			m_Local = local;
 			Token name = CheckTokenType(lcontext, TokenType.Name);
 			SelfType selfType = SelfType.None;
+			SourceRef funcKeywordSourceRef;
 			
 			if (m_Local)
 			{
 				m_FuncDefName = name.Text;
 				m_FriendlyName = string.Format("{0} (local)", name.Text);
 				m_SourceRef = funcKeyword.GetSourceRef(name);
+				funcKeywordSourceRef = funcKeyword.GetSourceRef();
 			}
 			else
 			{
 				string firstName = name.Text;
 
 				m_SourceRef = funcKeyword.GetSourceRef(name);
+				funcKeywordSourceRef = funcKeyword.GetSourceRef();
 				m_FuncLookupSymbol = firstName;
 
 				m_FriendlyName = firstName;
@@ -118,6 +121,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			}
 			
 			m_FuncDef = new FunctionDefinitionExpression(lcontext, selfType, false);
+			m_FuncDef.m_Begin = funcKeywordSourceRef;
 			lcontext.Source.Refs.Add(m_SourceRef);
 		}
 

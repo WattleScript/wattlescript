@@ -42,5 +42,10 @@ namespace WattleScript.Interpreter.Execution.VM
         // Source Code
         internal Instruction[] code;
         internal SourceRef[] sourceRefs;
+        
+        public string GetSourceCode(string fullSourceCode)
+        {
+            return sourceRefs.GetSourceCode(fullSourceCode);
+        }
     }
 }

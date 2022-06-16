@@ -30,7 +30,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		bool m_UsesGlobalEnv;
 		SymbolRef m_Env;
 
-		SourceRef m_Begin, m_End;
+		internal SourceRef m_Begin, m_End;
 		private ScriptLoadingContext lcontext;
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 		private bool m_IsConstructor;
@@ -370,6 +370,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			if(parent != null) parent.Protos.Add(proto);
 			
 			return proto;
+		}
+		
+		public void Compile(FunctionBuilder bc, string friendlyName)
+		{
+			CompileBody(bc, bc.Script, friendlyName);			
+			bc.Emit_Closure(bc.Protos.Count - 1);
 		}
 
 		public void Compile(FunctionBuilder bc, Func<int> afterDecl, string friendlyName)

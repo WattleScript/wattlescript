@@ -5,14 +5,13 @@ namespace WattleScript.Interpreter.Tree
 	class Token
 	{
 		public readonly int SourceId;
-		public readonly int FromCol, ToCol, FromLine, ToLine, PrevCol, PrevLine;
+		public readonly int FromCol, ToCol, FromLine, ToLine, PrevCol, PrevLine, CharIndexTo, CharIndexFrom;
 		public readonly TokenType Type;
 		public string Text { get; set; }
 
-		public Token(TokenType type, int sourceId, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol)
+		public Token(TokenType type, int sourceId, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol, int charIndexFrom, int charIndexTo, string text)
 		{
 			Type = type;
-
 			SourceId = sourceId;
 			FromLine = fromLine;
 			FromCol = fromCol;
@@ -20,17 +19,20 @@ namespace WattleScript.Interpreter.Tree
 			ToLine = toLine;
 			PrevCol = prevCol;
 			PrevLine = prevLine;
+			CharIndexTo = charIndexTo;
+			CharIndexFrom = charIndexFrom;
+			Text = text;
 		}
 
 		public override string ToString()
 		{
-			string tokenTypeString = (Type.ToString() + "                                                      ").Substring(0, 16);
+			string tokenTypeString = (Type + "                                                      ").Substring(0, 16);
 
-			string location = string.Format("{0}:{1}-{2}:{3}", FromLine, FromCol, ToLine, ToCol);
+			string location = $"{FromLine}:{FromCol}-{ToLine}:{ToCol}";
 
 			location = (location + "                                                      ").Substring(0, 10);
 
-			return string.Format("{0}  - {1} - '{2}'", tokenTypeString, location, this.Text ?? "");
+			return $"{tokenTypeString}  - {location} - '{Text ?? ""}'";
 		}
 
 		public static TokenType? GetReservedTokenType(string reservedWord, ScriptSyntax syntax)
@@ -93,14 +95,13 @@ namespace WattleScript.Interpreter.Tree
 
 		public double GetNumberValue()
 		{
-			if (this.Type == TokenType.Number)
-				return LexerUtils.ParseNumber(this);
-			else if (this.Type == TokenType.Number_Hex)
-				return LexerUtils.ParseHexInteger(this);
-			else if (this.Type == TokenType.Number_HexFloat)
-				return LexerUtils.ParseHexFloat(this);
-			else
-				throw new NotSupportedException("GetNumberValue is supported only on numeric tokens");
+			return Type switch
+			{
+				TokenType.Number => LexerUtils.ParseNumber(this),
+				TokenType.Number_Hex => LexerUtils.ParseHexInteger(this),
+				TokenType.Number_HexFloat => LexerUtils.ParseHexFloat(this),
+				_ => throw new NotSupportedException("GetNumberValue is supported only on numeric tokens")
+			};
 		}
 
 
@@ -165,17 +166,17 @@ namespace WattleScript.Interpreter.Tree
 
 		internal Debugging.SourceRef GetSourceRef(bool isStepStop = true)
 		{
-			return new Debugging.SourceRef(this.SourceId, this.FromCol, this.ToCol, this.FromLine, this.ToLine, isStepStop);
+			return new Debugging.SourceRef(SourceId, FromCol, ToCol, FromLine, ToLine, isStepStop, CharIndexFrom, CharIndexTo);
 		}
 
 		internal Debugging.SourceRef GetSourceRef(Token to, bool isStepStop = true)
 		{
-			return new Debugging.SourceRef(this.SourceId, this.FromCol, to.ToCol, this.FromLine, to.ToLine, isStepStop);
+			return new Debugging.SourceRef(SourceId, FromCol, to.ToCol, FromLine, to.ToLine, isStepStop, CharIndexFrom, CharIndexTo);
 		}
 
 		internal Debugging.SourceRef GetSourceRefUpTo(Token to, bool isStepStop = true)
 		{
-			return new Debugging.SourceRef(this.SourceId, this.FromCol, to.PrevCol, this.FromLine, to.PrevLine, isStepStop);
+			return new Debugging.SourceRef(SourceId, FromCol, to.PrevCol, FromLine, to.PrevLine, isStepStop, CharIndexFrom, CharIndexTo);
 		}
 	}
 }
