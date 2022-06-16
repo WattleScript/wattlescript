@@ -393,10 +393,8 @@ public class TemplatingEngine
         string transpiledTemplate = Transpile(code, transpileMode);
 
         DynValue dv = script.LoadString(transpiledTemplate, globalContext, friendlyCodeName);
-
-        using MemoryStream ms = new MemoryStream();
-        script.Dump(dv, ms, writeSourceRefs);
-        return ms.ToArray();
+        
+        return script.Dump(dv, writeSourceRefs);
     }
     
     public async Task<RenderResult> Render(byte[] bytecode, Table? globalContext = null, string? friendlyCodeName = null)
