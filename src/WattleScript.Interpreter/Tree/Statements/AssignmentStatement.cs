@@ -168,6 +168,56 @@ namespace WattleScript.Interpreter.Tree.Statements
 							AssignmentOp = Operator.NilCoalescingInverse;
 							lcontext.Lexer.Next();
 							break;
+						case TokenType.Op_GreaterThan:
+						{
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThanEqual) // >>=
+							{
+								lcontext.Lexer.Next();
+								AssignmentOp = Operator.BitRShiftA;
+								lcontext.Lexer.Next();
+								break;
+							}
+
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan) // >>>=
+							{
+								lcontext.Lexer.Next();
+								if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThanEqual)
+								{
+									lcontext.Lexer.Next();
+									AssignmentOp = Operator.BitRShiftL;
+									lcontext.Lexer.Next();
+									break;
+								}
+							}
+
+							CheckTokenType(lcontext, TokenType.Op_Assignment); // invalid token combination, throw
+							break;
+						}
+						case TokenType.Op_LessThan:
+						{
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThanEqual) // <<=
+							{
+								lcontext.Lexer.Next();
+								AssignmentOp = Operator.BitLShiftA;
+								lcontext.Lexer.Next();
+								break;
+							}
+							
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan) // <<<=
+							{
+								lcontext.Lexer.Next();
+								if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThanEqual)
+								{
+									lcontext.Lexer.Next();
+									AssignmentOp = Operator.BitLShiftL;
+									lcontext.Lexer.Next();
+									break;
+								}
+							}
+
+							CheckTokenType(lcontext, TokenType.Op_Assignment); // invalid token combination, throw
+							break;
+						}
 						default:
 							CheckTokenType(lcontext, TokenType.Op_Assignment);
 							break;

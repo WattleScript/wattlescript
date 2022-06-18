@@ -30,7 +30,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		BitAnd = 0x40000,
 		BitOr = 0x80000,
 		BitXor = 0x100000,
-		BitLShift = 0x200000,
+		BitLShiftA = 0x200000,
 		BitRShiftA = 0x400000,
 		BitRShiftL = 0x4800000,
 		NilCoalescingInverse = 0x9000000,
@@ -38,6 +38,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		LeftExclusiveRange = 0x24000000,
 		RightExclusiveRange = 0x48000000,
 		ExclusiveRange = 0x98000000,
+		BitLShiftL = 0x130000000
 	}
 	
 	class BinaryOperatorExpression : Expression
@@ -65,7 +66,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		const Operator LOGIC_AND = Operator.And;
 		const Operator LOGIC_OR = Operator.Or;
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
-		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
+		const Operator SHIFTS = Operator.BitLShiftA | Operator.BitRShiftA | Operator.BitRShiftL | Operator.BitLShiftL;
 		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
 		const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
 
@@ -82,10 +83,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public static void AddOperatorToChain(object chain, Token op)
+		public static void AddOperatorToChain(object chain, Token op, ScriptLoadingContext lcontext)
 		{
 			LinkedList list = (LinkedList)chain;
-			Node node = new Node() { Op = ParseBinaryOperator(op) };
+			Node node = new Node() { Op = ParseBinaryOperator(op, lcontext) };
 			AddNode(list, node);
 		}
 
@@ -234,7 +235,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		private static Operator ParseBinaryOperator(Token token)
+		private static Operator ParseBinaryOperator(Token token, ScriptLoadingContext lcontext)
 		{
 			switch (token.Type)
 			{
@@ -243,9 +244,39 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				case TokenType.And:
 					return Operator.And;
 				case TokenType.Op_LessThan:
+				{
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan)
+					{
+						lcontext.Lexer.Next();
+						
+						if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan)
+						{
+							lcontext.Lexer.Next();
+							return Operator.BitLShiftL;
+						}
+						
+						return Operator.BitLShiftA;
+					}
+					
 					return Operator.Less;
+				}
 				case TokenType.Op_GreaterThan:
+				{
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan)
+					{
+						lcontext.Lexer.Next();
+						
+						if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan)
+						{
+							lcontext.Lexer.Next();
+							return Operator.BitRShiftL;
+						}
+						
+						return Operator.BitRShiftA;
+					}
+					
 					return Operator.Greater;
+				}
 				case TokenType.Op_LessThanEqual:
 					return Operator.LessOrEqual;
 				case TokenType.Op_GreaterThanEqual:
@@ -278,12 +309,6 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return Operator.BitAnd;
 				case TokenType.Op_Xor:
 					return Operator.BitXor;
-				case TokenType.Op_LShift:
-					return Operator.BitLShift;
-				case TokenType.Op_RShiftArithmetic:
-					return Operator.BitRShiftA;
-				case TokenType.Op_RShiftLogical:
-					return Operator.BitRShiftL;
 				case TokenType.Op_InclusiveRange:
 					return Operator.InclusiveRange;
 				case TokenType.Op_ExclusiveRange:
@@ -362,8 +387,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return OpCode.BOr;
 				case Operator.BitXor:
 					return OpCode.BXor;
-				case Operator.BitLShift:
-					return OpCode.BLShift;
+				case Operator.BitLShiftA:
+					return OpCode.BLShiftA;
+				case Operator.BitLShiftL:
+					return OpCode.BLShiftL;
 				case Operator.BitRShiftA:
 					return OpCode.BRShiftA;
 				case Operator.BitRShiftL:
@@ -589,7 +616,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return (int) d1 | (int) d2;
 				case Operator.BitXor:
 					return (int) d1 ^ (int) d2;
-				case Operator.BitLShift:
+				case Operator.BitLShiftA:
 					return (int) d1 << (int) d2;
 				case Operator.BitRShiftA:
 					return (int) d1 >> (int) d2;
@@ -645,22 +672,13 @@ namespace WattleScript.Interpreter.Tree.Expressions
 						throw new DynamicExpressionException("Attempt to compare non-numbers, non-strings.");
 					}
 				case Operator.Equal:
-					if (object.ReferenceEquals(r, l))
+					if (r.Type != l.Type)
 					{
-						return true;
+						return (l.Type == DataType.Nil && r.Type == DataType.Void)
+						       || (l.Type == DataType.Void && r.Type == DataType.Nil);
 					}
-					else if (r.Type != l.Type)
-					{
-						if ((l.Type == DataType.Nil && r.Type == DataType.Void)
-							|| (l.Type == DataType.Void && r.Type == DataType.Nil))
-							return true;
-						else
-							return false;
-					}
-					else
-					{
-						return r.Equals(l);
-					}
+
+					return r.Equals(l);
 				case Operator.Greater:
 					return !EvalComparison(l, r, Operator.LessOrEqual);
 				case Operator.GreaterOrEqual:

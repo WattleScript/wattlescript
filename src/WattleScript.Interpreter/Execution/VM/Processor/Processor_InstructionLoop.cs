@@ -109,8 +109,11 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.BXor:
 							ExecBXor();
 							break;
-						case OpCode.BLShift:
-							ExecBlShift();
+						case OpCode.BLShiftA:
+							ExecBlShiftA();
+							break;
+						case OpCode.BLShiftL:
+							ExecBlShiftL();
 							break;
 						case OpCode.BRShiftA:
 							ExecBrShiftA();
@@ -1189,13 +1192,31 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 		
-		private void ExecBlShift()
+		private void ExecBlShiftA()
 		{
 			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
 			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber((int)ln << (int)rn)); 
+			}
+			else
+			{
+				var r = m_ValueStack.Pop().ToScalar();
+				var l = m_ValueStack.Pop().ToScalar();
+				throw ScriptRuntimeException.ArithmeticOnNonNumber(l, r);
+			}
+		}
+		
+		private void ExecBlShiftL()
+		{
+			if (m_ValueStack.Peek().TryCastToNumber(out var rn) && 
+			    m_ValueStack.Peek(1).TryCastToNumber(out var ln))
+			{
+				m_ValueStack.Pop();
+				m_ValueStack.Set(0, DynValue.NewNumber((int)(
+					(uint)ln << (int)rn
+				))); 
 			}
 			else
 			{

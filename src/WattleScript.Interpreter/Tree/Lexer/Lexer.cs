@@ -359,10 +359,6 @@ namespace WattleScript.Interpreter.Tree
 				case '<' when m_Syntax == ScriptSyntax.Wattle:
 				{
 					char next = CursorCharNext();
-					if (next == '<')
-					{
-						return PotentiallyDoubleCharOperator('=', TokenType.Op_LShift, TokenType.Op_LShiftEq, fromLine, fromCol);
-					}  
 					if (next == '=')
 					{
 						CursorCharNext();
@@ -393,23 +389,7 @@ namespace WattleScript.Interpreter.Tree
 						}
 					}
 					
-					if (next == '>')
-					{
-						next = CursorCharNext();
-						if (next == '>') {
-							//>>>, >>>= logical shift (zero)
-							return PotentiallyDoubleCharOperator('=', 
-								TokenType.Op_RShiftLogical, TokenType.Op_RShiftLogicalEq, 
-								fromLine, fromCol
-								);
-						}
-						//>>, >>= - arithmetic shift (sign bit)
-						return PotentiallyDoubleCharOperator('=', 
-							TokenType.Op_RShiftArithmetic, TokenType.Op_RShiftArithmeticEq, 
-							fromLine, fromCol
-						);
-					}
-					else if (next == '=')
+					if (next == '=')
 					{
 						CursorCharNext();
 						return CreateToken(TokenType.Op_GreaterThanEqual, fromLine, fromCol, ">=");
