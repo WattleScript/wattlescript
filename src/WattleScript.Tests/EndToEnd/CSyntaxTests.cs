@@ -748,6 +748,16 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         }
         
         [Test]
+        public void BitLShiftLEq()
+        {
+            TestScript.Run(@"
+            a = 1024
+            a <<<= 2;
+            assert.areequal(0x1000, a)
+            ", s => s.Options.Syntax = ScriptSyntax.Wattle);
+        }
+        
+        [Test]
         public void BitRShiftA()
         {
             TestScript.Run(@"

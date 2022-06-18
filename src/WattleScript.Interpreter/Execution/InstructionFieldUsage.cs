@@ -39,6 +39,14 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
 				case OpCode.SetMetaTab:
+				case OpCode.BAnd:
+				case OpCode.BOr:
+				case OpCode.BXor:
+				case OpCode.BLShiftA:
+				case OpCode.BLShiftL:
+				case OpCode.BRShiftA:
+				case OpCode.BRShiftL:
+				case OpCode.BNot:
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:

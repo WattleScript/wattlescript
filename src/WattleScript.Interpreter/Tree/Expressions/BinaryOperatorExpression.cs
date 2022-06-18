@@ -30,7 +30,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		BitAnd = 0x40000,
 		BitOr = 0x80000,
 		BitXor = 0x100000,
-		BitLShift = 0x200000,
+		BitLShiftA = 0x200000,
 		BitRShiftA = 0x400000,
 		BitRShiftL = 0x4800000,
 		NilCoalescingInverse = 0x9000000,
@@ -38,6 +38,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		LeftExclusiveRange = 0x24000000,
 		RightExclusiveRange = 0x48000000,
 		ExclusiveRange = 0x98000000,
+		BitLShiftL = 0x130000000,
 	}
 	
 	class BinaryOperatorExpression : Expression
@@ -65,7 +66,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		const Operator LOGIC_AND = Operator.And;
 		const Operator LOGIC_OR = Operator.Or;
 		const Operator NIL_COAL_ASSIGN = Operator.NilCoalescing;
-		const Operator SHIFTS = Operator.BitLShift | Operator.BitRShiftA | Operator.BitRShiftL;
+		const Operator SHIFTS = Operator.BitLShiftA | Operator.BitRShiftA | Operator.BitRShiftL | Operator.BitLShiftL;
 		const Operator NIL_COAL_INVERSE = Operator.NilCoalescingInverse;
 		const Operator RANGES = Operator.InclusiveRange | Operator.ExclusiveRange | Operator.LeftExclusiveRange | Operator.RightExclusiveRange;
 
@@ -247,7 +248,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan)
 					{
 						lcontext.Lexer.Next();
-						return Operator.BitLShift;
+						
+						if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan)
+						{
+							lcontext.Lexer.Next();
+							return Operator.BitLShiftL;
+						}
+						
+						return Operator.BitLShiftA;
 					}
 					
 					return Operator.Less;
@@ -385,8 +393,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return OpCode.BOr;
 				case Operator.BitXor:
 					return OpCode.BXor;
-				case Operator.BitLShift:
-					return OpCode.BLShift;
+				case Operator.BitLShiftA:
+					return OpCode.BLShiftA;
+				case Operator.BitLShiftL:
+					return OpCode.BLShiftL;
 				case Operator.BitRShiftA:
 					return OpCode.BRShiftA;
 				case Operator.BitRShiftL:
@@ -612,7 +622,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return (int) d1 | (int) d2;
 				case Operator.BitXor:
 					return (int) d1 ^ (int) d2;
-				case Operator.BitLShift:
+				case Operator.BitLShiftA:
 					return (int) d1 << (int) d2;
 				case Operator.BitRShiftA:
 					return (int) d1 >> (int) d2;
