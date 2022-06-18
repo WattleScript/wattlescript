@@ -603,7 +603,7 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
             var a = 7;
             goto fin
             a = 2;
-            fin:
+            label fin:
             assert.areequal(7, a);
             ", s => s.Options.Syntax = ScriptSyntax.Wattle);
         }
@@ -738,12 +738,42 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         }
         
         [Test]
+        public void BitLShiftEq()
+        {
+            TestScript.Run(@"
+            a = 16;
+            a <<= 2;
+            assert.areequal(64, a);
+            ", s => s.Options.Syntax = ScriptSyntax.Wattle);
+        }
+        
+        [Test]
         public void BitRShiftA()
         {
             TestScript.Run(@"
             function brshifta(a,b) { return a >> b };
             assert.areequal(-256, -1024 >> 2);
             assert.areequal(-256, brshifta(-1024, 2));
+            ", s => s.Options.Syntax = ScriptSyntax.Wattle);
+        }
+        
+        [Test]
+        public void BitRShiftAEq()
+        {
+            TestScript.Run(@"
+            a = -1024
+            a >>= 2;
+            assert.areequal(-256, a)
+            ", s => s.Options.Syntax = ScriptSyntax.Wattle);
+        }
+        
+        [Test]
+        public void BitRShiftLEq()
+        {
+            TestScript.Run(@"
+            a = -1024
+            a >>>= 2;
+            assert.areequal(0x3FFFFF00, a)
             ", s => s.Options.Syntax = ScriptSyntax.Wattle);
         }
         

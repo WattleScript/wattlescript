@@ -96,7 +96,7 @@ namespace WattleScript.Interpreter.Tree
 					List<Expression> powerChain = new List<Expression>();
 					powerChain.Add(e);
 
-					while (isPrimary && T.Type == TokenType.Op_Pwr)
+					while (T.Type == TokenType.Op_Pwr)
 					{
 						lcontext.Lexer.Next();
 						powerChain.Add(SubExpr(lcontext, false));
@@ -140,7 +140,7 @@ namespace WattleScript.Interpreter.Tree
 				
 				while (T.IsBinaryOperator())
 				{
-					BinaryOperatorExpression.AddOperatorToChain(chain, T);
+					BinaryOperatorExpression.AddOperatorToChain(chain, T, lcontext);
 					lcontext.Lexer.Next();
 					Expression right = SubExpr(lcontext, false, true);
 					BinaryOperatorExpression.AddExpressionToChain(chain, right);

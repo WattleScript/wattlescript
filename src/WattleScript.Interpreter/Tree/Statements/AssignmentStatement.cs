@@ -102,6 +102,57 @@ namespace WattleScript.Interpreter.Tree.Statements
 			if(localNames != null) lcontext.Scope.ResetTemporaryScope();
 		}
 
+		void ParseType(ScriptLoadingContext lcontext)
+		{
+			void TypeBegin() // ":", TypeExpr
+			{
+				lcontext.Lexer.Next();
+				TypeExpr();
+
+				var type = lcontext.Lexer.Current.Type;
+			}
+			
+			void TypeExpr() // LiteralExpr, [GenericTypeExpr], ["?" | "!"];
+			{
+				CheckTokenType(lcontext, TokenType.Name); // type name
+
+				if (lcontext.Lexer.Current.Type == TokenType.Op_LessThan)
+				{
+					GenericTypeExpr();
+				}
+
+				if (lcontext.Lexer.Current.Type == TokenType.Ternary) // ?
+				{
+					CheckTokenType(lcontext, TokenType.Ternary);
+				}
+				else if (lcontext.Lexer.Current.Type == TokenType.Not) // !
+				{
+					CheckTokenType(lcontext, TokenType.Not);
+				}
+			}
+
+			void GenericTypeExpr() // "<", {TypeExpr, [","]}, ">";
+			{
+				CheckTokenType(lcontext, TokenType.Op_LessThan);
+
+				while (lcontext.Lexer.Current.Type == TokenType.Name)
+				{
+					TypeExpr();
+
+					if (lcontext.Lexer.Current.Type != TokenType.Op_GreaterThan)
+					{
+						var type = lcontext.Lexer.Current.Type;
+						CheckTokenType(lcontext, TokenType.Comma);
+					}
+				}
+				
+				CheckTokenType(lcontext, TokenType.Op_GreaterThan);
+			}
+
+			// parser is at :
+			// ":", TypeExpr
+			TypeBegin();
+		}
 
 		public AssignmentStatement(ScriptLoadingContext lcontext, Expression firstExpression, Token first)
 			: base(lcontext)
@@ -168,6 +219,46 @@ namespace WattleScript.Interpreter.Tree.Statements
 							AssignmentOp = Operator.NilCoalescingInverse;
 							lcontext.Lexer.Next();
 							break;
+						case TokenType.Colon:
+							ParseType(lcontext);
+							CheckTokenType(lcontext, TokenType.Op_Assignment);
+							break;
+						case TokenType.Op_GreaterThan:
+						{
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThanEqual) // >>=
+							{
+								lcontext.Lexer.Next();
+								AssignmentOp = Operator.BitRShiftA;
+								lcontext.Lexer.Next();
+								break;
+							}
+							
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan) // >>>=
+							{
+								lcontext.Lexer.Next();
+								if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThanEqual)
+								{
+									lcontext.Lexer.Next();
+									AssignmentOp = Operator.BitRShiftL;
+									lcontext.Lexer.Next();
+									break;
+								}
+							}
+							
+							CheckTokenType(lcontext, TokenType.Op_Assignment); // invalid token combination, throw
+							break;
+						}
+						case TokenType.Op_LessThan:
+						{
+							if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThanEqual)
+							{
+								lcontext.Lexer.Next();
+								AssignmentOp = Operator.BitLShift;
+								lcontext.Lexer.Next();
+							}
+
+							break;
+						}
 						default:
 							CheckTokenType(lcontext, TokenType.Op_Assignment);
 							break;

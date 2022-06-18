@@ -20,6 +20,19 @@ namespace WattleScript.Interpreter.Tree
 		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
 		private Dictionary<string, DefineNode> m_Defines;
+		private Stack<Token> dynamicTokens = new Stack<Token>();
+
+		internal class DynamicToken
+		{
+			public TokenType Type { get; set; }
+			public string Text { get; set; }
+
+			public DynamicToken(TokenType type, string text)
+			{
+				Type = type;
+				Text = text;
+			}
+		}
 
 		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, DefineNode> defines)
 		{
@@ -47,8 +60,72 @@ namespace WattleScript.Interpreter.Tree
 			}
 		}
 
+		/// <summary>
+		/// Current token is split into parts based on dynamicTokens param
+		/// </summary>
+		/// <param name="dTokens">If current token is ">>=" then this should be some combination of these three chars, sequentially. For example ">", ">", "="</param>
+		public void ReplaceCurrent(List<DynamicToken> dTokens)
+		{
+			string ReplaceFirst(string text, string search, string replace)
+			{
+				int pos = text.IndexOf(search, StringComparison.Ordinal);
+				if (pos < 0)
+				{
+					return text;
+				}
+				return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+			}
+			
+			int fromLine = m_Current.FromLine;
+			int fromCol = m_Current.FromCol;
+			int toLine = m_Current.ToLine;
+			int toCol = m_Current.ToCol;
+			int prevLine = m_Current.PrevLine;
+			int prevCol = m_Current.PrevCol;
+			string currentText = m_Current.Text;
+			int i = 0;
+			int charOffset = 0;
+
+			foreach (DynamicToken dt in dTokens)
+			{
+				if (!currentText.StartsWith(dt.Text))
+				{
+					throw new InternalErrorException("Lexer.ReplaceCurrent() expects passed dynamic tokens to shape together the current token.");
+				}
+
+				currentText = ReplaceFirst(currentText, dt.Text, "");
+
+				if (i == 0)
+				{
+					m_Current = new Token(dt.Type, m_SourceId, fromLine, fromCol + charOffset, toLine, fromCol + charOffset + dt.Text.Length, prevLine, prevCol);
+				}
+				else
+				{
+					InsertNext(dt.Type, fromLine, fromCol + charOffset, toLine, fromCol + charOffset + dt.Text.Length, prevLine, prevCol);
+				}
+				
+				i++;
+				charOffset += dt.Text.Length;
+			}
+		}
+		
+		public void ReplaceCurrent(TokenType type, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol)
+		{
+			m_Current = new Token(type, m_SourceId, fromLine, fromCol, toLine, toCol, prevLine, prevCol);
+		}
+
+		public void InsertNext(TokenType type, int fromLine, int fromCol, int toLine, int toCol, int prevLine, int prevCol)
+		{
+			dynamicTokens.Push(new Token(type, m_SourceId, fromLine, fromCol, toLine, toCol, prevLine, prevCol));
+		}
+
 		private Token FetchNewToken()
 		{
+			if (dynamicTokens.Count > 0)
+			{
+				return dynamicTokens.Pop();
+			}
+			
 			while (true)
 			{
 				Token T = ReadToken();
@@ -135,7 +212,7 @@ namespace WattleScript.Interpreter.Tree
 			templateStringState = new List<int>(s.TemplateStringState);
 		}
 
-		public Token PeekNext()
+		public Token PeekNext(int offset = 1)
 		{
 			int snapshot = m_Cursor;
 			Token current = m_Current;
@@ -148,9 +225,14 @@ namespace WattleScript.Interpreter.Tree
 				lastC = templateStringState[templateStringState.Count - 1];
 			}
 
-			Next();
 			Token t = Current;
-
+			
+			for (int i = 0; i < offset; i++)
+			{
+				Next();
+				t = Current;
+			}
+			
 			m_Cursor = snapshot;
 			m_Current = current;
 			m_Line = line;
@@ -167,7 +249,8 @@ namespace WattleScript.Interpreter.Tree
 			else if (stateC != 0)
 			{
 				templateStringState[templateStringState.Count - 1] = lastC;
-			}
+			}	
+			
 			return t;
 		}
 
@@ -361,7 +444,7 @@ namespace WattleScript.Interpreter.Tree
 					char next = CursorCharNext();
 					if (next == '<')
 					{
-						return PotentiallyDoubleCharOperator('=', TokenType.Op_LShift, TokenType.Op_LShiftEq, fromLine, fromCol);
+						//return PotentiallyDoubleCharOperator('=', TokenType.Op_LShift, TokenType.Op_LShiftEq, fromLine, fromCol);
 					}  
 					if (next == '=')
 					{
@@ -395,7 +478,7 @@ namespace WattleScript.Interpreter.Tree
 					
 					if (next == '>')
 					{
-						next = CursorCharNext();
+						/*next = CursorCharNext();
 						if (next == '>') {
 							//>>>, >>>= logical shift (zero)
 							return PotentiallyDoubleCharOperator('=', 
@@ -407,7 +490,7 @@ namespace WattleScript.Interpreter.Tree
 						return PotentiallyDoubleCharOperator('=', 
 							TokenType.Op_RShiftArithmetic, TokenType.Op_RShiftArithmeticEq, 
 							fromLine, fromCol
-						);
+						);*/
 					}
 					else if (next == '=')
 					{

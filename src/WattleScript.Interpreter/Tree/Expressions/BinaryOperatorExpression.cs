@@ -82,10 +82,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		public static void AddOperatorToChain(object chain, Token op)
+		public static void AddOperatorToChain(object chain, Token op, ScriptLoadingContext lcontext)
 		{
 			LinkedList list = (LinkedList)chain;
-			Node node = new Node() { Op = ParseBinaryOperator(op) };
+			Node node = new Node() { Op = ParseBinaryOperator(op, lcontext) };
 			AddNode(list, node);
 		}
 
@@ -234,7 +234,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 
 
-		private static Operator ParseBinaryOperator(Token token)
+		private static Operator ParseBinaryOperator(Token token, ScriptLoadingContext lcontext)
 		{
 			switch (token.Type)
 			{
@@ -243,9 +243,32 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				case TokenType.And:
 					return Operator.And;
 				case TokenType.Op_LessThan:
+				{
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_LessThan)
+					{
+						lcontext.Lexer.Next();
+						return Operator.BitLShift;
+					}
+					
 					return Operator.Less;
+				}
 				case TokenType.Op_GreaterThan:
+				{
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan)
+					{
+						lcontext.Lexer.Next();
+						
+						if (lcontext.Lexer.PeekNext().Type == TokenType.Op_GreaterThan)
+						{
+							lcontext.Lexer.Next();
+							return Operator.BitRShiftL;
+						}
+						
+						return Operator.BitRShiftA;
+					}
+					
 					return Operator.Greater;
+				}
 				case TokenType.Op_LessThanEqual:
 					return Operator.LessOrEqual;
 				case TokenType.Op_GreaterThanEqual:
@@ -278,12 +301,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					return Operator.BitAnd;
 				case TokenType.Op_Xor:
 					return Operator.BitXor;
-				case TokenType.Op_LShift:
-					return Operator.BitLShift;
-				case TokenType.Op_RShiftArithmetic:
-					return Operator.BitRShiftA;
-				case TokenType.Op_RShiftLogical:
-					return Operator.BitRShiftL;
+				//case TokenType.Op_LShift:
+				//	return Operator.BitLShift;
+				//case TokenType.Op_RShiftArithmetic:
+				//	return Operator.BitRShiftA;
+				//case TokenType.Op_RShiftLogical:
+				//	return Operator.BitRShiftL;
 				case TokenType.Op_InclusiveRange:
 					return Operator.InclusiveRange;
 				case TokenType.Op_ExclusiveRange:

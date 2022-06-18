@@ -60,6 +60,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.New;
 					case "mixin":
 						return TokenType.Mixin;
+					case "label":
+						return TokenType.Label;
 				}
 			}
 
@@ -149,9 +151,9 @@ namespace WattleScript.Interpreter.Tree
 				case TokenType.Op_Or:
 				case TokenType.Op_And: 
 				case TokenType.Op_Xor:
-				case TokenType.Op_LShift:
-				case TokenType.Op_RShiftArithmetic:
-				case TokenType.Op_RShiftLogical:
+				//case TokenType.Op_LShift:
+				//case TokenType.Op_RShiftArithmetic:
+				//case TokenType.Op_RShiftLogical:
 				case TokenType.Op_InclusiveRange:
 				case TokenType.Op_LeftExclusiveRange:
 				case TokenType.Op_RightExclusiveRange:

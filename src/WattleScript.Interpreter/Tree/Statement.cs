@@ -241,10 +241,22 @@ namespace WattleScript.Interpreter.Tree
 					return new ClassDefinitionStatement(lcontext);
 				case TokenType.Mixin:
 					return new MixinDefinitionStatement(lcontext);
+				case TokenType.Label:
+				{
+					lcontext.Lexer.Next();
+					Token l = lcontext.Lexer.Current;
+					if (l.Type == TokenType.Name)
+					{
+						return new LabelStatement(lcontext);
+					}
+
+					throw new System.Data.SyntaxErrorException("Invalid label definition");
+				}
 				default:
 				{
 						//Check for labels in CLike mode
-						lcontext.Lexer.SavePos();
+						Token l = lcontext.Lexer.Current;
+						/*lcontext.Lexer.SavePos();
 						Token l = lcontext.Lexer.Current;
 						if (lcontext.Syntax == ScriptSyntax.Wattle && l.Type == TokenType.Name)
 						{
@@ -254,7 +266,7 @@ namespace WattleScript.Interpreter.Tree
 								return new LabelStatement(lcontext);
 							}
 						}
-						lcontext.Lexer.RestorePos();
+						lcontext.Lexer.RestorePos();*/
 						//Regular expression
 						Expression exp = Expression.PrimaryExp(lcontext, false);
 						FunctionCallExpression fnexp = exp as FunctionCallExpression;
