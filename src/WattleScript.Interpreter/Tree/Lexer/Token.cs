@@ -62,6 +62,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Mixin;
 					case "label":
 						return TokenType.Label;
+					case "typedef":
+						return TokenType.Typedef;
 				}
 			}
 

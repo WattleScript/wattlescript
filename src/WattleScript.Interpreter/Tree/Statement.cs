@@ -241,6 +241,8 @@ namespace WattleScript.Interpreter.Tree
 					return new ClassDefinitionStatement(lcontext);
 				case TokenType.Mixin:
 					return new MixinDefinitionStatement(lcontext);
+				case TokenType.Typedef:
+					return new TypedefDefinitionStatement(lcontext);
 				case TokenType.Label:
 				{
 					lcontext.Lexer.Next();

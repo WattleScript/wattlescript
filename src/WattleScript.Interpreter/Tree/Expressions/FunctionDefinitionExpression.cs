@@ -22,8 +22,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		RuntimeScopeFrame m_StackFrame;
 		List<SymbolRef> m_Closure = new List<SymbolRef>();
 		private Annotation[] m_Annotations;
-		bool m_HasVarArgs = false;
-		bool m_ImplicitThis = false;
+		private bool m_HasVarArgs = false;
+		private bool m_ImplicitThis = false;
+		private bool parseBody = true;
 		
 		private FunctionBuilder m_bc = null;
 		
@@ -42,10 +43,11 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda)
 			: this(lcontext, self, false, isLambda)
 		{ }
-		
-		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false)
+
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false, bool parseBody = true)
 			: base(lcontext)
 		{
+			this.parseBody = parseBody;
 			this.lcontext = lcontext;
 			this.m_IsConstructor = isConstructor;
 			if (m_UsesGlobalEnv = usesGlobalEnv)
@@ -97,13 +99,15 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 			
 			// here lexer is at first token of body
-
 			m_Begin = openRound.GetSourceRefUpTo(lcontext.Lexer.Current);
-			
-			if(isLambda || arrowFunc)
-				m_Statement = CreateLambdaBody(lcontext, arrowFunc);
-			else
-				m_Statement = CreateBody(lcontext, openCurly);
+
+			if (parseBody)
+			{
+				if(isLambda || arrowFunc)
+					m_Statement = CreateLambdaBody(lcontext, arrowFunc);
+				else
+					m_Statement = CreateBody(lcontext, openCurly);	
+			}
 
 
 			lcontext.Source.Refs.Add(m_Begin);
