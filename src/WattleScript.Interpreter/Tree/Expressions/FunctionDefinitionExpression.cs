@@ -64,21 +64,31 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			{
 				openRound = lcontext.Lexer.Current;
 				lcontext.Lexer.Next();
-				if (openRound.Type == TokenType.Name)
-					paramnames = new List<FunctionDefinitionStatement.FunctionParamRef>(new FunctionDefinitionStatement.FunctionParamRef[] {new FunctionDefinitionStatement.FunctionParamRef(openRound.Text)});
-				else
-					paramnames = BuildParamList(lcontext, self, openRound);
+				paramnames = openRound.Type == TokenType.Name ? new List<FunctionDefinitionStatement.FunctionParamRef>(new[] {new FunctionDefinitionStatement.FunctionParamRef(openRound.Text)}) : BuildParamList(lcontext, self, openRound);
+				
+				// return type
+				if (lcontext.Lexer.Current.Type == TokenType.Colon)
+				{
+					AssignmentStatement.ParseType(lcontext);
+				}
 			}
 			else
 			{
 				openRound = CheckTokenType(lcontext, TokenType.Brk_Open_Round);
 				paramnames = BuildParamList(lcontext, self, openRound);
+				
+				// return type
+				if (lcontext.Lexer.Current.Type == TokenType.Colon)
+				{
+					AssignmentStatement.ParseType(lcontext);
+				}
+				
 				if (lcontext.Syntax != ScriptSyntax.Lua && lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly) {
 					openCurly = true;
 					lcontext.Lexer.Next();
 				}
 			}
-			
+
 			// skip arrow
 			bool arrowFunc = false;
 			if (lcontext.Lexer.Current.Type == TokenType.Arrow) {
@@ -208,16 +218,15 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				if (t.Type == TokenType.Name)
 				{
 					string paramName = t.Text;
+					Expression defaultVal = null;
 					
 					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_Assignment)
 					{
 						parsingDefaultParams = true;
 						lcontext.Lexer.Next();
 						lcontext.Lexer.Next();
-						Expression defaultVal = Expr(lcontext);
+						defaultVal = Expr(lcontext);
 						nextAfterParamDeclr = false;
-
-						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName, defaultVal));
 					}
 					else
 					{
@@ -225,12 +234,19 @@ namespace WattleScript.Interpreter.Tree.Expressions
 						{
 							throw new SyntaxErrorException(t, "after first parameter with default value a parameter without default value cannot be declared", t.Text)
 							{
-								IsPrematureStreamTermination = (t.Type == TokenType.Eof)
+								IsPrematureStreamTermination = t.Type == TokenType.Eof
 							};
 						}
-						
-						paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName));
 					}
+
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Colon) // param type
+					{
+						lcontext.Lexer.Next();
+						AssignmentStatement.ParseType(lcontext);
+						nextAfterParamDeclr = false;
+					}
+					
+					paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName, defaultVal));
 				}
 				else if (t.Type == TokenType.VarArgs)
 				{

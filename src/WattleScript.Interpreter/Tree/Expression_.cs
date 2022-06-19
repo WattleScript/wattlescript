@@ -4,6 +4,7 @@ using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Tree.Expressions;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Execution.VM;
+using WattleScript.Interpreter.Tree.Statements;
 
 namespace WattleScript.Interpreter.Tree
 {
@@ -197,6 +198,12 @@ namespace WattleScript.Interpreter.Tree
 						lcontext.Lexer.Next();
 					}
 					lcontext.Lexer.Next();
+
+					if (lcontext.Lexer.Current.Type == TokenType.Colon) // parse return type
+					{
+						AssignmentStatement.ParseType(lcontext);
+					}
+					
 					bool arrowLambda = lcontext.Lexer.Current.Type == TokenType.Arrow || lcontext.Lexer.PeekNext().Type == TokenType.Arrow;
 					lcontext.Lexer.RestorePos();
 					if (arrowLambda) 					

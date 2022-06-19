@@ -102,14 +102,12 @@ namespace WattleScript.Interpreter.Tree.Statements
 			if(localNames != null) lcontext.Scope.ResetTemporaryScope();
 		}
 
-		void ParseType(ScriptLoadingContext lcontext)
+		public static void ParseType(ScriptLoadingContext lcontext)
 		{
 			void TypeBegin() // ":", TypeExpr
 			{
 				lcontext.Lexer.Next();
 				TypeExpr();
-
-				var type = lcontext.Lexer.Current.Type;
 			}
 			
 			void TypeExpr() // LiteralExpr, [GenericTypeExpr], ["?" | "!"];
