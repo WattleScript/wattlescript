@@ -6,7 +6,7 @@ namespace WattleScript.Interpreter
 {
     public static class Extensions
     {
-        public static string GetSourceCode(this SourceRef[] refs, string fullSourceCode)
+        public static string GetSourceFragment(this SourceRef[] refs, string fullSourceCode)
         {
             if (refs == null)
             {

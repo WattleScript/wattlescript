@@ -156,6 +156,8 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         {
             var s = new Script();
             s.Options.Syntax = ScriptSyntax.Wattle;
+            s.Options.AnnotationPolicy.AnnotationParsingPolicy = AnnotationValueParsingPolicy.StringOrTable;
+            
             var chunk = s.LoadString(@"
             @@number (1.0)
             @@string ('hello')
