@@ -76,16 +76,8 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 break;
                             case TokenType.Colon:
                             {
-                                if (lcontext.Lexer.PeekNext().Type == TokenType.Function)
-                                {
-                                    lcontext.Lexer.Next();
-                                    ParseFunctionMember(false);
-                                }
-                                else
-                                {
-                                    AssignmentStatement.ParseType(lcontext);    
-                                }
                                 
+                                AssignmentStatement.ParseType(lcontext);
                                 break;
                             }
                             default:

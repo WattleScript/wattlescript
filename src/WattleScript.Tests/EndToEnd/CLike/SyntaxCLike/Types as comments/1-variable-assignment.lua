@@ -1,2 +1,2 @@
-x : number = 100
+var x : number = 100
 print(x)

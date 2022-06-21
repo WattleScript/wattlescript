@@ -5,6 +5,16 @@ using WattleScript.Interpreter.Tree.Statements;
 
 namespace WattleScript.Interpreter.Tree
 {
+	struct DynValueTable
+	{
+		private DynValue dv;
+		
+		public DynValueTable(Table t)
+		{
+			dv = DynValue.NewTable(t);
+		} 
+	}
+	
 	abstract class Statement : NodeBase
 	{
 		public Statement(ScriptLoadingContext lcontext)

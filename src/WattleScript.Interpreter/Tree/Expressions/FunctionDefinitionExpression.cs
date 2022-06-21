@@ -224,6 +224,13 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					string paramName = t.Text;
 					Expression defaultVal = null;
 					
+					if (lcontext.Lexer.PeekNext().Type == TokenType.Colon) // param type
+					{
+						lcontext.Lexer.Next();
+						AssignmentStatement.ParseType(lcontext);
+						nextAfterParamDeclr = false;
+					}
+					
 					if (lcontext.Lexer.PeekNext().Type == TokenType.Op_Assignment)
 					{
 						parsingDefaultParams = true;
@@ -243,13 +250,6 @@ namespace WattleScript.Interpreter.Tree.Expressions
 						}
 					}
 
-					if (lcontext.Lexer.PeekNext().Type == TokenType.Colon) // param type
-					{
-						lcontext.Lexer.Next();
-						AssignmentStatement.ParseType(lcontext);
-						nextAfterParamDeclr = false;
-					}
-					
 					paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(paramName, defaultVal));
 				}
 				else if (t.Type == TokenType.VarArgs)

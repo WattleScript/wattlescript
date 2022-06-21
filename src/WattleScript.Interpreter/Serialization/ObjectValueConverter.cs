@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -25,9 +26,7 @@ namespace WattleScript.Interpreter.Serialization
 
 			Table t = new Table(script);
 
-			System.Collections.IEnumerable ienum = o as System.Collections.IEnumerable;
-
-			if (ienum != null)
+			if (o is IEnumerable ienum)
 			{
 				foreach (object obj in ienum)
 				{

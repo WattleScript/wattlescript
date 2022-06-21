@@ -32,6 +32,11 @@ namespace WattleScript.Interpreter.Tree.Statements
 				Token name = CheckTokenType(lcontext, TokenType.Name);
 				localNames.Add(name.Text);
 
+				if (lcontext.Lexer.Current.Type == TokenType.Colon)
+				{
+					ParseType(lcontext);
+				}
+				
 				if (lcontext.Lexer.Current.Type != TokenType.Comma)
 					break;
 
@@ -102,11 +107,22 @@ namespace WattleScript.Interpreter.Tree.Statements
 			if(localNames != null) lcontext.Scope.ResetTemporaryScope();
 		}
 
-		public static void ParseType(ScriptLoadingContext lcontext)
+		public static void ParseType(ScriptLoadingContext lcontext, bool currentTokenIsColon = true)
 		{
 			void TypeBegin() // ":", TypeExpr
 			{
-				lcontext.Lexer.Next();
+				if (currentTokenIsColon)
+				{
+					CheckTokenType(lcontext, TokenType.Colon);	
+				}
+
+				if (lcontext.Lexer.Current.Type == TokenType.Function)
+				{
+					lcontext.Lexer.Next();
+					FunctionDefinitionExpression fnDef = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, false, false, false);
+					return;
+				}
+				
 				TypeExpr();
 			}
 			

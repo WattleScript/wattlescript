@@ -1,6 +1,7 @@
 typedef Animal {
     Name : string,
-    Bark : function (what : string) : string
+    Bark : function (what : string) : string,
+    Callback : function (callback : function (param : object)) : void
 }
 
 animal : Animal = {

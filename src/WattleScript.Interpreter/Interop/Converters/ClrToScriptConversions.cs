@@ -19,8 +19,8 @@ namespace WattleScript.Interpreter.Interop.Converters
 			if (obj == null)
 				return DynValue.Nil;
 
-			if (obj is DynValue)
-				return (DynValue)obj;
+			if (obj is DynValue value)
+				return value;
 
 			Type t = obj.GetType();
 
