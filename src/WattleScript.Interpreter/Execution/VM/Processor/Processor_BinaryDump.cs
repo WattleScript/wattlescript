@@ -224,7 +224,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			proto.code = new Instruction[br.ReadVarUInt32()];
 			proto.sourceRefs = new SourceRef[proto.code.Length];
 			for (int i = 0; i < proto.code.Length; i++) proto.code[i] = Instruction.ReadBinary(br);
-			SourceRef sourceRef = new SourceRef(sourceID, 0, 0, 0, 0, false);
+
 			if (br.ReadBoolean())
 			{
 				//Debug info!
@@ -233,7 +233,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					switch (br.ReadByte())
 					{
 						case 0:
-							proto.sourceRefs[i] = sourceRef;
+							proto.sourceRefs[i] = null;
 							break;
 						case 1:
 							proto.sourceRefs[i] = proto.sourceRefs[i - 1];
@@ -247,7 +247,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			else
 			{
 				//No debug info
-				for (int i = 0; i < proto.sourceRefs.Length; i++) proto.sourceRefs[i] = sourceRef;
+				for (int i = 0; i < proto.sourceRefs.Length; i++) proto.sourceRefs[i] = null;
 			}
 			return proto;
 		}
