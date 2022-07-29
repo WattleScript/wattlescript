@@ -61,9 +61,9 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			return null;
 		}
 
-		internal SymbolRef DefineLocal(string name)
+		internal SymbolRef DefineLocal(string name, string typeName)
 		{
-			return m_ScopeTreeHead.Define(name);
+			return m_ScopeTreeHead.Define(name, typeName);
 		}
 
 		internal void TemporaryScope(Dictionary<string, SymbolRef> locals)
@@ -73,14 +73,14 @@ namespace WattleScript.Interpreter.Execution.Scopes
 
 		internal void ResetTemporaryScope() => m_ScopeTreeHead.ResetTemporaryScope();
 
-		internal SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
+		internal SymbolRef TryDefineLocal(string name, string typeName, out SymbolRef oldLocal)
 		{
 			if ((oldLocal = m_ScopeTreeHead.Find(name)) != null)
 			{
 				m_ScopeTreeHead.Rename(name);
 			}
 
-			return m_ScopeTreeHead.Define(name);
+			return m_ScopeTreeHead.Define(name, typeName);
 		}
 
 		internal void ResolveLRefs()

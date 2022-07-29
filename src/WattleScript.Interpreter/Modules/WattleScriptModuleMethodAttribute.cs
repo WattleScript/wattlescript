@@ -16,5 +16,12 @@ namespace WattleScript.Interpreter
 		/// Gets or sets the name of the function in the module (defaults to member name)
 		/// </summary>
 		public string Name { get; set; }
+
+		public DataType DataType { get; set; }
+
+		public WattleScriptModuleMethodAttribute(DataType dataType = DataType.Nil)
+		{
+			DataType = dataType;
+		}
 	}
 }

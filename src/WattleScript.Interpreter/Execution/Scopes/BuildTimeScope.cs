@@ -104,9 +104,9 @@ namespace WattleScript.Interpreter.Execution
 			}
 		}
 
-		public SymbolRef DefineLocal(string name)
+		public SymbolRef DefineLocal(string name, string type = "")
 		{
-			return m_Frames.Last().DefineLocal(name);
+			return m_Frames.Last().DefineLocal(name, type);
 		}
 
 		public SymbolRef DefineBaseRef()
@@ -127,9 +127,9 @@ namespace WattleScript.Interpreter.Execution
 		
 		
 
-		public SymbolRef TryDefineLocal(string name, out SymbolRef oldLocal)
+		public SymbolRef TryDefineLocal(string name, string typeName, out SymbolRef oldLocal)
 		{
-			return m_Frames.Last().TryDefineLocal(name, out oldLocal);
+			return m_Frames.Last().TryDefineLocal(name, typeName, out oldLocal);
 		}
 
 		public void TemporaryScope(Dictionary<string, SymbolRef> locals)

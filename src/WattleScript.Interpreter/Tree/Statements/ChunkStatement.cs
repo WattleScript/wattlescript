@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
+using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
@@ -11,7 +13,10 @@ namespace WattleScript.Interpreter.Tree.Statements
 		SymbolRef m_Env;
 		SymbolRef m_VarArgs;
 		private Annotation[] annotations;
-
+		private ScriptLoadingContext lcontext;
+		private Table locals = null;
+		private List<SymbolRefExpression> sreList = new List<SymbolRefExpression>();
+		
 		public ChunkStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
@@ -23,13 +28,26 @@ namespace WattleScript.Interpreter.Tree.Statements
 			annotations = lcontext.ChunkAnnotations.ToArray();
 		}
 
+
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
+			this.lcontext = lcontext;
+			
 			lcontext.Scope.PushFunction(this);
 			lcontext.Scope.SetHasVarArgs();
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
 			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 
+			lcontext.Script.CompiletimeTopLevelLocals["myLocalVar"] = DynValue.NewNumber(100);
+			
+			if (lcontext.Script.CompiletimeTopLevelLocals.Any())
+			{
+				SymbolRefExpression sre = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal("myLocalVar"));
+				locals = lcontext.Script.CompiletimeTopLevelLocals;
+				sreList.Add(sre);
+				//sre.CompileAssignment();
+			} 
+			
 			m_Block.ResolveScope(lcontext);
 			
 			m_StackFrame = lcontext.Scope.PopFunction();
@@ -42,6 +60,16 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.Emit_Load(SymbolRef.Upvalue(WellKnownSymbols.ENV, 0));
 			bc.Emit_Store(m_Env, 0, 0);
 			bc.Emit_Pop();
+
+			if (locals != null)
+			{
+				foreach (SymbolRefExpression sre in sreList)
+				{
+					bc.Emit_Literal(DynValue.NewNumber(100));
+					sre.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+				}
+			}
+			
 			m_Block.Compile(bc);
 			bc.Emit_Ret(0);
 			

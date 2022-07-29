@@ -7,6 +7,23 @@ using NUnit.Framework;
 
 namespace WattleScript.Interpreter.Tests;
 
+[WattleScriptUserData]
+public class TestCls
+{
+    public TestCls()
+    {
+        
+    }
+    
+    public DynValue a(Script script, CallbackArguments args)
+    {
+        Closure c = args[0].Function;
+  
+        
+        return DynValue.NewNumber(1);
+    }
+}
+
 public class CLikeTestRunner
 {
     private const string ROOT_FOLDER = "EndToEnd/CLike";
@@ -29,9 +46,15 @@ public class CLikeTestRunner
     {
         await RunCore(path, true);
     }
+
+    public DynValue GetSession()
+    {
+        return UserData.Create(new TestCls());
+    }
     
     public async Task RunCore(string path, bool reportErrors = false)
     {
+        UserData.RegisterType<TestCls>();
         string outputPath = path.Replace(".lua", ".txt");
 
         if (!File.Exists(outputPath))
@@ -55,6 +78,11 @@ public class CLikeTestRunner
         script.Globals["CurrentColumn"] = (ScriptExecutionContext c, CallbackArguments a) => {
             return c.CallingLocation.FromChar;
         };
+
+        script.Globals["CLR_GET_SESSION"] = GetSession;
+        
+        script.CompiletimeTopLevelLocals["topLevelVar"] = DynValue.NewNumber(60);
+        
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");

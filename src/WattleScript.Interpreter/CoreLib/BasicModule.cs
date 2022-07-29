@@ -209,7 +209,7 @@ namespace WattleScript.Interpreter.CoreLib
 		// The base may be any integer between 2 and 36, inclusive. In bases above 10, the letter 'A' (in either 
 		// upper or lower case) represents 10, 'B' represents 11, and so forth, with 'Z' representing 35. If the 
 		// string e is not a valid numeral in the given base, the function returns nil. 
-		[WattleScriptModuleMethod]
+		[WattleScriptModuleMethod(DataType.Number)]
 		public static DynValue tonumber(ScriptExecutionContext executionContext, CallbackArguments args)
 		{
 			if (args.Count < 1) throw ScriptRuntimeException.BadArgumentValueExpected(0, "tonumber");
@@ -231,13 +231,7 @@ namespace WattleScript.Interpreter.CoreLib
 			}
 			else
 			{
-				DynValue ee;
-
-				if (args[0].Type != DataType.Number)
-					ee = args.AsType(0, "tonumber", DataType.String, false);
-				else
-					ee = DynValue.NewString(args[0].Number.ToString(CultureInfo.InvariantCulture)); ;
-				if (ee.String.Length < 0) return DynValue.Nil;
+				DynValue ee = args[0].Type != DataType.Number ? args.AsType(0, "tonumber", DataType.String) : DynValue.NewString(args[0].Number.ToString(CultureInfo.InvariantCulture)); ;
 				int bb = (int)b.Number;
 
 			    double uiv = 0;

@@ -113,6 +113,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     {
                         var T = lcontext.Lexer.Current;
                         lcontext.Lexer.Next();
+                        parseMember:
                         switch (lcontext.Lexer.Current.Type)
                         {
                             case TokenType.Brk_Open_Round:
@@ -127,6 +128,9 @@ namespace WattleScript.Interpreter.Tree.Statements
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
                                 break;
+                            case TokenType.Colon:
+                                AssignmentStatement.ParseType(lcontext);
+                                goto parseMember;
                             default:
                                 CheckTokenType(lcontext, TokenType.SemiColon); //throws error
                                 break;

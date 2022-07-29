@@ -51,6 +51,8 @@ namespace WattleScript.Interpreter
 		/// Gets the default _ENV.
 		/// </summary>
 		public static SymbolRef DefaultEnv { get { return s_DefaultEnv; } }
+		
+		public string TypeName { get; set; }
 
 		/// <summary>
 		/// Creates a new symbol reference pointing to a global var
@@ -69,10 +71,10 @@ namespace WattleScript.Interpreter
 		/// <param name="name">The name.</param>
 		/// <param name="index">The index of the var in local scope.</param>
 		/// <returns></returns>
-		internal static SymbolRef Local(string name, int index)
+		internal static SymbolRef Local(string name, string typeName, int index)
 		{
 			//Debug.Assert(index >= 0, "Symbol Index < 0");
-			return new SymbolRef() { i_Index = index, i_Type = SymbolRefType.Local, i_Name = name };
+			return new SymbolRef() { i_Index = index, i_Type = SymbolRefType.Local, i_Name = name, TypeName = typeName};
 		}
 
 		/// <summary>

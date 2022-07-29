@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using WattleScript.Interpreter.DataStructs;
@@ -581,6 +582,20 @@ namespace WattleScript.Interpreter
 
 			object key;
 			return ResolveMultipleKeys(keys, out key).Remove(key);
+		}
+
+		/// <summary>
+		/// Returns whether length of the table is greater than zero.
+		/// </summary>
+		/// <returns>true: lenght > 0, false otherwise</returns>
+		public bool Any()
+		{
+			return Keys.Any();
+		}
+
+		public IEnumerable<DynValue> Where(Func<DynValue, bool> func)
+		{
+			return Values.Where(func);
 		}
 
 		#endregion

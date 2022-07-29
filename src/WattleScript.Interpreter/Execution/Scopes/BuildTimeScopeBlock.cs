@@ -54,9 +54,9 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			return m_DefinedNames.GetOrDefault(name);
 		}
 
-		internal SymbolRef Define(string name)
+		internal SymbolRef Define(string name, string typeName)
 		{
-			SymbolRef l = SymbolRef.Local(name, -1);
+			SymbolRef l = SymbolRef.Local(name, typeName, -1);
 			m_DefinedNames.Add(name, l);
 			m_LastDefinedName = name;
 			return l;

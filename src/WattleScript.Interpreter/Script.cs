@@ -115,6 +115,7 @@ namespace WattleScript.Interpreter
 
 			m_MainProcessor = new Processor(this, m_GlobalTable);
 			m_GlobalTable = new Table(this).RegisterCoreModules(coreModules);
+			CompiletimeTopLevelLocals = new Table(this);
 		}
 
 
@@ -147,6 +148,9 @@ namespace WattleScript.Interpreter
 		{
 			get { return m_GlobalTable; }
 		}
+
+		public Table CompiletimeTopLevelLocals { get; }
+
 
 		/// <summary>
 		/// Loads a string containing a Lua/WattleScript function.

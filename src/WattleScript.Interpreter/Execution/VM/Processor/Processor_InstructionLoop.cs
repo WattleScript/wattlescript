@@ -1806,17 +1806,13 @@ namespace WattleScript.Interpreter.Execution.VM
 		private int ExecIndex(Instruction i, int instructionPtr)
 		{
 			int nestedMetaOps = 100; // sanity check, to avoid potential infinite loop here
-
+			bool isMultiIndex = i.OpCode == OpCode.IndexL;
+			
 			// stack: base - index
-			bool isNameIndex = i.OpCode == OpCode.IndexN;
-
-			bool isMultiIndex = (i.OpCode == OpCode.IndexL);
-
 			string i_str = GetString(i.NumVal);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
-			DynValue idx = originalIdx.ToScalar();
-			DynValue obj = m_ValueStack.Pop().ToScalar();
-
+			DynValue idx = originalIdx;
+			DynValue obj = m_ValueStack.Pop();
 			bool setFromMT = false; 
 			
 			while (nestedMetaOps > 0)
@@ -1876,7 +1872,7 @@ namespace WattleScript.Interpreter.Execution.VM
 					{
 						UserData ud = obj.UserData;
 
-						var v = ud.Descriptor.Index(GetScript(), ud.Object, originalIdx, isNameIndex);
+						var v = ud.Descriptor.Index(GetScript(), ud.Object, originalIdx, i.OpCode == OpCode.IndexN);
 
 						if (v.IsVoid())
 						{
@@ -1888,18 +1884,16 @@ namespace WattleScript.Interpreter.Execution.VM
 					}
 					case DataType.Range:
 					{
-						if (idx.String == "to")
+						switch (idx.String)
 						{
-							m_ValueStack.Push(DynValue.NewNumber(obj.Range.To));
-							return instructionPtr;
+							case "to":
+								m_ValueStack.Push(DynValue.NewNumber(obj.Range.To));
+								return instructionPtr;
+							case "from":
+								m_ValueStack.Push(DynValue.NewNumber(obj.Range.From));
+								return instructionPtr;
 						}
-						
-						if (idx.String == "from")
-						{
-							m_ValueStack.Push(DynValue.NewNumber(obj.Range.From));
-							return instructionPtr;
-						}
-						
+
 						goto default;
 					}
 					default:

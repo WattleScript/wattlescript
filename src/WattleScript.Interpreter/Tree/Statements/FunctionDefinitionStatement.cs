@@ -125,7 +125,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		{
 			if (m_FuncDefName != null)
 			{
-				m_FuncSymbol = lcontext.Scope.TryDefineLocal(m_FuncDefName, out _);
+				m_FuncSymbol = lcontext.Scope.TryDefineLocal(m_FuncDefName,  "object", out _);
 			}
 		}
 

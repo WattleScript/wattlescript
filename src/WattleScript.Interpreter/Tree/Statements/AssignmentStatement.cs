@@ -11,31 +11,34 @@ namespace WattleScript.Interpreter.Tree.Statements
 	class AssignmentStatement : Statement
 	{
 		List<IVariable> m_LValues;
-		List<string> localNames;
+		List<KeyValuePair<string, TypeExpression>> localNames;
 		List<Expression> m_RValues;
 		SourceRef m_Ref;
 
 		public Operator AssignmentOp = Operator.NotAnOperator;
 
 		private bool isIncDec;
-
-
+		private ScriptLoadingContext lcontext;
+		
 		public AssignmentStatement(ScriptLoadingContext lcontext, Token startToken)
 			: base(lcontext)
 		{
-			localNames = new List<string>();
+			localNames = new List<KeyValuePair<string, TypeExpression>>();
+			this.lcontext = lcontext;
 
 			Token first = startToken;
 
 			while (true)
 			{
 				Token name = CheckTokenType(lcontext, TokenType.Name);
-				localNames.Add(name.Text);
-
+				TypeExpression typeExpr = null;
+				
 				if (lcontext.Lexer.Current.Type == TokenType.Colon)
 				{
-					ParseType(lcontext);
+					typeExpr = ParseType(lcontext);
 				}
+				
+				localNames.Add(new KeyValuePair<string, TypeExpression>(name.Text, typeExpr));
 				
 				if (lcontext.Lexer.Current.Type != TokenType.Comma)
 					break;
@@ -81,9 +84,11 @@ namespace WattleScript.Interpreter.Tree.Statements
 			{
 				m_LValues = new List<IVariable>();
 				oldScope = new Dictionary<string, SymbolRef>();
-				foreach (string name in localNames)
+				foreach (KeyValuePair<string, TypeExpression> localDef in localNames)
 				{
-					var localVar = lcontext.Scope.TryDefineLocal(name, out var oldLocal);
+					string name = localDef.Key;
+					
+					var localVar = lcontext.Scope.TryDefineLocal(name, localDef.Value?.NameToken?.Text ?? "object", out var oldLocal);
 					oldScope.Add(name, oldLocal);
 					var symbol = new SymbolRefExpression(lcontext, localVar);
 					m_LValues.Add(symbol);
@@ -107,8 +112,10 @@ namespace WattleScript.Interpreter.Tree.Statements
 			if(localNames != null) lcontext.Scope.ResetTemporaryScope();
 		}
 
-		public static void ParseType(ScriptLoadingContext lcontext, bool currentTokenIsColon = true)
+		public static TypeExpression ParseType(ScriptLoadingContext lcontext, bool currentTokenIsColon = true)
 		{
+			TypeExpression typeExpression = new TypeExpression(lcontext);
+			
 			void TypeBegin() // ":", TypeExpr
 			{
 				if (currentTokenIsColon)
@@ -128,8 +135,9 @@ namespace WattleScript.Interpreter.Tree.Statements
 			
 			void TypeExpr() // LiteralExpr, [GenericTypeExpr], ["?" | "!"];
 			{
-				CheckTokenType(lcontext, TokenType.Name); // type name
-
+				Token typeName = CheckTokenType(lcontext, TokenType.Name); // type name
+				typeExpression.NameToken = typeName;
+				
 				if (lcontext.Lexer.Current.Type == TokenType.Op_LessThan)
 				{
 					GenericTypeExpr();
@@ -166,11 +174,14 @@ namespace WattleScript.Interpreter.Tree.Statements
 			// parser is at :
 			// ":", TypeExpr
 			TypeBegin();
+			return typeExpression;
 		}
 
 		public AssignmentStatement(ScriptLoadingContext lcontext, Expression firstExpression, Token first)
 			: base(lcontext)
 		{
+			this.lcontext = lcontext;
+			
 			m_LValues = new List<IVariable>();
 			m_LValues.Add(CheckVar(lcontext, firstExpression));
 
@@ -321,7 +332,23 @@ namespace WattleScript.Interpreter.Tree.Statements
 				{
 					foreach (var exp in m_RValues)
 					{
-						exp.CompilePossibleLiteral(bc);
+						string rType = exp.CompilePossibleLiteral(bc);
+						foreach (IVariable val in m_LValues)
+						{
+							if (val is SymbolRefExpression sre)
+							{
+								string targetType = sre.Symbol.TypeName;
+								if (targetType == "object")
+								{
+									continue;
+								}
+
+								if (targetType != rType)
+								{
+									//throw new SyntaxErrorException(lcontext.Script, m_Ref, $"Invalid type assigned. Target type {targetType} cannot be converted to {rType}");}}
+								}
+							}
+						}
 					}
 
 					for (int i = 0; i < m_LValues.Count; i++)

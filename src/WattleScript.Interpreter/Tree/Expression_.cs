@@ -27,13 +27,27 @@ namespace WattleScript.Interpreter.Tree
 
 		public abstract bool EvalLiteral(out DynValue dv, IDictionary<string, DynValue> symbols = null);
 
-		public void CompilePossibleLiteral(FunctionBuilder bc)
+		public string CompilePossibleLiteral(FunctionBuilder bc)
 		{
 			if (EvalLiteral(out var dv))
 			{
 				bc.Emit_Literal(dv);
+
+				if (dv.Type == DataType.Number)
+				{
+					return "number";
+				}
+
+				if (dv.Type == DataType.String)
+				{
+					return "string";
+				}
+				
+				return "object";
 			}
-			else Compile(bc);
+			
+			Compile(bc);
+			return "object";
 		}
 
 		public virtual SymbolRef FindDynamic(ScriptExecutionContext context)
