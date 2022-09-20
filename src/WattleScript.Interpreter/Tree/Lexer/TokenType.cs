@@ -121,6 +121,8 @@ namespace WattleScript.Interpreter.Tree
 		New,
 		Mixin,
 		
+		Static,
+		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}
 

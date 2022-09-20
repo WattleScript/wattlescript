@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -16,9 +17,11 @@ namespace WattleScript.Interpreter.Tree.Statements
         private SymbolRefExpression constructorLocal;
         private SymbolRefExpression initLocal;
         private SymbolRefExpression mixinLocal;
+        private SymbolRefExpression staticThis;
         private string initName;
         
         private SymbolRef classLocalRef;
+        private SymbolRef classGlobalRef;
         private SymbolRefExpression mixinRef;
         private SymbolRefExpression varargsRef;
         private SourceRef defSource;
@@ -27,22 +30,22 @@ namespace WattleScript.Interpreter.Tree.Statements
         private string baseName;
         private Annotation[] annotations;
         private RuntimeScopeBlock classBlock;
+        private RuntimeScopeBlock classStaticBlock;
         //
         private GeneratedClosure newClosure;
         private GeneratedClosure initClosure;
         private GeneratedClosure tostringClosure;
         private GeneratedClosure emptyConstructor;
         private bool tostringImpl;
-
+        
         //Class members
-        private List<(string name, FunctionDefinitionExpression exp)> functions =
-            new List<(string name, FunctionDefinitionExpression exp)>();
-        private List<(string name, Expression exp)> fields 
-            = new List<(string name, Expression exp)>();
+        private Dictionary<string, MemberFieldInfo> functions = new Dictionary<string, MemberFieldInfo>();
+        private Dictionary<string, MemberFieldInfo> fields = new Dictionary<string, MemberFieldInfo>();
         private FunctionDefinitionExpression constructor;
 
         private List<string> mixinNames = new List<string>();
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
+        
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
             lcontext.Lexer.Next();
@@ -77,10 +80,24 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure = new GeneratedClosure($"{className}.__init", defSource, FunctionFlags.None, false);
             //__tostring()
             tostringClosure = new GeneratedClosure($"{className}.__tostring", defSource, FunctionFlags.TakesSelf, false);
+   
+            MemberModifierFlags modifierFlags = MemberModifierFlags.None;
+            
+            void AddMemberFlag(MemberModifierFlags flag)
+            {
+                if ((modifierFlags & flag) != 0)
+                {
+                    UnexpectedTokenType(lcontext.Lexer.Current);
+                }
+
+                modifierFlags |= flag;
+            }
+            
             //parse members
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
             {
+
                 ParseAnnotations(lcontext);
                 switch (lcontext.Lexer.Current.Type)
                 {
@@ -88,12 +105,23 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.SemiColon:
                         lcontext.Lexer.Next();
                         break;
+                    case TokenType.Static:
+                        AddMemberFlag(MemberModifierFlags.Static);
+                        lcontext.Lexer.Next();
+                        break;
                     case TokenType.Function:
                     {
                         lcontext.Lexer.Next();
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
                         if (funcName.Text == "tostring") tostringImpl = true;
-                        functions.Add((funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+
+                        if (functions.ContainsKey(funcName.Text))
+                        {
+                            throw new SyntaxErrorException(funcName, "duplicate declaration of a function '{0}'", funcName.Text);
+                        }
+                        
+                        functions.Add(funcName.Text, new MemberFieldInfo(funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     case TokenType.Local: //var
@@ -107,6 +135,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     {
                         lcontext.Lexer.Next();
                         constructor = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, false, true);
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     case TokenType.Name:
@@ -116,13 +145,24 @@ namespace WattleScript.Interpreter.Tree.Statements
                         switch (lcontext.Lexer.Current.Type)
                         {
                             case TokenType.Brk_Open_Round:
-                                functions.Add((T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+                                
+                                if (functions.ContainsKey(T.Text))
+                                {
+                                    throw new SyntaxErrorException(T, "duplicate declaration of a function '{0}'", T.Text);
+                                }
+                                
+                                functions.Add(T.Text, new MemberFieldInfo(T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
                                 break;
                             case TokenType.Op_Assignment:
+                                
+                                if (fields.ContainsKey(T.Text))
+                                {
+                                    throw new SyntaxErrorException(T, "duplicate declaration of a field '{0}'", T.Text);
+                                }
+                                
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
-                                initClosure.AddExpression(exp);
-                                fields.Add((T.Text, exp));
+                                fields.Add(T.Text, new MemberFieldInfo(T.Text, exp, modifierFlags));
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -131,6 +171,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 CheckTokenType(lcontext, TokenType.SemiColon); //throws error
                                 break;
                         }
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     default:
@@ -154,7 +195,8 @@ namespace WattleScript.Interpreter.Tree.Statements
                 lcontext.Scope.DefineBaseEmpty();
             }
             classLocalRef = lcontext.Scope.DefineLocal(localName);
-            classStoreGlobal = new SymbolRefExpression(lcontext, lcontext.Scope.Find(className));
+            classGlobalRef = lcontext.Scope.Find(className);
+            classStoreGlobal = new SymbolRefExpression(lcontext, classGlobalRef);
             classStoreLocal = new SymbolRefExpression(lcontext, classLocalRef);
             if (constructor != null) {
                 var conName = localName + ".__ctor";
@@ -200,8 +242,14 @@ namespace WattleScript.Interpreter.Tree.Statements
             tostringClosure.ResolveScope(lcontext);
             //functions
             foreach(var fn in functions)
-                fn.exp.ResolveScope(lcontext);
+                fn.Value.Expr.ResolveScope(lcontext);
             constructor?.ResolveScope(lcontext);
+            //statics
+            lcontext.Scope.PushBlock();
+            staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal("this"));
+            foreach(var fn in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+                fn.Value.Expr.ResolveScope(lcontext);
+            classStaticBlock = lcontext.Scope.PopBlock();
             classBlock = lcontext.Scope.PopBlock();
         }
 
@@ -275,10 +323,10 @@ namespace WattleScript.Interpreter.Tree.Statements
                     bc.Emit_Pop();
                 }
                 sym["table"].Compile(bc);
-                foreach (var field in fields)
+                foreach (var field in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) == 0))
                 {
-                    bc.Emit_Literal(DynValue.NewString(field.name));
-                    field.exp.CompilePossibleLiteral(bc);
+                    bc.Emit_Literal(DynValue.NewString(field.Key));
+                    field.Value.Expr.CompilePossibleLiteral(bc);
                 }
                 bc.Emit_TblInitN(fields.Count * 2, 0);
                 bc.Emit_Pop();
@@ -352,12 +400,12 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Literal(DynValue.NewString(className));
             //build __index table
             bc.Emit_Literal(DynValue.NewString("__index"));
-            foreach (var fn in functions)
+            foreach (var fn in functions.Where(x => (x.Value.Flags & MemberModifierFlags.Static) == 0))
             {
-                bc.Emit_Literal(DynValue.NewString(fn.name));
-                fn.exp.Compile(bc, fn.name);
+                bc.Emit_Literal(DynValue.NewString(fn.Key));
+                ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
             }
-            bc.Emit_TblInitN(functions.Count * 2, 1);
+            bc.Emit_TblInitN(functions.Count(x => (x.Value.Flags & MemberModifierFlags.Static) == 0) * 2, 1);
             //compile __tostring metamethod
             bc.Emit_Literal(DynValue.NewString("__tostring"));
             CompileToString(bc);
@@ -385,8 +433,30 @@ namespace WattleScript.Interpreter.Tree.Statements
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
             classStoreGlobal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            //static fields
+            bc.Emit_Enter(classStaticBlock);
+            staticThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            foreach (var field in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+            {
+                bc.Emit_Literal(DynValue.NewString(field.Key));
+                field.Value.Expr.CompilePossibleLiteral(bc);
+                bc.Emit_Load(classGlobalRef);
+                bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
+            }
+            bc.Emit_Leave(classStaticBlock);
+            //class block end
             bc.Emit_Pop();
             bc.Emit_Leave(classBlock);
+            
+            //static functions
+            foreach (var fn in functions.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+            {
+                bc.Emit_Literal(DynValue.NewString(fn.Key));
+                ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
+                bc.Emit_Load(classGlobalRef);
+                bc.Emit_IndexSet(0, 0, fn.Key, isNameIndex: true);
+            }
+
             bc.PopSourceRef();
         }
     }
