@@ -52,39 +52,20 @@ namespace WattleScript.Interpreter.Interop.LuaStateInterop
 {
 	public class CharPtr
 	{
-		public char[] chars;
+		public string chars;
 		public int index;
 
 		public char this[int offset]
 		{
 			get { return chars[index + offset]; }
-			set { chars[index + offset] = value; }
-		}
-
-		public char this[uint offset]
-		{
-			get { return chars[index + offset]; }
-			set { chars[index + offset] = value; }
-		}
-		public char this[long offset]
-		{
-			get { return chars[index + (int)offset]; }
-			set { chars[index + (int)offset] = value; }
 		}
 
 		public static implicit operator CharPtr(string str) { return new CharPtr(str); }
-		public static implicit operator CharPtr(char[] chars) { return new CharPtr(chars); }
-		public static implicit operator CharPtr(byte[] bytes) { return new CharPtr(bytes); }
-
-		public CharPtr()
-		{
-			this.chars = null;
-			this.index = 0;
-		}
+		
 
 		public CharPtr(string str)
 		{
-			this.chars = (str + '\0').ToCharArray();
+			this.chars = str;
 			this.index = 0;
 		}
 
@@ -100,61 +81,18 @@ namespace WattleScript.Interpreter.Interop.LuaStateInterop
 			this.index = index;
 		}
 
-		public CharPtr(char[] chars)
-		{
-			this.chars = chars;
-			this.index = 0;
-		}
-
-		public CharPtr(char[] chars, int index)
-		{
-			this.chars = chars;
-			this.index = index;
-		}
-
-		public CharPtr(byte[] bytes)
-		{
-			this.chars = new char[bytes.Length];
-			for (int i = 0; i < bytes.Length; i++)
-			{
-				this.chars[i] = (char)bytes[i];
-			}
-
-			this.index = 0;
-		}
-
-		public CharPtr(IntPtr ptr)
-		{
-			this.chars = new char[0];
-			this.index = 0;
-		}
-
 		public static CharPtr operator +(CharPtr ptr, int offset) { return new CharPtr(ptr.chars, ptr.index + offset); }
 		public static CharPtr operator -(CharPtr ptr, int offset) { return new CharPtr(ptr.chars, ptr.index - offset); }
 		public static CharPtr operator +(CharPtr ptr, uint offset) { return new CharPtr(ptr.chars, ptr.index + (int)offset); }
 		public static CharPtr operator -(CharPtr ptr, uint offset) { return new CharPtr(ptr.chars, ptr.index - (int)offset); }
 
-		public void inc() { this.index++; }
-		public void dec() { this.index--; }
 		public CharPtr next() { return new CharPtr(this.chars, this.index + 1); }
-		public CharPtr prev() { return new CharPtr(this.chars, this.index - 1); }
-		public CharPtr add(int ofs) { return new CharPtr(this.chars, this.index + ofs); }
-		public CharPtr sub(int ofs) { return new CharPtr(this.chars, this.index - ofs); }
 
 		public static bool operator ==(CharPtr ptr, char ch) { return ptr[0] == ch; }
 		public static bool operator ==(char ch, CharPtr ptr) { return ptr[0] == ch; }
 		public static bool operator !=(CharPtr ptr, char ch) { return ptr[0] != ch; }
 		public static bool operator !=(char ch, CharPtr ptr) { return ptr[0] != ch; }
-
-		public static CharPtr operator +(CharPtr ptr1, CharPtr ptr2)
-		{
-			string result = "";
-			for (int i = 0; ptr1[i] != '\0'; i++)
-				result += ptr1[i];
-			for (int i = 0; ptr2[i] != '\0'; i++)
-				result += ptr2[i];
-			return new CharPtr(result);
-		}
+		
 		public static int operator -(CharPtr ptr1, CharPtr ptr2)
 		{
 			Debug.Assert(ptr1.chars == ptr2.chars); return ptr1.index - ptr2.index;
@@ -211,6 +149,7 @@ namespace WattleScript.Interpreter.Interop.LuaStateInterop
 				result.Append(chars[i]);
 			return result.ToString();
 		}
+
 	}
 
 }

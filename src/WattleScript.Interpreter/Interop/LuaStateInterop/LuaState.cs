@@ -82,13 +82,5 @@ namespace WattleScript.Interpreter.Interop.LuaStateInterop
 				return DynValue.NewTupleNested(rets);
 			}
 		}
-
-
-
-		public void Discard(int nargs)
-		{
-			for(int i = 0; i < nargs; i++)
-				m_Stack.RemoveAt(m_Stack.Count - 1);
-		}
 	}
 }
