@@ -794,7 +794,7 @@ namespace WattleScript.Interpreter.CoreLib.StringLib
 		/* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
 		public const int MAX_ITEM = 512;
 		/* valid flags in a format specification */
-		public const string FLAGS = "-+ #0";
+		public const string FLAGS = "-+ #0'";
 		/*
 		** maximum size of each format specification (such as '%-099.99d')
 		** (+10 accounts for %99.99x plus margin of error)
