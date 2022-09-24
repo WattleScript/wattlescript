@@ -366,8 +366,8 @@ namespace WattleScript.Interpreter.CoreLib
 
 			if (plain)
 			{
-				var idx = arg_s.IndexOf(arg_pattern);
-				if (idx > 0)
+				var idx = arg_s.IndexOf(arg_pattern, arg_index);
+				if (idx != -1)
 					return DynValue.NewTuple(
 						DynValue.NewNumber(idx + 1), DynValue.NewNumber(idx + arg_pattern.Length));
 			}
@@ -435,7 +435,8 @@ namespace WattleScript.Interpreter.CoreLib
 		[WattleScriptModuleMethod]
 		public static DynValue format(ScriptExecutionContext executionContext, CallbackArguments args)
 		{
-			return executionContext.EmulateClassicCall(args, "format", KopiLua_StringLib.str_format);
+			DynValue arg_s = args.AsType(0, "format", DataType.String, false);
+			return DynValue.NewString(KopiLua.sprintf(arg_s.String, args, 1));
 		}
 
 
