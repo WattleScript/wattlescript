@@ -93,7 +93,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             
             void AddMemberFlag(MemberModifierFlags flag)
             {
-                if ((modifierFlags & flag) != 0)
+                if (modifierFlags.HasFlag(flag))
                 {
                     UnexpectedTokenType(lcontext.Lexer.Current);
                 }
@@ -348,7 +348,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     bc.Emit_Pop();
                 }
                 sym["table"].Compile(bc);
-                foreach (var field in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) == 0))
+                foreach (var field in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
                     bc.Emit_Literal(DynValue.NewString(field.Key));
                     field.Value.Expr.CompilePossibleLiteral(bc);
@@ -425,12 +425,12 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Literal(DynValue.NewString(className));
             //build __index table
             bc.Emit_Literal(DynValue.NewString("__index"));
-            foreach (var fn in functions.Where(x => (x.Value.Flags & MemberModifierFlags.Static) == 0))
+            foreach (var fn in functions.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
                 bc.Emit_Literal(DynValue.NewString(fn.Key));
                 ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
             }
-            bc.Emit_TblInitN(functions.Count(x => (x.Value.Flags & MemberModifierFlags.Static) == 0) * 2, 1);
+            bc.Emit_TblInitN(functions.Count(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)) * 2, 1);
             //compile __tostring metamethod
             bc.Emit_Literal(DynValue.NewString("__tostring"));
             CompileToString(bc);
