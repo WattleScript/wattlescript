@@ -39,12 +39,20 @@ namespace WattleScript.Interpreter.Tree.Statements
         private bool tostringImpl;
         
         //Class members
-        private Dictionary<string, MemberFieldInfo> functions = new Dictionary<string, MemberFieldInfo>();
-        private Dictionary<string, MemberFieldInfo> fields = new Dictionary<string, MemberFieldInfo>();
+        private Dictionary<string, WattleMemberInfo> functions = new Dictionary<string, WattleMemberInfo>();
+        private Dictionary<string, WattleMemberInfo> fields = new Dictionary<string, WattleMemberInfo>();
         private FunctionDefinitionExpression constructor;
 
         private List<string> mixinNames = new List<string>();
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
+
+        private static HashSet<string> reservedFields = new HashSet<string>()
+        {
+            "__index",
+            "__init",
+            "__ctor",
+            "__tostring"
+        };
         
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
@@ -115,12 +123,17 @@ namespace WattleScript.Interpreter.Tree.Statements
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
                         if (funcName.Text == "tostring") tostringImpl = true;
 
+                        if (reservedFields.Contains(funcName.Text))
+                        {
+                            throw new SyntaxErrorException(funcName, "field name '{0}' is reserved in class definition", funcName.Text);
+                        }
+                        
                         if (functions.ContainsKey(funcName.Text))
                         {
                             throw new SyntaxErrorException(funcName, "duplicate declaration of a function '{0}'", funcName.Text);
                         }
                         
-                        functions.Add(funcName.Text, new MemberFieldInfo(funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
+                        functions.Add(funcName.Text, new WattleMemberInfo(funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
                         modifierFlags = MemberModifierFlags.None;
                         break;
                     }
@@ -146,14 +159,24 @@ namespace WattleScript.Interpreter.Tree.Statements
                         {
                             case TokenType.Brk_Open_Round:
                                 
+                                if (reservedFields.Contains(T.Text))
+                                {
+                                    throw new SyntaxErrorException(T, "field name '{0}' is reserved in class definition", T.Text);
+                                }
+                                
                                 if (functions.ContainsKey(T.Text))
                                 {
                                     throw new SyntaxErrorException(T, "duplicate declaration of a function '{0}'", T.Text);
                                 }
                                 
-                                functions.Add(T.Text, new MemberFieldInfo(T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
+                                functions.Add(T.Text, new WattleMemberInfo(T.Text, new FunctionDefinitionExpression(lcontext, modifierFlags.HasFlag(MemberModifierFlags.Static) ? SelfType.None : SelfType.Implicit, false, modifierFlags), modifierFlags));
                                 break;
                             case TokenType.Op_Assignment:
+                                
+                                if (reservedFields.Contains(T.Text))
+                                {
+                                    throw new SyntaxErrorException(T, "field name '{0}' is reserved in class definition", T.Text);
+                                }
                                 
                                 if (fields.ContainsKey(T.Text))
                                 {
@@ -162,7 +185,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
-                                fields.Add(T.Text, new MemberFieldInfo(T.Text, exp, modifierFlags));
+                                fields.Add(T.Text, new WattleMemberInfo(T.Text, exp, modifierFlags));
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -241,13 +264,15 @@ namespace WattleScript.Interpreter.Tree.Statements
             tostringClosure.DefineLocal("this");
             tostringClosure.ResolveScope(lcontext);
             //functions
-            foreach(var fn in functions)
+            foreach(var fn in functions.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 fn.Value.Expr.ResolveScope(lcontext);
             constructor?.ResolveScope(lcontext);
             //statics
             lcontext.Scope.PushBlock();
             staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal("this"));
-            foreach(var fn in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+            foreach(var fn in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Value.Expr.ResolveScope(lcontext);
+            foreach(var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 fn.Value.Expr.ResolveScope(lcontext);
             classStaticBlock = lcontext.Scope.PopBlock();
             classBlock = lcontext.Scope.PopBlock();
@@ -436,26 +461,27 @@ namespace WattleScript.Interpreter.Tree.Statements
             //static fields
             bc.Emit_Enter(classStaticBlock);
             staticThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-            foreach (var field in fields.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
                 bc.Emit_Literal(DynValue.NewString(field.Key));
                 field.Value.Expr.CompilePossibleLiteral(bc);
                 bc.Emit_Load(classGlobalRef);
                 bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
             }
-            bc.Emit_Leave(classStaticBlock);
-            //class block end
-            bc.Emit_Pop();
-            bc.Emit_Leave(classBlock);
             
             //static functions
-            foreach (var fn in functions.Where(x => (x.Value.Flags & MemberModifierFlags.Static) != 0))
+            foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
                 bc.Emit_Literal(DynValue.NewString(fn.Key));
                 ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
                 bc.Emit_Load(classGlobalRef);
                 bc.Emit_IndexSet(0, 0, fn.Key, isNameIndex: true);
             }
+            
+            bc.Emit_Leave(classStaticBlock);
+            //class block end
+            bc.Emit_Pop();
+            bc.Emit_Leave(classBlock);
 
             bc.PopSourceRef();
         }

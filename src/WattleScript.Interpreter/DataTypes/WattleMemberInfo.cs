@@ -2,13 +2,13 @@
 
 namespace WattleScript.Interpreter
 {
-    internal class MemberFieldInfo
+    internal class WattleMemberInfo
     {
         public string Name { get; set; }
         public MemberModifierFlags Flags { get; set; }
         public Expression Expr { get; set; }
 
-        public MemberFieldInfo(string name, Expression expr, MemberModifierFlags flags)
+        public WattleMemberInfo(string name, Expression expr, MemberModifierFlags flags)
         {
             Name = name;
             Expr = expr;
