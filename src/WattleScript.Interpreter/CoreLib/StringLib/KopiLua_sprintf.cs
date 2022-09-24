@@ -53,7 +53,7 @@ namespace WattleScript.Interpreter.CoreLib.StringLib
 {
     internal static class KopiLua
     {
-        internal static Regex formatRegex = new Regex(@"\%(\d*\$)?([\'\#\-\+ ]*)(\d*)(?:\.(\d+))?([hl])?(.)");
+        internal static Regex formatRegex = new Regex(@"\%(\d*\$)?([,\#\-\+ ]*)(\d*)(?:\.(\d+))?([hl])?(.)");
 
         static string QuoteString(string input)
         {
