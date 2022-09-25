@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Tree.Expressions;
 using WattleScript.Interpreter.Tree.Statements;
@@ -162,6 +164,8 @@ namespace WattleScript.Interpreter.Tree
 		}
 
 		private const string ANNOTATION_ERROR = @"annotations may only be applied to function, class, mixin or enum declarations";
+		private const string UNEXPECTED_MODIFIER_ERROR = "'{0}' modifier{1} can be only applied to class or mixin";
+		private const string DUPLICATE_MODIFIER_ERROR = "duplicate modifier '{0}' encountered";
 		static bool AnnotationsAllowed(TokenType type)
 		{
 			switch (type)
@@ -241,6 +245,35 @@ namespace WattleScript.Interpreter.Tree
 					return new ClassDefinitionStatement(lcontext);
 				case TokenType.Mixin:
 					return new MixinDefinitionStatement(lcontext);
+				// all member modifier keywords
+				case TokenType.Static:
+					lcontext.Lexer.SavePos();
+					HashSet<string> flags = new HashSet<string>();
+
+					while (lcontext.Lexer.Current.IsMemberModifier())
+					{
+						if (!flags.Contains(lcontext.Lexer.Current.Text))
+						{
+							flags.Add(lcontext.Lexer.Current.Text);
+						}
+						else
+						{
+							throw new SyntaxErrorException(tkn, string.Format(DUPLICATE_MODIFIER_ERROR, lcontext.Lexer.Current.Text));
+						}
+
+						lcontext.Lexer.Next();
+					}
+					
+					Token lastToken = lcontext.Lexer.Current; 
+					lcontext.Lexer.RestorePos();
+
+					if (lastToken.Type == TokenType.Class)
+					{
+						return new ClassDefinitionStatement(lcontext);
+					}
+					// [todo] mixins
+				
+					throw new SyntaxErrorException(lastToken, string.Format(UNEXPECTED_MODIFIER_ERROR, string.Join(" ", flags), flags.Count > 1 ? "s" : "")); 
 				default:
 				{
 						//Check for labels in CLike mode
@@ -257,11 +290,11 @@ namespace WattleScript.Interpreter.Tree
 						lcontext.Lexer.RestorePos();
 						//Regular expression
 						Expression exp = Expression.PrimaryExp(lcontext, false);
-						FunctionCallExpression fnexp = exp as FunctionCallExpression;
-						if (fnexp != null)
+						if (exp is FunctionCallExpression fnexp)
 							return new FunctionCallStatement(lcontext, fnexp);
-						else
-							return new AssignmentStatement(lcontext, exp, l);
+						if (exp is NewExpression ne)
+							return new NewCallStatement(lcontext, ne);
+						return new AssignmentStatement(lcontext, exp, l);
 				}
 			}
 		}

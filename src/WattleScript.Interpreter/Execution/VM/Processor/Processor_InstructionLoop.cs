@@ -1788,8 +1788,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			// stack: base - index
 			bool isNameIndex = i.OpCode == OpCode.IndexN;
-
-			bool isMultiIndex = (i.OpCode == OpCode.IndexL);
+			bool isMultiIndex = i.OpCode == OpCode.IndexL;
 
 			string i_str = GetString(i.NumVal);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();

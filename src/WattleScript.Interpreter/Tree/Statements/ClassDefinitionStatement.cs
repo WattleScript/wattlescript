@@ -46,6 +46,9 @@ namespace WattleScript.Interpreter.Tree.Statements
         private List<string> mixinNames = new List<string>();
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
 
+        private MemberModifierFlags flags = MemberModifierFlags.None;
+            
+        //static    
         private static HashSet<string> reservedFields = new HashSet<string>()
         {
             "__index",
@@ -53,10 +56,27 @@ namespace WattleScript.Interpreter.Tree.Statements
             "__ctor",
             "__tostring"
         };
-        
+
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            void AddModifierFlag(ref MemberModifierFlags source, MemberModifierFlags flag)
+            {
+                if (source.HasFlag(flag))
+                {
+                    UnexpectedTokenType(lcontext.Lexer.Current);
+                }
+
+                source |= flag;
+            }
+            
+            while (lcontext.Lexer.Current.IsMemberModifier())
+            {
+                AddModifierFlag(ref flags, lcontext.Lexer.Current.ToMemberModiferFlag());
+                lcontext.Lexer.Next();
+            }
+            
             lcontext.Lexer.Next();
+
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
             className = nameToken.Text;
             localName = $"$class:{className}";
@@ -90,17 +110,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             tostringClosure = new GeneratedClosure($"{className}.__tostring", defSource, FunctionFlags.TakesSelf, false);
    
             MemberModifierFlags modifierFlags = MemberModifierFlags.None;
-            
-            void AddMemberFlag(MemberModifierFlags flag)
-            {
-                if (modifierFlags.HasFlag(flag))
-                {
-                    UnexpectedTokenType(lcontext.Lexer.Current);
-                }
 
-                modifierFlags |= flag;
-            }
-            
             //parse members
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
@@ -114,7 +124,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Static:
-                        AddMemberFlag(MemberModifierFlags.Static);
+                        AddModifierFlag(ref modifierFlags, MemberModifierFlags.Static);
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Function:
@@ -125,7 +135,12 @@ namespace WattleScript.Interpreter.Tree.Statements
 
                         if (reservedFields.Contains(funcName.Text))
                         {
-                            throw new SyntaxErrorException(funcName, "field name '{0}' is reserved in class definition", funcName.Text);
+                            throw new SyntaxErrorException(funcName, "member name '{0}' is reserved in class definition", funcName.Text);
+                        }
+
+                        if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                        {
+                            throw new SyntaxErrorException(funcName, "static class '{0}' cannot contain non-static function '{1}'", className, funcName.Text);
                         }
                         
                         if (functions.ContainsKey(funcName.Text))
@@ -146,6 +161,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                             throw new SyntaxErrorException(lcontext.Lexer.Current, "expected name");
                     case TokenType.Name when lcontext.Lexer.Current.Text == className:
                     {
+                        if (flags.HasFlag(MemberModifierFlags.Static))
+                        {
+                            throw new SyntaxErrorException(lcontext.Lexer.Current, "static class '{0}' cannot contain constructor", className);
+                        }
+                        
                         lcontext.Lexer.Next();
                         constructor = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, false, true);
                         modifierFlags = MemberModifierFlags.None;
@@ -161,7 +181,12 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 
                                 if (reservedFields.Contains(T.Text))
                                 {
-                                    throw new SyntaxErrorException(T, "field name '{0}' is reserved in class definition", T.Text);
+                                    throw new SyntaxErrorException(T, "member name '{0}' is reserved in class definition", T.Text);
+                                }
+                                
+                                if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                                {
+                                    throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static function '{1}'", className, T.Text);
                                 }
                                 
                                 if (functions.ContainsKey(T.Text))
@@ -176,6 +201,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 if (reservedFields.Contains(T.Text))
                                 {
                                     throw new SyntaxErrorException(T, "field name '{0}' is reserved in class definition", T.Text);
+                                }
+                                
+                                if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                                {
+                                    throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static field '{1}'", className, T.Text);
                                 }
                                 
                                 if (fields.ContainsKey(T.Text))

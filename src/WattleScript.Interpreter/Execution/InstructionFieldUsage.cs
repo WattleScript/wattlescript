@@ -93,9 +93,9 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Invalid:
 				case OpCode.MixInit:
 				case OpCode.PushString:
-				case OpCode.PushInt:
-					return InstructionFieldUsage.NumVal;
 				case OpCode.PushNumber:
+				case OpCode.PushInt:
+				case OpCode.BaseChk:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Call:
 				case OpCode.ThisCall:
@@ -111,6 +111,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.AnnotB:
 				case OpCode.AnnotS: 
 				case OpCode.AnnotN:
+				case OpCode.LoopChk:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumValB;
 				case OpCode.AnnotT:
 					return InstructionFieldUsage.NumValB;
