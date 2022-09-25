@@ -31,6 +31,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		SymbolRef m_Env;
 
 		internal SourceRef m_Begin, m_End;
+		internal MemberModifierFlags flags;
 		private ScriptLoadingContext lcontext;
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 		private bool m_IsConstructor;
@@ -42,6 +43,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda)
 			: this(lcontext, self, false, isLambda)
 		{ }
+
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda, MemberModifierFlags flags)
+			: this(lcontext, self, false, isLambda)
+		{
+			this.flags = flags;
+		}
 		
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false)
 			: base(lcontext)
