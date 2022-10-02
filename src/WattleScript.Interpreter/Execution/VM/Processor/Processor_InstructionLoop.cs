@@ -276,7 +276,8 @@ namespace WattleScript.Interpreter.Execution.VM
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
 							top.Table.Kind = (TableKind)i.NumVal;
-							top.Table.ReadOnly = i.NumVal2 != 0;
+							top.Table.ReadOnly = i.NumVal3 != 0;
+							top.Table.ModifierFlags = (MemberModifierFlags)i.NumVal2;
 							break;
 						}
 						case OpCode.SetMetaTab:
@@ -285,6 +286,10 @@ namespace WattleScript.Interpreter.Execution.VM
 							ref var tab = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
 							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
+							if (top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
+							{
+								throw ScriptRuntimeException.BaseInvalidModifier(MemberModifierFlags.Static.GetDescription(), top.Table.Get("Name").String, currentFrame.Function.strings[i.NumVal]);
+							}
 							tab.Table.MetaTable = top.Table;
 							break;
 						}
@@ -1603,6 +1608,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (cls.Type != DataType.Table ||
 			    cls.Table.Kind != TableKind.Class)
 				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
+			if (cls.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
+				throw ScriptRuntimeException.NewCallIncompatibleModifier(MemberModifierFlags.Static.GetDescription(), GetString((int) i.NumValB), cls);
 			cls = cls.Table.Get("new");
 			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
 		}

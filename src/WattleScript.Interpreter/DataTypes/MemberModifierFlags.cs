@@ -1,11 +1,13 @@
 ﻿using System;
+using System.ComponentModel;
 
 namespace WattleScript.Interpreter
 {
     [Flags]
-    internal enum MemberModifierFlags
+    public enum MemberModifierFlags
     {
         None = 0,
+        [Description("static")]
         Static = 1
     }
 }

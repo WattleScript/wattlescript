@@ -361,7 +361,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     sym[localName].Compile(bc);
                     bc.Emit_Index("__index");
                     bc.Emit_Swap(0, 1);
-                    bc.Emit_SetMetaTab();
+                    bc.Emit_SetMetaTab(className);
                     bc.Emit_Pop();
                     //Set Base member + leave on stack
                     baseSym.Compile(bc);
@@ -484,7 +484,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
-            bc.Emit_TabProps(TableKind.Class, false);
+            bc.Emit_TabProps(TableKind.Class, flags, false);
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
             classStoreGlobal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);

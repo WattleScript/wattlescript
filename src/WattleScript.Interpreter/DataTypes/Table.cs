@@ -63,6 +63,12 @@ namespace WattleScript.Interpreter
 		/// This is only for metadata purposes, and does not affect execution.
 		/// </summary>
 		public TableKind Kind { get; set; }
+		
+		/// <summary>
+		/// Gets/sets the modifiers of table.
+		/// This is only for metadata purposes, and does not affect execution.
+		/// </summary>
+		public MemberModifierFlags ModifierFlags { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
