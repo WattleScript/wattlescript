@@ -488,17 +488,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
             classStoreGlobal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-            //static fields
+            //static block
             bc.Emit_Enter(classStaticBlock);
             staticThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
-            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-            {
-                bc.Emit_Literal(DynValue.NewString(field.Key));
-                field.Value.Expr.CompilePossibleLiteral(bc);
-                bc.Emit_Load(classGlobalRef);
-                bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
-            }
-            
             //static functions
             foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
@@ -507,7 +499,16 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Load(classGlobalRef);
                 bc.Emit_IndexSet(0, 0, fn.Key, isNameIndex: true);
             }
-            
+            //static fields
+            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+            {
+                bc.Emit_Literal(DynValue.NewString(field.Key));
+                field.Value.Expr.CompilePossibleLiteral(bc);
+                bc.Emit_Load(classGlobalRef);
+                bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
+            }
+
+            //static block end
             bc.Emit_Leave(classStaticBlock);
             //class block end
             bc.Emit_Pop();
