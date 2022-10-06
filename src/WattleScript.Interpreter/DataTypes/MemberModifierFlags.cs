@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 
 namespace WattleScript.Interpreter
 {
@@ -7,7 +6,6 @@ namespace WattleScript.Interpreter
     public enum MemberModifierFlags
     {
         None = 0,
-        [Description("static")]
         Static = 1
     }
 }

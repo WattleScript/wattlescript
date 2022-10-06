@@ -288,7 +288,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
 							if (top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
 							{
-								throw ScriptRuntimeException.BaseInvalidModifier(MemberModifierFlags.Static.GetDescription(), top.Table.Get("Name").String, currentFrame.Function.strings[i.NumVal]);
+								throw ScriptRuntimeException.BaseInvalidModifier(MemberModifierFlags.Static.ToString().ToLowerInvariant(), top.Table.Get("Name").String ?? "(null)", currentFrame.Function.strings[i.NumVal]);
 							}
 							tab.Table.MetaTable = top.Table;
 							break;
@@ -1609,7 +1609,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			    cls.Table.Kind != TableKind.Class)
 				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
 			if (cls.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
-				throw ScriptRuntimeException.NewCallIncompatibleModifier(MemberModifierFlags.Static.GetDescription(), GetString((int) i.NumValB), cls);
+				throw ScriptRuntimeException.NewCallIncompatibleModifier(MemberModifierFlags.Static.ToString().ToLowerInvariant(), GetString((int) i.NumValB), cls);
 			cls = cls.Table.Get("new");
 			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
 		}

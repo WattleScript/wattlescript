@@ -510,10 +510,10 @@ namespace WattleScript.Interpreter.Tree.Statements
             //static fields
             foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                bc.Emit_Literal(DynValue.NewString(field.Key));
                 field.Value.Expr.CompilePossibleLiteral(bc);
                 bc.Emit_Load(classGlobalRef);
                 bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
+                bc.Emit_Pop();
             }
 
             //static block end
