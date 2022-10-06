@@ -387,10 +387,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                 topThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                 foreach (var field in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
-                    bc.Emit_Literal(DynValue.NewString(field.Key));
                     field.Value.Expr.CompilePossibleLiteral(bc);
+                    sym["table"].Compile(bc);
+                    bc.Emit_IndexSet(0, 0, field.Key);
+                    bc.Emit_Pop();
                 }
-                bc.Emit_TblInitN(fields.Count * 2, 0);
                 bc.Emit_Pop();
                 bc.Emit_Ret(0);
             });
