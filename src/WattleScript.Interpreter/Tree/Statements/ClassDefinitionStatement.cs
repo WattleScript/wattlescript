@@ -39,39 +39,22 @@ namespace WattleScript.Interpreter.Tree.Statements
         private bool tostringImpl;
         
         //Class members
-        private Dictionary<string, WattleMemberInfo> functions = new Dictionary<string, WattleMemberInfo>();
-        private Dictionary<string, WattleMemberInfo> fields = new Dictionary<string, WattleMemberInfo>();
+        private MemberCollection functions = new MemberCollection();
+        private MemberCollection fields = new MemberCollection();
         private FunctionDefinitionExpression constructor;
 
         private List<string> mixinNames = new List<string>();
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
 
         private MemberModifierFlags flags = MemberModifierFlags.None;
-            
-        //static    
-        private static HashSet<string> reservedFields = new HashSet<string>()
-        {
-            "__index",
-            "__init",
-            "__ctor",
-            "__tostring",
-        };
-
+        
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
-            void AddModifierFlag(ref MemberModifierFlags source, MemberModifierFlags flag)
-            {
-                if (source.HasFlag(flag))
-                {
-                    UnexpectedTokenType(lcontext.Lexer.Current);
-                }
-
-                source |= flag;
-            }
+            
             
             while (lcontext.Lexer.Current.IsMemberModifier())
             {
-                AddModifierFlag(ref flags, lcontext.Lexer.Current.ToMemberModiferFlag());
+                MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current);
                 lcontext.Lexer.Next();
             }
             
@@ -123,12 +106,9 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.SemiColon:
                         lcontext.Lexer.Next();
                         break;
-                    case TokenType.Private:
-                        AddModifierFlag(ref modifierFlags, MemberModifierFlags.Private);
-                        lcontext.Lexer.Next();
-                        break;
                     case TokenType.Static:
-                        AddModifierFlag(ref modifierFlags, MemberModifierFlags.Static);
+                    case TokenType.Private:
+                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current);
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Function:
@@ -137,22 +117,16 @@ namespace WattleScript.Interpreter.Tree.Statements
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
                         if (funcName.Text == "tostring") tostringImpl = true;
 
-                        if (reservedFields.Contains(funcName.Text))
-                        {
-                            throw new SyntaxErrorException(funcName, "member name '{0}' is reserved in class definition", funcName.Text);
-                        }
+                        MemberUtilities.CheckReserved(funcName, "class");
 
                         if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
                         {
                             throw new SyntaxErrorException(funcName, "static class '{0}' cannot contain non-static function '{1}'", className, funcName.Text);
                         }
-                        
-                        if (functions.ContainsKey(funcName.Text))
-                        {
-                            throw new SyntaxErrorException(funcName, "duplicate declaration of a function '{0}'", funcName.Text);
-                        }
-                        
-                        functions.Add(funcName.Text, new WattleMemberInfo(funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags), modifierFlags));
+
+                        functions.Add(funcName,
+                            new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags),
+                            modifierFlags, true);
                         modifierFlags = MemberModifierFlags.None;
                         break;
                     }
@@ -183,43 +157,29 @@ namespace WattleScript.Interpreter.Tree.Statements
                         {
                             case TokenType.Brk_Open_Round:
                                 
-                                if (reservedFields.Contains(T.Text))
-                                {
-                                    throw new SyntaxErrorException(T, "member name '{0}' is reserved in class definition", T.Text);
-                                }
-                                
+                                MemberUtilities.CheckReserved(T, "class");
+
                                 if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
                                 {
                                     throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static function '{1}'", className, T.Text);
                                 }
-                                
-                                if (functions.ContainsKey(T.Text))
-                                {
-                                    throw new SyntaxErrorException(T, "duplicate declaration of a function '{0}'", T.Text);
-                                }
-                                
-                                functions.Add(T.Text, new WattleMemberInfo(T.Text, new FunctionDefinitionExpression(lcontext, modifierFlags.HasFlag(MemberModifierFlags.Static) ? SelfType.None : SelfType.Implicit, false, modifierFlags), modifierFlags));
+     
+                                functions.Add(T,
+                                    new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags),
+                                    modifierFlags, true);
                                 break;
                             case TokenType.Op_Assignment:
                                 
-                                if (reservedFields.Contains(T.Text))
-                                {
-                                    throw new SyntaxErrorException(T, "field name '{0}' is reserved in class definition", T.Text);
-                                }
-                                
+                                MemberUtilities.CheckReserved(T, "class");
+
                                 if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
                                 {
                                     throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static field '{1}'", className, T.Text);
                                 }
-                                
-                                if (fields.ContainsKey(T.Text))
-                                {
-                                    throw new SyntaxErrorException(T, "duplicate declaration of a field '{0}'", T.Text);
-                                }
-                                
+
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
-                                fields.Add(T.Text, new WattleMemberInfo(T.Text, exp, modifierFlags));
+                                fields.Add(T, exp, modifierFlags, false);
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -277,8 +237,8 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure.DefineLocal("table"); //arg 0
             initClosure.DefineLocal("depth"); //arg 1
             initClosure.DefineLocal("this");
-            foreach(var fn in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-                initClosure.AddExpression(fn.Value.Expr);
+            foreach(var fn in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
+                initClosure.AddExpression(fn.Expr);
             if (baseName != null)
             {
                 initClosure.AddSymbol("base");
@@ -302,16 +262,16 @@ namespace WattleScript.Interpreter.Tree.Statements
             tostringClosure.DefineLocal("this");
             tostringClosure.ResolveScope(lcontext);
             //functions
-            foreach(var fn in functions.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-                fn.Value.Expr.ResolveScope(lcontext);
+            foreach(var fn in functions.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
             constructor?.ResolveScope(lcontext);
             //statics
             lcontext.Scope.PushBlock();
             staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineThisArg("this"));
-            foreach(var fn in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-                fn.Value.Expr.ResolveScope(lcontext);
-            foreach(var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-                fn.Value.Expr.ResolveScope(lcontext);
+            foreach(var fn in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
+            foreach(var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
             classStaticBlock = lcontext.Scope.PopBlock();
             classBlock = lcontext.Scope.PopBlock();
         }
@@ -327,20 +287,23 @@ namespace WattleScript.Interpreter.Tree.Statements
                     mixinSym.Compile(bc);
                     int mixInit = bc.Emit_Jump(OpCode.JtOrPop, -1);
                     sym[localName].Compile(bc);
+                    bc.Emit_Copy(0);
                     bc.Emit_Index("__index");
                     bc.Emit_TblInitN(0, 1);
                     mixinSym.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                     foreach (var n in mixinNames) {
                         //stack:
+                        //class
                         //class __index table
                         //mixin init table
                         //mixin ref
                         mixinRefs[n].Compile(bc);
+                        bc.Emit_MergePriv(0, 3);
                         bc.Emit_MixInit(n);
                     }
-                    //stack: __index, init table
-                    bc.Emit_Swap(0, 1);
-                    bc.Emit_Pop(); //remove __index, just have init table
+                    //stack: class, __index, init table
+                    bc.Emit_Swap(0, 2);
+                    bc.Emit_Pop(2); //remove class and __index, just have init table
                     bc.SetNumVal(mixInit, bc.GetJumpPointForNextInstruction());
                     foreach (var n in mixinNames)
                     {
@@ -374,7 +337,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     //Set Base member, copy private field info + leave on stack
                     baseSym.Compile(bc);
                     sym[localName].Compile(bc);
-                    bc.Emit_MergePriv();
+                    bc.Emit_MergePriv(1, 0);
                     bc.Emit_IndexSet(0, 0, "Base");
                     //Base resolved, call __init
                     bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
@@ -390,11 +353,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                 sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                 sym[localName].Compile(bc);
                 bc.Emit_CopyPriv();
-                foreach (var field in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+                foreach (var field in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
-                    field.Value.Expr.CompilePossibleLiteral(bc);
+                    field.Expr.CompilePossibleLiteral(bc);
                     sym["table"].Compile(bc);
-                    bc.Emit_IndexSet(0, 0, field.Key, false, false, true);
+                    bc.Emit_IndexSet(0, 0, field.Name, false, false, true);
                     bc.Emit_Pop();
                 }
                 bc.Emit_Pop();
@@ -468,12 +431,12 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Literal(DynValue.NewString(className));
             //build __index table
             bc.Emit_Literal(DynValue.NewString("__index"));
-            foreach (var fn in functions.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+            foreach (var fn in functions.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                bc.Emit_Literal(DynValue.NewString(fn.Key));
-                ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
+                ((FunctionDefinitionExpression)fn.Expr).Compile(bc, fn.Name);
             }
-            bc.Emit_TblInitN(functions.Count(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)) * 2, 1);
+            bc.Emit_TblInitN(functions.Count(x => !x.Flags.HasFlag(MemberModifierFlags.Static)) * 2, 1);
             //compile __tostring metamethod
             bc.Emit_Literal(DynValue.NewString("__tostring"));
             CompileToString(bc);
@@ -498,13 +461,13 @@ namespace WattleScript.Interpreter.Tree.Statements
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
             int privateCount = 0;
-            foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Private))) {
+            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
                 privateCount++;
-                bc.Emit_Literal(DynValue.NewString(fn.Key));
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
             }
-            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Private))) {
+            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
                 privateCount++;
-                bc.Emit_Literal(DynValue.NewString(field.Key));
+                bc.Emit_Literal(DynValue.NewString(field.Name));
             }
             if (privateCount > 0) {
                 bc.Emit_SetPriv(privateCount);
@@ -517,19 +480,19 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Enter(classStaticBlock);
             staticThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //static functions
-            foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
+                ((FunctionDefinitionExpression)fn.Expr).Compile(bc, fn.Name);
                 bc.Emit_Load(classGlobalRef);
-                bc.Emit_IndexSet(0, 0, fn.Key, isNameIndex: true);
+                bc.Emit_IndexSet(0, 0, fn.Name, isNameIndex: true);
                 bc.Emit_Pop();
             }
             //static fields
-            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                field.Value.Expr.CompilePossibleLiteral(bc);
+                field.Expr.CompilePossibleLiteral(bc);
                 bc.Emit_Load(classGlobalRef);
-                bc.Emit_IndexSet(0, 0, field.Key, isNameIndex: true);
+                bc.Emit_IndexSet(0, 0, field.Name, isNameIndex: true);
                 bc.Emit_Pop();
             }
 

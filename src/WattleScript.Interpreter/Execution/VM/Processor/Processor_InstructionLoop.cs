@@ -650,8 +650,8 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecMergePriv(Instruction i)
 		{
-			ref DynValue dest = ref m_ValueStack.Peek(0);
-			ref DynValue src = ref m_ValueStack.Peek(1);
+			ref DynValue dest = ref m_ValueStack.Peek(i.NumVal2);
+			ref DynValue src = ref m_ValueStack.Peek(i.NumVal);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("MERGEPRIV called on non-table object");
 			if (src.Table.PrivateKeys != null)
@@ -1759,7 +1759,7 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (!accessPrivate && obj.Table.PrivateKeys != null &&
 							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
 							{
-								throw new ScriptRuntimeException($"cannot write to private key '{idx}'");
+								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
 							}
 							//Don't do check for __newindex if there is no metatable to begin with
 							if (obj.Table.MetaTable == null || !obj.Table.Get(idx).IsNil())

@@ -207,9 +207,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.SetPriv, num));
 		}
 		
-		public int Emit_MergePriv()
+		public int Emit_MergePriv(int src, int dst)
 		{
-			return AppendInstruction(new Instruction(OpCode.MergePriv));
+			return AppendInstruction(new Instruction(OpCode.MergePriv, src, dst));
 		}
 		
 		public int Emit_CopyPriv()
