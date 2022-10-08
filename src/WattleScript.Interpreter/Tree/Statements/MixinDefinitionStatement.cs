@@ -43,7 +43,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                         break;
                     case TokenType.Public:
                     case TokenType.Private:
-                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current);
+                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current, WattleMemberType.MixinMember);
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Function:
