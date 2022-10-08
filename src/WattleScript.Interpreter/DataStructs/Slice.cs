@@ -9,11 +9,10 @@ namespace WattleScript.Interpreter.DataStructs
 	/// Provides facility to create a "sliced" view over an existing IList<typeparamref name="T"/>
 	/// </summary>
 	/// <typeparam name="T">The type of the items contained in the collection</typeparam>
-	internal class Slice<T> : IEnumerable<T>, IList<T>
+	internal class Slice<T> : IList<T>
 	{
 		IList<T> m_SourceList;
 		int m_From, m_Length;
-		bool m_Reversed;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Slice{T}"/> class.
@@ -21,13 +20,11 @@ namespace WattleScript.Interpreter.DataStructs
 		/// <param name="list">The list to apply the Slice view on</param>
 		/// <param name="from">From which index</param>
 		/// <param name="length">The length of the slice</param>
-		/// <param name="reversed">if set to <c>true</c> the view is in reversed order.</param>
-		public Slice(IList<T> list, int from, int length, bool reversed)
+		public Slice(IList<T> list, int from, int length)
 		{
 			m_SourceList = list;
 			m_From = from;
 			m_Length = length;
-			m_Reversed = reversed;
 		}
 
 		/// <summary>
@@ -37,60 +34,36 @@ namespace WattleScript.Interpreter.DataStructs
 		/// <returns></returns>
 		public T this[int index]
 		{
-			get 
-			{
-				return m_SourceList[CalcRealIndex(index)];
-			}
-			set
-			{
-				m_SourceList[CalcRealIndex(index)] = value;
-			}
+			get => m_SourceList[CalcRealIndex(index)];
+			set => m_SourceList[CalcRealIndex(index)] = value;
 		}
 
 		/// <summary>
 		/// Gets the index from which the slice starts
 		/// </summary>
-		public int From
-		{
-			get { return m_From; }
-		}
+		public int From => m_From;
 
 		/// <summary>
 		/// Gets the number of elements contained in the <see cref="T:System.Collections.Generic.ICollection`1" />.
 		/// </summary>
 		/// <returns>The number of elements contained in the <see cref="T:System.Collections.Generic.ICollection`1" />.</returns>
-		public int Count
-		{
-			get { return m_Length; }
-		}
-
+		public int Count => m_Length;
+		
 		/// <summary>
-		/// Gets a value indicating whether this <see cref="Slice{T}"/> operates in a reversed direction.
+		/// Gets a value indicating whether the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only.
 		/// </summary>
-		/// <value>
-		///   <c>true</c> if this <see cref="Slice{T}"/> operates in a reversed direction; otherwise, <c>false</c>.
-		/// </value>
-		public bool Reversed
-		{
-			get { return m_Reversed; }
-		}
-
+		/// <returns>true if the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only; otherwise, false.</returns>
+		public bool IsReadOnly => true;
+		
 		/// <summary>
 		/// Calculates the real index in the underlying collection
 		/// </summary>
 		private int CalcRealIndex(int index)
 		{
 			if (index < 0 || index >= m_Length)
-				throw new ArgumentOutOfRangeException("index");
-
-			if (m_Reversed)
-			{
-				return m_From + m_Length - index - 1;
-			}
-			else
-			{
-				return m_From + index;
-			}
+				throw new ArgumentOutOfRangeException(nameof(index));
+			
+			return m_From + index;
 		}
 
 		/// <summary>
@@ -222,15 +195,6 @@ namespace WattleScript.Interpreter.DataStructs
 		{
 			for (int i = 0; i < Count; i++)
 				array[i + arrayIndex] = this[i];
-		}
-
-		/// <summary>
-		/// Gets a value indicating whether the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only.
-		/// </summary>
-		/// <returns>true if the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only; otherwise, false.</returns>
-		public bool IsReadOnly
-		{
-			get { return true; }
 		}
 
 		/// <summary>
