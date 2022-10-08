@@ -275,9 +275,9 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
-							top.Table.Kind = (TableKind)i.NumVal;
+							top.Table.Kind = (TableKind)i.NumVal2;
 							top.Table.ReadOnly = i.NumVal3 != 0;
-							top.Table.ModifierFlags = (MemberModifierFlags)i.NumVal2;
+							top.Table.ModifierFlags = (MemberModifierFlags)i.NumVal;
 							break;
 						}
 						case OpCode.SetMetaTab:

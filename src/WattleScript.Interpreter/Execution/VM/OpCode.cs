@@ -22,7 +22,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		TblInitN,	// Initializes NumVal named entries, NumVal2 0 = don't create, 1 = create normal, 2 = create shared
 		TblInitI,	// Initializes NumVal table positional entries, NumVal3 0 = don't create, 1 = create normal, 2 = create shared
 		NewRange,   // Creates a range from the v-stack
-		TabProps,	// Sets v-stack top table kind and readonly flag. Does not pop
+		TabProps,	// Sets v-stack top table modifier flags, kind and readonly flag. Does not pop
 		SetMetaTab, // Sets v-stack - 1 table's metatable to vstack top & pops once.
 		
 		StoreLcl, Local,

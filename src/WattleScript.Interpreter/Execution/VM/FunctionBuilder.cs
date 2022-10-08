@@ -199,7 +199,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public int Emit_TabProps(TableKind kind, MemberModifierFlags flags, bool isReadOnly)
 		{
-			return AppendInstruction(new Instruction(OpCode.TabProps, (int) kind, (int)flags, isReadOnly ? (uint)1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TabProps, (int) flags, (int)kind, isReadOnly ? (uint)1 : 0));
 		}
 		
 		public int Emit_SetPriv(int num)
