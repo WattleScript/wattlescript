@@ -54,7 +54,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             "__index",
             "__init",
             "__ctor",
-            "__tostring"
+            "__tostring",
         };
 
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
@@ -121,6 +121,10 @@ namespace WattleScript.Interpreter.Tree.Statements
                 {
                     case TokenType.Comma: //skip extras
                     case TokenType.SemiColon:
+                        lcontext.Lexer.Next();
+                        break;
+                    case TokenType.Private:
+                        AddModifierFlag(ref modifierFlags, MemberModifierFlags.Private);
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Static:
@@ -303,7 +307,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             constructor?.ResolveScope(lcontext);
             //statics
             lcontext.Scope.PushBlock();
-            staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal("this"));
+            staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineThisArg("this"));
             foreach(var fn in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 fn.Value.Expr.ResolveScope(lcontext);
             foreach(var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
@@ -367,9 +371,10 @@ namespace WattleScript.Interpreter.Tree.Statements
                     bc.Emit_Swap(0, 1);
                     bc.Emit_SetMetaTab(className);
                     bc.Emit_Pop();
-                    //Set Base member + leave on stack
+                    //Set Base member, copy private field info + leave on stack
                     baseSym.Compile(bc);
                     sym[localName].Compile(bc);
+                    bc.Emit_MergePriv();
                     bc.Emit_IndexSet(0, 0, "Base");
                     //Base resolved, call __init
                     bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
@@ -383,11 +388,13 @@ namespace WattleScript.Interpreter.Tree.Statements
                 }
                 sym["table"].Compile(bc);
                 sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                sym[localName].Compile(bc);
+                bc.Emit_CopyPriv();
                 foreach (var field in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
                     field.Value.Expr.CompilePossibleLiteral(bc);
                     sym["table"].Compile(bc);
-                    bc.Emit_IndexSet(0, 0, field.Key);
+                    bc.Emit_IndexSet(0, 0, field.Key, false, false, true);
                     bc.Emit_Pop();
                 }
                 bc.Emit_Pop();
@@ -490,6 +497,18 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
+            int privateCount = 0;
+            foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(fn.Key));
+            }
+            foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(field.Key));
+            }
+            if (privateCount > 0) {
+                bc.Emit_SetPriv(privateCount);
+            }
             bc.Emit_TabProps(TableKind.Class, flags, false);
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name

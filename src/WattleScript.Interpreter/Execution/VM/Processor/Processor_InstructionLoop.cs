@@ -387,6 +387,15 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewRange:
 							ExecNewRange(i);
 							break;
+						case OpCode.SetPriv:
+							ExecSetPriv(i);
+							break;
+						case OpCode.CopyPriv:
+							ExecCopyPriv(i);
+							break;
+						case OpCode.MergePriv:
+							ExecMergePriv(i);
+							break;
 						case OpCode.ToNum:
 						{
 							ref var top = ref m_ValueStack.Peek();
@@ -618,6 +627,40 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		}
 
+		private void ExecSetPriv(Instruction i)
+		{
+			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
+			if (t.Type != DataType.Table)
+				throw new InternalErrorException("SETPRIV called on non-table object");
+			t.Table.PrivateKeys = new PrivateKeyInfo();
+			while (i.NumVal-- > 0) {
+				t.Table.PrivateKeys.Fields.Add(m_ValueStack.Pop().CastToString());
+			}
+		}
+
+		private void ExecCopyPriv(Instruction i)
+		{
+			ref DynValue dest = ref m_ValueStack.Peek(1);
+			ref DynValue src = ref m_ValueStack.Peek(0);
+			if (dest.Type != DataType.Table || src.Type != DataType.Table)
+				throw new InternalErrorException("COPYPRIV called on non-table object");
+			dest.Table.PrivateKeys = src.Table.PrivateKeys;
+			m_ValueStack.Pop();
+		}
+
+		private void ExecMergePriv(Instruction i)
+		{
+			ref DynValue dest = ref m_ValueStack.Peek(0);
+			ref DynValue src = ref m_ValueStack.Peek(1);
+			if (dest.Type != DataType.Table || src.Type != DataType.Table)
+				throw new InternalErrorException("MERGEPRIV called on non-table object");
+			if (src.Table.PrivateKeys != null)
+			{
+				dest.Table.PrivateKeys ??= new PrivateKeyInfo();
+				dest.Table.PrivateKeys.Merge(src.Table.PrivateKeys);
+			}
+		}
+		
 		private void ExecIterPrep()
 		{
 			DynValue v = m_ValueStack.Pop();
@@ -1690,7 +1733,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			// stack: vals.. - base - index
 			bool isNameIndex = i.OpCode == OpCode.IndexSetN;
 			bool isMultiIndex = (i.OpCode == OpCode.IndexSetL);
-
+			// extract privateAccess bool from spare bit in numVal
+			bool accessPrivate = (i.NumVal & 0x40000000) != 0;
+			i.NumVal &= 0x3FFFFFFF;
 			string i_str = GetString((int)i.NumVal3);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
@@ -1710,6 +1755,12 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						if (!isMultiIndex)
 						{
+							//Private fields - error on write
+							if (!accessPrivate && obj.Table.PrivateKeys != null &&
+							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							{
+								throw new ScriptRuntimeException($"cannot write to private key '{idx}'");
+							}
 							//Don't do check for __newindex if there is no metatable to begin with
 							if (obj.Table.MetaTable == null || !obj.Table.Get(idx).IsNil())
 							{
@@ -1796,6 +1847,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			// stack: base - index
 			bool isNameIndex = i.OpCode == OpCode.IndexN;
 			bool isMultiIndex = i.OpCode == OpCode.IndexL;
+			bool accessPrivate = i.NumVal3 > 0;
 
 			string i_str = GetString(i.NumVal);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
@@ -1815,6 +1867,14 @@ namespace WattleScript.Interpreter.Execution.VM
 					{
 						if (!isMultiIndex)
 						{
+							//Don't return private fields
+							if (!accessPrivate && obj.Table.PrivateKeys != null &&
+							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							{
+								m_ValueStack.Push(DynValue.Nil);
+								return instructionPtr;
+							}
+								
 							var v = obj.Table.Get(idx);
 
 							if (!v.IsNil())

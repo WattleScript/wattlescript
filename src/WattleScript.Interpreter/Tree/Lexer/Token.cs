@@ -65,6 +65,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Mixin;
 					case "static":
 						return TokenType.Static;
+					case "private":
+						return TokenType.Private;
 				}
 			}
 
@@ -131,7 +133,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public bool IsMemberModifier()
 		{
-			return Type == TokenType.Static;
+			return Type == TokenType.Static || Type == TokenType.Private;
 		}
 
 		public MemberModifierFlags ToMemberModiferFlag()
@@ -139,6 +141,7 @@ namespace WattleScript.Interpreter.Tree
 			return Type switch
 			{
 				TokenType.Static => MemberModifierFlags.Static,
+				TokenType.Private => MemberModifierFlags.Private,
 				_ => MemberModifierFlags.None
 			};
 		}

@@ -42,6 +42,11 @@ namespace WattleScript.Interpreter
 		public bool IsBaseClass { get; set; }
 		
 		/// <summary>
+		/// Sets whether or not this symbol is the `this` argument of a function
+		/// </summary>
+		public bool IsThisArgument { get; set; }
+		
+		/// <summary>
 		/// Set to true if this symbol is a placeholder (no allocation)
 		/// </summary>
 		public bool Placeholder { get; set; }

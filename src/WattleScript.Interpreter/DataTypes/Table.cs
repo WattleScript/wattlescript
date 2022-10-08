@@ -69,6 +69,11 @@ namespace WattleScript.Interpreter
 		/// This is only for metadata purposes, and does not affect execution.
 		/// </summary>
 		public MemberModifierFlags ModifierFlags { get; set; }
+		
+		/// <summary>
+		/// Holds information relating to private keys (if present)
+		/// </summary>
+		public PrivateKeyInfo PrivateKeys { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.

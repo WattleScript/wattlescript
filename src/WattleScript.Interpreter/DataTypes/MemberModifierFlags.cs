@@ -6,6 +6,7 @@ namespace WattleScript.Interpreter
     public enum MemberModifierFlags
     {
         None = 0,
-        Static = 1
+        Static = 1,
+        Private = 2
     }
 }

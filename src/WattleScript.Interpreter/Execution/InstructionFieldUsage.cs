@@ -80,11 +80,10 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.NewRange:
 				case OpCode.TblInitI:
 				case OpCode.TabProps:
-					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2 | InstructionFieldUsage.NumVal3;
 				case OpCode.Index:
 				case OpCode.IndexL:
 				case OpCode.IndexN:
-					return InstructionFieldUsage.NumVal; //string argument
+					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2 | InstructionFieldUsage.NumVal3;
 				case OpCode.Closure:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Nop:
