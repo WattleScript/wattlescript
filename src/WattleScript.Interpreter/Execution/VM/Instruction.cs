@@ -32,7 +32,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			get => (uint) (_data >> 39); //25 bits unsigned
 			set
 			{
-				if (value > 0x2000000) throw new ArgumentOutOfRangeException("NumValB");
+				if (value > 0x1FFFFFF) throw new ArgumentOutOfRangeException("NumValB");
 				_data = (_data & ~0xFFFFFF8000000000) |
 				        ((ulong) value) << 39;
 			}

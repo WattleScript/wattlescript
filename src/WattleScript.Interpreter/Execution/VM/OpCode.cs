@@ -22,7 +22,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		TblInitN,	// Initializes NumVal named entries, NumVal2 0 = don't create, 1 = create normal, 2 = create shared
 		TblInitI,	// Initializes NumVal table positional entries, NumVal3 0 = don't create, 1 = create normal, 2 = create shared
 		NewRange,   // Creates a range from the v-stack
-		TabProps,	// Sets v-stack top table kind and readonly flag. Does not pop
+		TabProps,	// Sets v-stack top table modifier flags, kind and readonly flag. Does not pop
 		SetMetaTab, // Sets v-stack - 1 table's metatable to vstack top & pops once.
 		
 		StoreLcl, Local,
@@ -127,6 +127,9 @@ namespace WattleScript.Interpreter.Execution.VM
 				 //Throws error using class name in NumValB if type check fails
 		MixInit, //Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
 		         //Error check uses NumVal for mixin name
+		SetPriv, //Sets NumVal keys to private (pops NumVal items)
+		MergePriv, //Merges the PrivateKeyInfo of v-stack(NumVal) into v-stack(NumVal2)
+		CopyPriv, //Copies the PrivateKeyInfo of v-stack top into v-stack +1, pops 1 value
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}
