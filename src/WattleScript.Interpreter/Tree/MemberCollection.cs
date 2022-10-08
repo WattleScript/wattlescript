@@ -20,8 +20,6 @@ namespace WattleScript.Interpreter.Tree
 
         public void Add(Token nameToken, Expression expression, MemberModifierFlags modifiers, bool isFunction)
         {
-            MemberUtilities.CheckModifierCombination(nameToken, modifiers);
-            
             if (names.Contains(nameToken.Text))
             {
                 throw new SyntaxErrorException(

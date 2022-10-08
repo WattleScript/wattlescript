@@ -12,6 +12,12 @@ namespace WattleScript.Interpreter.Tree
             "__tostring",
         };
 
+        private static readonly (MemberModifierFlags a, MemberModifierFlags b, string msg)[] flagConflicts =
+        {
+            (MemberModifierFlags.Private, MemberModifierFlags.Static, "members declared static may not be private"),
+            (MemberModifierFlags.Public, MemberModifierFlags.Private, null)
+        };
+
         public static void CheckReserved(Token name, string buildKind)
         {
             if (reservedFields.Contains(name.Text))
@@ -25,20 +31,22 @@ namespace WattleScript.Interpreter.Tree
             var flag = token.ToMemberModiferFlag();
             if (source.HasFlag(flag))
             {
-                NodeBase.UnexpectedTokenType(token);
+                throw new SyntaxErrorException(token, "duplicate modifier '{0}'", token.Text);
             }
             source |= flag;
-        }
-
-        public static void CheckModifierCombination(Token nameToken, MemberModifierFlags modifiers)
-        {
-            if (modifiers.HasFlag(MemberModifierFlags.Private) &&
-                modifiers.HasFlag(MemberModifierFlags.Static))
-                throw new SyntaxErrorException(nameToken, "members declared static may not be private");
             
-            if (modifiers.HasFlag(MemberModifierFlags.Private) &&
-                modifiers.HasFlag(MemberModifierFlags.Public))
-                throw new SyntaxErrorException(nameToken, "conflicting access modifiers public and private");
+            foreach (var combo in flagConflicts)
+            {
+                if (source.HasFlag(combo.a) && source.HasFlag(combo.b))
+                {
+                    if (combo.msg != null)
+                        throw new SyntaxErrorException(token, combo.msg);
+                    throw new SyntaxErrorException(token,
+                        "conflicting modifiers '{0}' and '{1}'",
+                        combo.a.ToString().ToLowerInvariant(),
+                        combo.b.ToString().ToLowerInvariant());
+                }
+            }
         }
     }
 }
