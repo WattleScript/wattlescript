@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using WattleScript.Interpreter.Debugging;
 
 namespace WattleScript.Interpreter

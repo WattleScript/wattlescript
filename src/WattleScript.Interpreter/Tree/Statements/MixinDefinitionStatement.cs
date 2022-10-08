@@ -118,7 +118,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store global
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
-            bc.Emit_TabProps(TableKind.Mixin, true);
+            bc.Emit_TabProps(TableKind.Mixin, MemberModifierFlags.None, true);
             storeValue.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             bc.Emit_Leave(scopeBlock);
             bc.PopSourceRef();

@@ -8,8 +8,9 @@ namespace WattleScript.Interpreter.Tree.Expressions
 { 
     class NewExpression : Expression
     {
+        internal SourceRef SourceRef;
+        
         private SymbolRefExpression classRef;
-        private SourceRef sourceRef;
         private List<Expression> arguments;
         private string className;
         
@@ -28,12 +29,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
                 arguments = ExprList(lcontext);
             }
             var end = CheckTokenType(lcontext, TokenType.Brk_Close_Round);
-            sourceRef = classTok.GetSourceRef(end);
+            SourceRef = classTok.GetSourceRef(end);
         }
 
         public override void Compile(FunctionBuilder bc)
         {
-            bc.PushSourceRef(sourceRef);
+            bc.PushSourceRef(SourceRef);
             classRef.Compile(bc);
             foreach(var a in arguments)
                 a.CompilePossibleLiteral(bc);

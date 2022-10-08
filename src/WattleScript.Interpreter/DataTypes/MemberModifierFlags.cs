@@ -3,7 +3,7 @@
 namespace WattleScript.Interpreter
 {
     [Flags]
-    internal enum MemberModifierFlags
+    public enum MemberModifierFlags
     {
         None = 0,
         Static = 1

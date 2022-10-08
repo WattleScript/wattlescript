@@ -1,4 +1,5 @@
 ﻿using System;
+using WattleScript.Interpreter.Tree.Statements;
 
 namespace WattleScript.Interpreter.Tree
 {
@@ -126,6 +127,20 @@ namespace WattleScript.Interpreter.Tree
 		{
 			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len ||
 			       Type == TokenType.Op_Inc || Type == TokenType.Op_Dec || Type == TokenType.Op_Not;
+		}
+
+		public bool IsMemberModifier()
+		{
+			return Type == TokenType.Static;
+		}
+
+		public MemberModifierFlags ToMemberModiferFlag()
+		{
+			return Type switch
+			{
+				TokenType.Static => MemberModifierFlags.Static,
+				_ => MemberModifierFlags.None
+			};
 		}
 
 		public bool IsBinaryOperator()
