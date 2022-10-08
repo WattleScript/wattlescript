@@ -1,0 +1,3 @@
+static static class Math {
+  
+}

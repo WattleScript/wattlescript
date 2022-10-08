@@ -64,7 +64,7 @@ public class CLikeTestRunner
     {
         string outputPath = path.Replace(".lua", ".txt");
 
-        if (!File.Exists(outputPath))
+        if (!File.Exists(outputPath) && !path.Contains("-invalid"))
         {
             Assert.Inconclusive($"Missing output file for test {path}");
             return;
@@ -72,7 +72,7 @@ public class CLikeTestRunner
 
         string rootPath = Path.GetFullPath(Path.Combine(outputPath.Replace(".lua", ""), "..\\"));
         string code = await File.ReadAllTextAsync(path);
-        string output = await File.ReadAllTextAsync(outputPath);
+        string output = File.Exists(outputPath) ? await File.ReadAllTextAsync(outputPath) : "";
         stdOut = new StringBuilder();
 
         Script script = InitScript(rootPath);

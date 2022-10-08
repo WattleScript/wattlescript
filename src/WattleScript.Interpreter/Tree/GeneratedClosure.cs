@@ -57,8 +57,8 @@ namespace WattleScript.Interpreter.Tree
             {
                 referenced[s] = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(s));
             }
-            foreach(var e in toResolve) e.ResolveScope(lcontext);
             extra?.Invoke(lcontext);
+            foreach(var e in toResolve) e.ResolveScope(lcontext);
             frame = lcontext.Scope.PopFunction();
         }
 
