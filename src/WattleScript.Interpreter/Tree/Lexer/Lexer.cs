@@ -20,11 +20,19 @@ namespace WattleScript.Interpreter.Tree
 		private ScriptSyntax m_Syntax;
 		private HashSet<string> m_Directives;
 		private Dictionary<string, DefineNode> m_Defines;
+		private bool keepInsignificantChars;
+		private StringBuilder whitespaceStringBuilder;
 
-		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, DefineNode> defines)
+		public Lexer(int sourceID, string scriptContent, bool autoSkipComments, ScriptSyntax syntax, HashSet<string> directives, Dictionary<string, DefineNode> defines, bool keepInsignificantChars = false)
 		{
 			m_Code = scriptContent;
 			m_SourceId = sourceID;
+			this.keepInsignificantChars = keepInsignificantChars;
+
+			if (keepInsignificantChars)
+			{
+				whitespaceStringBuilder = new StringBuilder();
+			}
 
 			// remove unicode BOM if any
 			if (m_Code.Length > 0 && m_Code[0] == 0xFEFF)
@@ -210,6 +218,11 @@ namespace WattleScript.Interpreter.Tree
 			return CursorChar();
 		}
 
+		private char CursorCharPeekNext()
+		{
+			return m_Cursor + 1 < m_Code.Length ? m_Code[m_Cursor + 1] : '\0';
+		}
+
 		private bool CursorMatches(string pattern)
 		{
 			for (int i = 0; i < pattern.Length; i++)
@@ -233,10 +246,31 @@ namespace WattleScript.Interpreter.Tree
 		{
 			return char.IsWhiteSpace(c);
 		}
+		
+		private bool IsWhiteSpace(char c, StringBuilder sb)
+		{
+			bool isWs = char.IsWhiteSpace(c);
+
+			if (isWs)
+			{
+				sb.Append(c);
+			}
+			
+			return isWs;
+		}
 
 		private void SkipWhiteSpace()
 		{
 			for (; CursorNotEof() && IsWhiteSpace(CursorChar()); CursorNext())
+			{
+			}
+		}
+		
+		private void StashWhiteSpace()
+		{
+			whitespaceStringBuilder.Clear();
+			
+			for (; CursorNotEof() && IsWhiteSpace(CursorChar(), whitespaceStringBuilder); CursorNext())
 			{
 			}
 		}
@@ -273,7 +307,14 @@ namespace WattleScript.Interpreter.Tree
 
 		private Token ReadToken()
 		{
-			SkipWhiteSpace();
+			if (keepInsignificantChars)
+			{
+				StashWhiteSpace();
+			}
+			else
+			{
+				SkipWhiteSpace();
+			}
 
 			int fromLine = m_Line;
 			int fromCol = m_Col;
@@ -574,7 +615,7 @@ namespace WattleScript.Interpreter.Tree
 				case '#' when m_Syntax == ScriptSyntax.Wattle:
 					if (m_Cursor == 0 && m_Code.Length > 1 && m_Code[1] == '!')
 						return ReadHashBang(fromLine, fromCol);
-					else if (m_StartOfLine && CursorMatches("#line"))
+					else if (CursorMatches("#line")) // [todo] fix
 					{
 						//Read in line
 						CursorNext();
@@ -990,7 +1031,7 @@ namespace WattleScript.Interpreter.Tree
 					text.Append(c);
 				}
 			}
-
+			
 			return CreateToken(TokenType.Comment, fromLine, fromCol, text.ToString());
 		}
 

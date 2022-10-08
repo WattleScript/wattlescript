@@ -64,6 +64,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Mixin;
 					case "static":
 						return TokenType.Static;
+					case "using":
+						return TokenType.Using;
 				}
 			}
 

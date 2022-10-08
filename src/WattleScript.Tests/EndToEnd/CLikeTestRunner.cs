@@ -34,7 +34,7 @@ public class CLikeTestRunner
         await RunCore(path, true);
     }
     
-    Script InitScript()
+    Script InitScript(string scriptFolderPath)
     {
         Script script = new Script(CoreModules.Preset_SoftSandboxWattle);
         script.Options.IndexTablesFrom = 0;
@@ -46,6 +46,16 @@ public class CLikeTestRunner
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Globals["CurrentLine"] = (ScriptExecutionContext c, CallbackArguments a) => c.CallingLocation.FromLine;
         script.Globals["CurrentColumn"] = (ScriptExecutionContext c, CallbackArguments a) => c.CallingLocation.FromChar;
+        script.UsingHandler = (path) =>
+        {
+            if (File.Exists($"{scriptFolderPath}\\{path}.wtlib"))
+            {
+                string libText = File.ReadAllText($"{scriptFolderPath}\\{path}.wtlib");
+                return new Module(libText);
+            }
+            
+            return null;
+        };
 
         return script;
     }
@@ -60,11 +70,13 @@ public class CLikeTestRunner
             return;
         }
 
+        string rootPath = Path.GetFullPath(Path.Combine(outputPath.Replace(".lua", ""), "..\\"));
         string code = await File.ReadAllTextAsync(path);
         string output = await File.ReadAllTextAsync(outputPath);
         stdOut = new StringBuilder();
 
-        Script script = InitScript();
+        Script script = InitScript(rootPath);
+
         if (path.Contains("flaky"))
         {
             Assert.Inconclusive($"Test {path} marked as flaky");
@@ -93,7 +105,7 @@ public class CLikeTestRunner
 
             if (TEST_SOURCE_REFS_DUMP)
             {
-                Exception e = TestSourceRefsBinDump(code);
+                Exception e = TestSourceRefsBinDump(code, rootPath);
                 if (e != null)
                 {
                     Assert.Fail($"Dumped source refs not equal to original.\n{e.Message}\n{e.StackTrace}");
@@ -128,16 +140,16 @@ public class CLikeTestRunner
         }
     }
     
-    public Exception TestSourceRefsBinDump(string code)
+    public Exception TestSourceRefsBinDump(string code, string path)
     {
-        Script sc = InitScript();
+        Script sc = InitScript(path);
         DynValue dv = sc.LoadString(code);
         IReadOnlyList<SourceRef> originalSourceRefs = dv.Function.Function.SourceRefs;
 
         using MemoryStream ms = new MemoryStream();
         sc.Dump(dv, ms);
         ms.Seek(0, SeekOrigin.Begin);
-        sc = InitScript();
+        sc = InitScript(path);
         dv = sc.LoadStream(ms);
         dv.Function.Call();
 

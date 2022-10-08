@@ -40,7 +40,7 @@ namespace WattleScript.Interpreter.Tree
 				return CheckTokenType(lcontext, tokenType1);
 		}
 
-		protected static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType)
+		internal static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType)
 		{
 			Token t = lcontext.Lexer.Current;
 			if (t.Type != tokenType)

@@ -123,6 +123,8 @@ namespace WattleScript.Interpreter.Tree
 		
 		Static,
 		
+		Using,
+		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}
 

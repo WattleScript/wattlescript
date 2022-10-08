@@ -145,6 +145,8 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public Table Globals => m_GlobalTable;
 
+		public Func<string, Module> UsingHandler { get; set; }
+
 		/// <summary>
 		/// Loads a string containing a Lua/WattleScript function.
 		/// </summary>
