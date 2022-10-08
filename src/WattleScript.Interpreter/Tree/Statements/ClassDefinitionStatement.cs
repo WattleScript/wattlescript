@@ -18,7 +18,6 @@ namespace WattleScript.Interpreter.Tree.Statements
         private SymbolRefExpression initLocal;
         private SymbolRefExpression mixinLocal;
         private SymbolRefExpression staticThis;
-        private SymbolRefExpression topThis;
         private string initName;
         
         private SymbolRef classLocalRef;
@@ -240,7 +239,6 @@ namespace WattleScript.Interpreter.Tree.Statements
         public override void ResolveScope(ScriptLoadingContext lcontext)
         {
             lcontext.Scope.PushBlock();
-            topThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal("this"));
             
             //
             if (baseName != null) {
@@ -274,6 +272,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure.AddSymbol(localName);
             initClosure.DefineLocal("table"); //arg 0
             initClosure.DefineLocal("depth"); //arg 1
+            initClosure.DefineLocal("this");
+            foreach(var fn in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
+                initClosure.AddExpression(fn.Value.Expr);
             if (baseName != null)
             {
                 initClosure.AddSymbol("base");
@@ -296,9 +297,6 @@ namespace WattleScript.Interpreter.Tree.Statements
             //resolve tostring
             tostringClosure.DefineLocal("this");
             tostringClosure.ResolveScope(lcontext);
-            //fields
-            foreach(var fn in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
-                fn.Value.Expr.ResolveScope(lcontext);
             //functions
             foreach(var fn in functions.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 fn.Value.Expr.ResolveScope(lcontext);
@@ -384,7 +382,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     bc.Emit_Pop();
                 }
                 sym["table"].Compile(bc);
-                topThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                 foreach (var field in fields.Where(x => !x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
                     field.Value.Expr.CompilePossibleLiteral(bc);
@@ -502,10 +500,10 @@ namespace WattleScript.Interpreter.Tree.Statements
             //static functions
             foreach (var fn in functions.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                bc.Emit_Literal(DynValue.NewString(fn.Key));
                 ((FunctionDefinitionExpression)fn.Value.Expr).Compile(bc, fn.Key);
                 bc.Emit_Load(classGlobalRef);
                 bc.Emit_IndexSet(0, 0, fn.Key, isNameIndex: true);
+                bc.Emit_Pop();
             }
             //static fields
             foreach (var field in fields.Where(x => x.Value.Flags.HasFlag(MemberModifierFlags.Static)))
