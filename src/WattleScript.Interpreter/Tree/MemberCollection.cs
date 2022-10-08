@@ -20,9 +20,7 @@ namespace WattleScript.Interpreter.Tree
 
         public void Add(Token nameToken, Expression expression, MemberModifierFlags modifiers, bool isFunction)
         {
-            if (modifiers.HasFlag(MemberModifierFlags.Private) &&
-                modifiers.HasFlag(MemberModifierFlags.Static))
-                throw new SyntaxErrorException(nameToken, "members declared static may not be private");
+            MemberUtilities.CheckModifierCombination(nameToken, modifiers);
             
             if (names.Contains(nameToken.Text))
             {

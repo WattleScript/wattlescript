@@ -41,6 +41,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.SemiColon:
                         lcontext.Lexer.Next();
                         break;
+                    case TokenType.Public:
                     case TokenType.Private:
                         MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current);
                         lcontext.Lexer.Next();

@@ -67,6 +67,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Static;
 					case "private":
 						return TokenType.Private;
+					case "public":
+						return TokenType.Public;
 				}
 			}
 
@@ -133,7 +135,7 @@ namespace WattleScript.Interpreter.Tree
 
 		public bool IsMemberModifier()
 		{
-			return Type == TokenType.Static || Type == TokenType.Private;
+			return Type == TokenType.Static || Type == TokenType.Private || Type == TokenType.Public;
 		}
 
 		public MemberModifierFlags ToMemberModiferFlag()
@@ -142,7 +144,8 @@ namespace WattleScript.Interpreter.Tree
 			{
 				TokenType.Static => MemberModifierFlags.Static,
 				TokenType.Private => MemberModifierFlags.Private,
-				_ => MemberModifierFlags.None
+				TokenType.Public => MemberModifierFlags.Public,
+				_ => throw new InvalidCastException("Token is not modifier flag")
 			};
 		}
 

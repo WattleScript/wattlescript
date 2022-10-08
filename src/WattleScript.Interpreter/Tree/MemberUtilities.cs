@@ -29,5 +29,16 @@ namespace WattleScript.Interpreter.Tree
             }
             source |= flag;
         }
+
+        public static void CheckModifierCombination(Token nameToken, MemberModifierFlags modifiers)
+        {
+            if (modifiers.HasFlag(MemberModifierFlags.Private) &&
+                modifiers.HasFlag(MemberModifierFlags.Static))
+                throw new SyntaxErrorException(nameToken, "members declared static may not be private");
+            
+            if (modifiers.HasFlag(MemberModifierFlags.Private) &&
+                modifiers.HasFlag(MemberModifierFlags.Public))
+                throw new SyntaxErrorException(nameToken, "conflicting access modifiers public and private");
+        }
     }
 }
