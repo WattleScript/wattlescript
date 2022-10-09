@@ -221,12 +221,13 @@ namespace WattleScript.Interpreter
 		/// <returns></returns>
 		public CallbackArguments SkipMethodCall()
 		{
-			if (this.IsMethodCall)
+			if (IsMethodCall)
 			{
-				Slice<DynValue> slice = new Slice<DynValue>(m_Args, 1, m_Args.Count - 1, false);
+				Slice<DynValue> slice = new Slice<DynValue>(m_Args, 1, m_Args.Count - 1);
 				return new CallbackArguments(slice, m_implicitThis, false);
 			}
-			else return this;
+			
+			return this;
 		}
 	}
 }

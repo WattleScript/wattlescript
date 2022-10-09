@@ -597,9 +597,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecMkTuple(Instruction i)
 		{
-			Slice<DynValue> slice = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal, false);
-
-			var v = Internal_AdjustTuple(slice);
+			var v = Internal_AdjustTuple(new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal));
 			m_ValueStack.RemoveLast(i.NumVal);
 			m_ValueStack.Push(DynValue.NewTuple(v));
 		}
@@ -790,7 +788,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				return values;
 			}
 
-			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs, false);
+			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs);
 		}
 		
 		private void ExecArgs(Instruction I)
