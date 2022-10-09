@@ -13,11 +13,11 @@ namespace WattleScript.Interpreter.Tree
             "__tostring",
         };
 
-        private static readonly (MemberModifierFlags a, MemberModifierFlags? b, WattleMemberType[] appliesTo, string msg)[] flagConflicts =
+        private static readonly (MemberModifierFlags a, MemberModifierFlags? b, WattleMemberType appliesTo, string msg)[] flagConflicts =
         {
-            (MemberModifierFlags.Private, MemberModifierFlags.Static, new [] { WattleMemberType.ClassMember }, "members declared static may not be private"),
-            (MemberModifierFlags.Public, MemberModifierFlags.Private, new [] { WattleMemberType.Any }, null),
-            (MemberModifierFlags.Sealed, MemberModifierFlags.Static, new [] { WattleMemberType.Any }, null)
+            (MemberModifierFlags.Private, MemberModifierFlags.Static, WattleMemberType.ClassMember, "members declared static may not be private"),
+            (MemberModifierFlags.Public, MemberModifierFlags.Private, WattleMemberType.Any, null),
+            (MemberModifierFlags.Sealed, MemberModifierFlags.Static, WattleMemberType.Any, null)
         };
 
         public static void CheckReserved(Token name, string buildKind)
@@ -39,7 +39,7 @@ namespace WattleScript.Interpreter.Tree
             
             foreach (var combo in flagConflicts)
             {
-                if ((combo.appliesTo.Contains(WattleMemberType.Any) || combo.appliesTo.Contains(memberType)) && source.HasFlag(combo.a) && (combo.b == null || source.HasFlag(combo.b)))
+                if ((combo.appliesTo == WattleMemberType.Any || combo.appliesTo == memberType) && source.HasFlag(combo.a) && (combo.b == null || source.HasFlag(combo.b)))
                 {
                     if (combo.msg != null)
                         throw new SyntaxErrorException(token, combo.msg);
