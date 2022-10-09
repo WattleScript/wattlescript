@@ -210,17 +210,19 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 			//Set positional values in groups of 16
 			j = 0;
+			int start = 0;
 			for (int i = 0; i < m_PositionalValues.Count; i++ )
 			{
 				if ((i == m_PositionalValues.Count - 1 && j > 0)|| j >= 16)
 				{
-					bc.Emit_TblInitI(false, j, created ? 0 : type);
+					bc.Emit_TblInitI(start, j, created ? 0 : type, false);
+					start += j;
 					created = true;
 					j = 0;
 				}
 				m_PositionalValues[i].Compile(bc);
 				if (i == m_PositionalValues.Count - 1) {
-					bc.Emit_TblInitI(true, 1, created ? 0 : type);
+					bc.Emit_TblInitI(start, 1, created ? 0 : type, true);
 					created = true;
 				}
 				j++;

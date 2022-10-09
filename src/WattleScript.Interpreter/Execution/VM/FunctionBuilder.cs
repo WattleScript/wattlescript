@@ -279,7 +279,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (itemCount > 0) 
 						{
 							//We don't support tuples so we don't need lastpos
-							Emit_TblInitI(false, itemCount, 2);
+							Emit_TblInitI(0, itemCount, 2, false);
 							created = true;
 						}
 						tblInitI = false;
@@ -310,7 +310,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (itemCount > 0 || !created) {
 				if (tblInitI && itemCount > 0)
 				{
-					Emit_TblInitI(false, itemCount, 2);
+					Emit_TblInitI(0, itemCount, 2, false);
 				}
 				else {
 					Emit_TblInitN(itemCount * 2, created ? 0 : 2);
@@ -591,9 +591,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.SetMetaTab, StringArg(name)));
 		}
 
-		public int Emit_TblInitI(bool lastpos, int count, int create)
+		public int Emit_TblInitI(int start, int count, int create, bool lastpos)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0, (uint)create));
+			if (lastpos) create |= 0x80;
+			return AppendInstruction(new Instruction(OpCode.TblInitI, start, count, (uint)create));
 		}
 
 		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false, bool accessPrivate = false)
