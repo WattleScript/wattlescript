@@ -114,14 +114,14 @@ namespace WattleScript.Interpreter
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool TryGetIntegralKey(ref DynValue dv, out int k)
 		{
-			if (!dv.TryGetNumber(out var d))
+			if (dv.Type != DataType.Number)
 			{
 				k = -1;
 				return false;
 			}
-			k = (int)d;
-
-			if (d >= indexFrom && d == k)
+			k = (int)dv.Number;
+			// ReSharper disable once CompareOfFloatsByEqualityOperator
+			if (dv.Number == k)
 				return true;
 			return false;
 		}
