@@ -630,9 +630,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
 			if (t.Type != DataType.Table)
 				throw new InternalErrorException("SETFLAGS called on non-table object");
-			t.Table.Fields = new WattleFieldsInfo();
+			t.Table.Shape = new WattleShape();
 			while (i.NumVal-- > 0) {
-				t.Table.Fields.Fields.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
+				t.Table.Shape.Members.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
 			}
 		}
 
@@ -642,7 +642,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue src = ref m_ValueStack.Peek(0);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("COPYFLAGS called on non-table object");
-			dest.Table.Fields = src.Table.Fields;
+			dest.Table.Shape = src.Table.Shape;
 			m_ValueStack.Pop();
 		}
 
@@ -652,10 +652,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue src = ref m_ValueStack.Peek(i.NumVal);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("MERGEFLAGS called on non-table object");
-			if (src.Table.Fields != null)
+			if (src.Table.Shape != null)
 			{
-				dest.Table.Fields ??= new WattleFieldsInfo();
-				dest.Table.Fields.Merge(src.Table.Fields);
+				dest.Table.Shape ??= new WattleShape();
+				dest.Table.Shape.Merge(src.Table.Shape);
 			}
 		}
 		
@@ -1762,8 +1762,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Private fields - error on write
-							if (!accessPrivate && obj.Table.Fields != null &&
-							    obj.Table.Fields.IsKeyPrivate(idx))
+							if (!accessPrivate && obj.Table.Shape != null &&
+							    obj.Table.Shape.IsKeyPrivate(idx))
 							{
 								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
 							}
@@ -1874,8 +1874,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Don't return private fields
-							if (!accessPrivate && obj.Table.Fields != null &&
-							    obj.Table.Fields.IsKeyPrivate(idx))
+							if (!accessPrivate && obj.Table.Shape != null &&
+							    obj.Table.Shape.IsKeyPrivate(idx))
 							{
 								m_ValueStack.Push(DynValue.Nil);
 								return instructionPtr;
