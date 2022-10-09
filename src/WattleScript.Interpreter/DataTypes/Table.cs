@@ -14,9 +14,23 @@ namespace WattleScript.Interpreter
 		private readonly LinkedList<TablePair> valueList = new LinkedList<TablePair>();
 		readonly Dictionary<DynValue, LinkedListNode<TablePair>> valueMap = new Dictionary<DynValue, LinkedListNode<TablePair>>();
 		private DynValue[] arrayPart = null;
-		
-		bool containsNilEntries = false;
 		int arrayLength = 0;
+		
+		//Bit 31 = ReadOnly
+		//Bit 30 = ContainsNilEntries
+		//Other bits = TableKind.
+		private uint kindVal = 0;
+
+		private bool containsNilEntries
+		{
+			get => (kindVal & 0x40000000) != 0;
+			set
+			{
+				if (value) kindVal |= 0x40000000;
+				else kindVal &= ~0x40000000U;
+			}
+		}
+
 		
 		int indexFrom => OwnerScript?.Options.IndexTablesFrom ?? 1;
 
@@ -47,18 +61,30 @@ namespace WattleScript.Interpreter
 		/// Gets the script owning this resource.
 		/// </summary>
 		public Script OwnerScript { get; }
-		
+
 		/// <summary>
 		/// Gets/sets if this is a ReadOnly table.
 		/// Writing to a ReadOnly table will throw an exception
 		/// </summary>
-		public bool ReadOnly { get; set; }
-		
+		public bool ReadOnly
+		{
+			get => (kindVal & 0x80000000) != 0;
+			set
+			{
+				if (value) kindVal |= 0x80000000;
+				else kindVal &= ~0x80000000U;
+			}
+		}
+
 		/// <summary>
 		/// Gets/sets the kind of table.
 		/// This is only for metadata purposes, and does not affect execution.
 		/// </summary>
-		public TableKind Kind { get; set; }
+		public TableKind Kind
+		{
+			get => (TableKind)(kindVal & 0x3FFFFFFF);
+			set => kindVal = kindVal & 0xC0000000 | (uint)value & 0x3FFFFFFF;
+		}
 		
 		/// <summary>
 		/// Gets/sets the modifiers of table.
