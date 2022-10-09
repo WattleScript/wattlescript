@@ -153,6 +153,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     {
                         var T = lcontext.Lexer.Current;
                         lcontext.Lexer.Next();
+                        bool resetModifiers = true;
                         switch (lcontext.Lexer.Current.Type)
                         {
                             case TokenType.Brk_Open_Round:
@@ -181,14 +182,22 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 var exp = Expression.Expr(lcontext, true);
                                 fields.Add(T, exp, modifierFlags, false);
                                 break;
-                            case TokenType.Comma: //no-op
+                            case TokenType.Comma:
+                                fields.Add(T, new LiteralExpression(lcontext, DynValue.Nil), modifierFlags, false);
+                                resetModifiers = false;
+                                break;
                             case TokenType.SemiColon:
                                 break;
                             default:
-                                CheckTokenType(lcontext, TokenType.SemiColon); //throws error
+                                fields.Add(T, new LiteralExpression(lcontext, DynValue.Nil), modifierFlags, false);
                                 break;
                         }
-                        modifierFlags = MemberModifierFlags.None;
+
+                        if (resetModifiers)
+                        {
+                            modifierFlags = MemberModifierFlags.None;   
+                        }
+                        
                         break;
                     }
                     default:
