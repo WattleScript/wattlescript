@@ -1,22 +1,28 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace WattleScript.Interpreter
 {
-    public sealed class PrivateKeyInfo
+    public sealed class WattleFieldsInfo
     {
-        internal HashSet<string> Fields = new HashSet<string>();
+        internal Dictionary<string, MemberModifierFlags> Fields = new Dictionary<string, MemberModifierFlags>();
 
         public bool IsKeyPrivate(DynValue key)
         {
             if (key.Type != DataType.String) return false;
-            return Fields.Contains(key.String);
+            if (Fields.TryGetValue(key.String, out MemberModifierFlags flags))
+            {
+                return flags.HasFlag(MemberModifierFlags.Private);
+            }
+
+            return false;
         }
 
-        internal void Merge(PrivateKeyInfo parent)
+        internal void Merge(WattleFieldsInfo parent)
         {
-            Fields.UnionWith(parent.Fields);
+            parent.Fields.ToList().ForEach(x => Fields[x.Key] = x.Value);
         }
 
-        internal PrivateKeyInfo() { }
+        internal WattleFieldsInfo() { }
     }
 }

@@ -93,9 +93,9 @@ namespace WattleScript.Interpreter
 		public MemberModifierFlags ModifierFlags { get; set; }
 		
 		/// <summary>
-		/// Holds information relating to private keys (if present)
+		/// Holds information relating to declared keys (can be null)
 		/// </summary>
-		public PrivateKeyInfo PrivateKeys { get; set; }
+		public WattleFieldsInfo Fields { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.

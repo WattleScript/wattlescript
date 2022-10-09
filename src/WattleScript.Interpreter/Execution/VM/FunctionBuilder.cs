@@ -202,19 +202,19 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.TabProps, (int) flags, (int)kind, isReadOnly ? (uint)1 : 0));
 		}
 		
-		public int Emit_SetPriv(int num)
+		public int Emit_SetFlags(int num, MemberModifierFlags flags)
 		{
-			return AppendInstruction(new Instruction(OpCode.SetPriv, num));
+			return AppendInstruction(new Instruction(OpCode.SetFlags, num, (int)flags));
 		}
 		
 		public int Emit_MergePriv(int src, int dst)
 		{
-			return AppendInstruction(new Instruction(OpCode.MergePriv, src, dst));
+			return AppendInstruction(new Instruction(OpCode.MergeFlags, src, dst));
 		}
 		
 		public int Emit_CopyPriv()
 		{
-			return AppendInstruction(new Instruction(OpCode.CopyPriv));
+			return AppendInstruction(new Instruction(OpCode.CopyFlags));
 		}
 
 		public int Emit_Pop(int num = 1)

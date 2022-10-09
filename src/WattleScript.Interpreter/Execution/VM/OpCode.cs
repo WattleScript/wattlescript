@@ -129,9 +129,9 @@ namespace WattleScript.Interpreter.Execution.VM
 				 //Throws error using class name in NumValB if type check fails
 		MixInit, //Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
 		         //Error check uses NumVal for mixin name
-		SetPriv, //Sets NumVal keys to private (pops NumVal items)
-		MergePriv, //Merges the PrivateKeyInfo of v-stack(NumVal) into v-stack(NumVal2)
-		CopyPriv, //Copies the PrivateKeyInfo of v-stack top into v-stack +1, pops 1 value
+		SetFlags, //Sets NumVal keys to WattleMemberInfo endoded in NumVal2 (pops NumVal items)
+		MergeFlags, //Merges the WattleFieldsInfo of v-stack(NumVal) into v-stack(NumVal2)
+		CopyFlags, //Copies the WattleFieldsInfo of v-stack top into v-stack +1, pops 1 value
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

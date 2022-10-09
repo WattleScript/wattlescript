@@ -470,7 +470,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_Literal(DynValue.NewString(field.Name));
             }
             if (privateCount > 0) {
-                bc.Emit_SetPriv(privateCount);
+                bc.Emit_SetFlags(privateCount, MemberModifierFlags.Private);
             }
             bc.Emit_TabProps(TableKind.Class, flags, false);
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);

@@ -387,14 +387,14 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.NewRange:
 							ExecNewRange(i);
 							break;
-						case OpCode.SetPriv:
-							ExecSetPriv(i);
+						case OpCode.SetFlags:
+							ExecSetFlags(i);
 							break;
-						case OpCode.CopyPriv:
-							ExecCopyPriv(i);
+						case OpCode.CopyFlags:
+							ExecCopyFlags(i);
 							break;
-						case OpCode.MergePriv:
-							ExecMergePriv(i);
+						case OpCode.MergeFlags:
+							ExecMergeFlags(i);
 							break;
 						case OpCode.ToNum:
 						{
@@ -625,37 +625,37 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		}
 
-		private void ExecSetPriv(Instruction i)
+		private void ExecSetFlags(Instruction i)
 		{
 			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
 			if (t.Type != DataType.Table)
-				throw new InternalErrorException("SETPRIV called on non-table object");
-			t.Table.PrivateKeys = new PrivateKeyInfo();
+				throw new InternalErrorException("SETFLAGS called on non-table object");
+			t.Table.Fields = new WattleFieldsInfo();
 			while (i.NumVal-- > 0) {
-				t.Table.PrivateKeys.Fields.Add(m_ValueStack.Pop().CastToString());
+				t.Table.Fields.Fields.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
 			}
 		}
 
-		private void ExecCopyPriv(Instruction i)
+		private void ExecCopyFlags(Instruction i)
 		{
 			ref DynValue dest = ref m_ValueStack.Peek(1);
 			ref DynValue src = ref m_ValueStack.Peek(0);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
-				throw new InternalErrorException("COPYPRIV called on non-table object");
-			dest.Table.PrivateKeys = src.Table.PrivateKeys;
+				throw new InternalErrorException("COPYFLAGS called on non-table object");
+			dest.Table.Fields = src.Table.Fields;
 			m_ValueStack.Pop();
 		}
 
-		private void ExecMergePriv(Instruction i)
+		private void ExecMergeFlags(Instruction i)
 		{
 			ref DynValue dest = ref m_ValueStack.Peek(i.NumVal2);
 			ref DynValue src = ref m_ValueStack.Peek(i.NumVal);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
-				throw new InternalErrorException("MERGEPRIV called on non-table object");
-			if (src.Table.PrivateKeys != null)
+				throw new InternalErrorException("MERGEFLAGS called on non-table object");
+			if (src.Table.Fields != null)
 			{
-				dest.Table.PrivateKeys ??= new PrivateKeyInfo();
-				dest.Table.PrivateKeys.Merge(src.Table.PrivateKeys);
+				dest.Table.Fields ??= new WattleFieldsInfo();
+				dest.Table.Fields.Merge(src.Table.Fields);
 			}
 		}
 		
@@ -1762,8 +1762,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Private fields - error on write
-							if (!accessPrivate && obj.Table.PrivateKeys != null &&
-							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							if (!accessPrivate && obj.Table.Fields != null &&
+							    obj.Table.Fields.IsKeyPrivate(idx))
 							{
 								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
 							}
@@ -1874,8 +1874,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Don't return private fields
-							if (!accessPrivate && obj.Table.PrivateKeys != null &&
-							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							if (!accessPrivate && obj.Table.Fields != null &&
+							    obj.Table.Fields.IsKeyPrivate(idx))
 							{
 								m_ValueStack.Push(DynValue.Nil);
 								return instructionPtr;
