@@ -183,13 +183,13 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 fields.Add(T, exp, modifierFlags, false);
                                 break;
                             case TokenType.Comma:
-                                fields.Add(T, new LiteralExpression(lcontext, DynValue.Nil), modifierFlags, false);
+                                fields.Add(T, null, modifierFlags, false);
                                 resetModifiers = false;
                                 break;
                             case TokenType.SemiColon:
                                 break;
                             default:
-                                fields.Add(T, new LiteralExpression(lcontext, DynValue.Nil), modifierFlags, false);
+                                fields.Add(T, null, modifierFlags, false);
                                 break;
                         }
 
@@ -364,6 +364,11 @@ namespace WattleScript.Interpreter.Tree.Statements
                 bc.Emit_CopyPriv();
                 foreach (var field in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
+                    if (field.Expr == null)
+                    {
+                        continue;
+                    }
+                    
                     field.Expr.CompilePossibleLiteral(bc);
                     sym["table"].Compile(bc);
                     bc.Emit_IndexSet(0, 0, field.Name, false, false, true);
