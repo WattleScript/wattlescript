@@ -1,49 +1,54 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using WattleScript.Interpreter.DataStructs;
 
 namespace WattleScript.Interpreter.Execution.VM
 {
 	sealed partial class Processor
 	{
-		private DynValue[] Internal_AdjustTuple(IList<DynValue> values)
+		private static DynValue[] Internal_AdjustTuple(IList<DynValue> values)
 		{
-			if (values == null || values.Count == 0)
-				return new DynValue[0];
-
-			if (values[values.Count - 1].Type == DataType.Tuple)
+			while (true)
 			{
-				int baseLen = values.Count - 1 + values[values.Count - 1].Tuple.Length;
-				DynValue[] result = new DynValue[baseLen];
+				if (values == null || values.Count == 0) 
+					return Array.Empty<DynValue>();
 
-				for (int i = 0; i < values.Count - 1; i++)
+				if (values[values.Count - 1].Type == DataType.Tuple)
 				{
-					result[i] = values[i].ToScalar();
-				}
+					int baseLen = values.Count - 1 + values[values.Count - 1].Tuple.Length;
+					DynValue[] result = new DynValue[baseLen];
 
-				for (int i = 0; i < values[values.Count - 1].Tuple.Length; i++)
-				{
-					result[values.Count + i - 1] = values[values.Count - 1].Tuple[i];
-				}
+					for (int i = 0; i < values.Count - 1; i++)
+					{
+						result[i] = values[i].ToScalar();
+					}
 
-				if (result[result.Length - 1].Type == DataType.Tuple)
-					return Internal_AdjustTuple(result);
+					for (int i = 0; i < values[values.Count - 1].Tuple.Length; i++)
+					{
+						result[values.Count + i - 1] = values[values.Count - 1].Tuple[i];
+					}
+
+					if (result[result.Length - 1].Type == DataType.Tuple)
+					{
+						values = result;
+					}
+					else
+						return result;
+				}
 				else
-					return result;
-			}
-			else
-			{
-				DynValue[] result = new DynValue[values.Count];
-
-				for (int i = 0; i < values.Count; i++)
 				{
-					result[i] = values[i].ToScalar();
-				}
+					DynValue[] result = new DynValue[values.Count];
 
-				return result;
+					for (int i = 0; i < values.Count; i++)
+					{
+						result[i] = values[i].ToScalar();
+					}
+
+					return result;
+				}
 			}
 		}
-
-
-
+		
 		private int Internal_InvokeUnaryMetaMethod(DynValue op1, string eventName, int instructionPtr)
 		{
 			DynValue m = DynValue.Nil;
@@ -71,11 +76,10 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Push(op1);
 				return Internal_ExecCall(false, 1, instructionPtr);
 			}
-			else
-			{
-				return -1;
-			}
+
+			return -1;
 		}
+		
 		private int Internal_InvokeBinaryMetaMethod(DynValue l, DynValue r, string eventName, int instructionPtr, DynValue extraPush = default)
 		{
 			var m = GetBinaryMetamethod(l, r, eventName);
@@ -90,60 +94,8 @@ namespace WattleScript.Interpreter.Execution.VM
 				m_ValueStack.Push(r);
 				return Internal_ExecCall(false, 2, instructionPtr);
 			}
-			else
-			{
-				return -1;
-			}
+
+			return -1;
 		}
-
-
-
-
-		private DynValue[] StackTopToArray(int items, bool pop)
-		{
-			DynValue[] values = new DynValue[items];
-
-			if (pop)
-			{
-				for (int i = 0; i < items; i++)
-				{
-					values[i] = m_ValueStack.Pop();
-				}
-			}
-			else
-			{
-				for (int i = 0; i < items; i++)
-				{
-					values[i] = m_ValueStack[m_ValueStack.Count - 1 - i];
-				}
-			}
-
-			return values;
-		}
-
-		private DynValue[] StackTopToArrayReverse(int items, bool pop)
-		{
-			DynValue[] values = new DynValue[items];
-
-			if (pop)
-			{
-				for (int i = 0; i < items; i++)
-				{
-					values[items - 1 - i] = m_ValueStack.Pop();
-				}
-			}
-			else
-			{
-				for (int i = 0; i < items; i++)
-				{
-					values[items - 1 - i] = m_ValueStack[m_ValueStack.Count - 1 - i];
-				}
-			}
-
-			return values;
-		}
-
-
-
 	}
 }
