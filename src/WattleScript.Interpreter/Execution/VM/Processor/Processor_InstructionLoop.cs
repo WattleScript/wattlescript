@@ -599,9 +599,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecMkTuple(Instruction i)
 		{
-			Slice<DynValue> slice = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal, false);
-
-			var v = Internal_AdjustTuple(slice);
+			var v = Internal_AdjustTuple(new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal));
 			m_ValueStack.RemoveLast(i.NumVal);
 			m_ValueStack.Push(DynValue.NewTuple(v));
 		}
@@ -792,7 +790,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				return values;
 			}
 
-			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs, false);
+			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs);
 		}
 		
 		private void ExecArgs(Instruction I)
@@ -1628,23 +1626,31 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitI(Instruction i)
 		{
 			// stack: tbl - val,val,val
-			DynValue tbl = i.NumVal3 switch
+			bool lastPos = (i.NumVal3 & 0x80) == 0x80;
+			DynValue tbl = (i.NumVal3 & 0x7F) switch
 			{
-				0 => m_ValueStack.Peek(i.NumVal),
+				0 => m_ValueStack.Peek(i.NumVal2),
 				1 => DynValue.NewTable(m_Script),
 				2 => DynValue.NewPrimeTable(),
 				_ => throw new InternalErrorException("TblInitI NumVal3 invalid")
 			};
-
-			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
-			for (int j = i.NumVal - 1; j >= 0; j--) {
-				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
+			var index = i.NumVal + m_Script.Options.IndexTablesFrom;
+			for (int j = i.NumVal2 - 1; j >= 0; j--)
+			{
+				ref var val = ref m_ValueStack.Peek(j);
+				if (lastPos && val.Type == DataType.Tuple) {
+					foreach(var v in val.Tuple)
+						tbl.Table.Set(index++, v);
+				}
+				else
+				{
+					tbl.Table.Set(index++, val.ToScalar());
+				}
 			}
-			m_ValueStack.RemoveLast(i.NumVal);
-			
-			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
+			m_ValueStack.RemoveLast(i.NumVal2);
+			if ((i.NumVal3 & 0x7F) > 0) m_ValueStack.Push(tbl);
 		}
 
 		private int ExecNewCall(Instruction i, int instructionPtr, bool canAwait)

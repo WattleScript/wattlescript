@@ -20,7 +20,9 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
 		TblInitN,	// Initializes NumVal named entries, NumVal2 0 = don't create, 1 = create normal, 2 = create shared
-		TblInitI,	// Initializes NumVal table positional entries, NumVal3 0 = don't create, 1 = create normal, 2 = create shared
+		TblInitI,	// Initializes NumVal2 table positional entries, starting at pos NumVal (modifed by IndexFrom)
+            // (NumVal3 & 0x7F) 0 = don't create, 1 = create normal, 2 = create shared
+            // NumVal3 & 0x80 == expand tuple
 		NewRange,   // Creates a range from the v-stack
 		TabProps,	// Sets v-stack top table modifier flags, kind and readonly flag. Does not pop
 		SetMetaTab, // Sets v-stack - 1 table's metatable to vstack top & pops once.
