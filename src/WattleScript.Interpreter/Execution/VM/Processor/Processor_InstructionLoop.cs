@@ -632,7 +632,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				throw new InternalErrorException("SETFLAGS called on non-table object");
 			t.Table.Shape = new WattleShape();
 			while (i.NumVal-- > 0) {
-				t.Table.Shape.Members.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
+				t.Table.Shape.i_Members.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
 			}
 		}
 
@@ -1763,7 +1763,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							//Private fields - error on write
 							if (!accessPrivate && obj.Table.Shape != null &&
-							    obj.Table.Shape.IsKeyPrivate(idx))
+							    obj.Table.Shape.MemberHasModifier(idx, MemberModifierFlags.Private))
 							{
 								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
 							}
@@ -1875,7 +1875,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							//Don't return private fields
 							if (!accessPrivate && obj.Table.Shape != null &&
-							    obj.Table.Shape.IsKeyPrivate(idx))
+							    obj.Table.Shape.MemberHasModifier(idx, MemberModifierFlags.Private))
 							{
 								m_ValueStack.Push(DynValue.Nil);
 								return instructionPtr;

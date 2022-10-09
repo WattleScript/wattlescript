@@ -5,22 +5,24 @@ namespace WattleScript.Interpreter
 {
     public sealed class WattleShape
     {
-        internal readonly Dictionary<string, MemberModifierFlags> Members = new Dictionary<string, MemberModifierFlags>();
+        public IReadOnlyDictionary<string, MemberModifierFlags> Members => i_Members;
 
-        public bool IsKeyPrivate(DynValue key)
+        internal readonly Dictionary<string, MemberModifierFlags> i_Members = new Dictionary<string, MemberModifierFlags>();
+
+        public bool MemberHasModifier(string memberName, MemberModifierFlags modifier)
         {
-            if (key.Type != DataType.String) return false;
-            if (Members.TryGetValue(key.String, out MemberModifierFlags flags))
-            {
-                return flags.HasFlag(MemberModifierFlags.Private);
-            }
-
-            return false;
+            return MemberHasModifier(DynValue.NewString(memberName), modifier);
+        }
+        
+        public bool MemberHasModifier(DynValue memberName, MemberModifierFlags modifier)
+        {
+            if (memberName.Type != DataType.String) return false;
+            return i_Members.TryGetValue(memberName.String, out MemberModifierFlags flags) && flags.HasFlag(modifier);
         }
 
         internal void Merge(WattleShape parent)
         {
-            parent.Members.ToList().ForEach(x => Members[x.Key] = x.Value);
+            parent.i_Members.ToList().ForEach(x => i_Members[x.Key] = x.Value);
         }
 
         internal WattleShape() { }
