@@ -3,11 +3,11 @@ using System.Linq;
 
 namespace WattleScript.Interpreter
 {
-    public sealed class WattleShape
+    public sealed class WattleMembersInfo
     {
-        public IReadOnlyDictionary<string, MemberModifierFlags> Members => i_Members;
+        public IReadOnlyDictionary<string, MemberModifierFlags> Modifiers => i_Modifiers;
 
-        internal readonly Dictionary<string, MemberModifierFlags> i_Members = new Dictionary<string, MemberModifierFlags>();
+        internal readonly Dictionary<string, MemberModifierFlags> i_Modifiers = new Dictionary<string, MemberModifierFlags>();
 
         public bool MemberHasModifier(string memberName, MemberModifierFlags modifier)
         {
@@ -17,14 +17,14 @@ namespace WattleScript.Interpreter
         public bool MemberHasModifier(DynValue memberName, MemberModifierFlags modifier)
         {
             if (memberName.Type != DataType.String) return false;
-            return i_Members.TryGetValue(memberName.String, out MemberModifierFlags flags) && flags.HasFlag(modifier);
+            return i_Modifiers.TryGetValue(memberName.String, out MemberModifierFlags flags) && flags.HasFlag(modifier);
         }
 
-        internal void Merge(WattleShape parent)
+        internal void Merge(WattleMembersInfo parent)
         {
-            parent.i_Members.ToList().ForEach(x => i_Members[x.Key] = x.Value);
+            parent.i_Modifiers.ToList().ForEach(x => i_Modifiers[x.Key] = x.Value);
         }
 
-        internal WattleShape() { }
+        internal WattleMembersInfo() { }
     }
 }

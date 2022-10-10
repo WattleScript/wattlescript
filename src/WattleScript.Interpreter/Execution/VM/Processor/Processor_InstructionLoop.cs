@@ -630,9 +630,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
 			if (t.Type != DataType.Table)
 				throw new InternalErrorException("SETFLAGS called on non-table object");
-			t.Table.Shape ??= new WattleShape();
+			t.Table.Members ??= new WattleMembersInfo();
 			while (i.NumVal-- > 0) {
-				t.Table.Shape.i_Members.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
+				t.Table.Members.i_Modifiers.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
 			}
 		}
 
@@ -642,7 +642,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue src = ref m_ValueStack.Peek(0);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("COPYFLAGS called on non-table object");
-			dest.Table.Shape ??= src.Table.Shape;
+			dest.Table.Members ??= src.Table.Members;
 			m_ValueStack.Pop();
 		}
 
@@ -652,10 +652,10 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue src = ref m_ValueStack.Peek(i.NumVal);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("MERGEFLAGS called on non-table object");
-			if (src.Table.Shape != null)
+			if (src.Table.Members != null)
 			{
-				dest.Table.Shape ??= new WattleShape();
-				dest.Table.Shape.Merge(src.Table.Shape);
+				dest.Table.Members ??= new WattleMembersInfo();
+				dest.Table.Members.Merge(src.Table.Members);
 			}
 		}
 		
@@ -1762,8 +1762,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Private fields - error on write
-							if (!accessPrivate && obj.Table.Shape != null &&
-							    obj.Table.Shape.MemberHasModifier(idx, MemberModifierFlags.Private))
+							if (!accessPrivate && obj.Table.Members != null &&
+							    obj.Table.Members.MemberHasModifier(idx, MemberModifierFlags.Private))
 							{
 								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
 							}
@@ -1874,8 +1874,8 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (!isMultiIndex)
 						{
 							//Don't return private fields
-							if (!accessPrivate && obj.Table.Shape != null &&
-							    obj.Table.Shape.MemberHasModifier(idx, MemberModifierFlags.Private))
+							if (!accessPrivate && obj.Table.Members != null &&
+							    obj.Table.Members.MemberHasModifier(idx, MemberModifierFlags.Private))
 							{
 								m_ValueStack.Push(DynValue.Nil);
 								return instructionPtr;

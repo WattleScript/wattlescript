@@ -95,7 +95,7 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// Holds modifiers of declared fields & functions in case <see cref="TableKind"/> is Class/Mixin. Can be null.
 		/// </summary>
-		public WattleShape Shape { get; set; }
+		public WattleMembersInfo Members { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
