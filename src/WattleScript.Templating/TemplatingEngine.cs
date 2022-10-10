@@ -336,7 +336,7 @@ public class TemplatingEngine
                 continue;
             }
             
-            string snip = fn.GetSourceCode(transpiledTemplate);
+            string snip = fn.GetSourceFragment(transpiledTemplate);
             string[] snipLines = snip.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
             List<string> outLines = new List<string>();
             foreach (string snipLine in snipLines)
