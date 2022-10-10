@@ -128,18 +128,23 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store global
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
-            int privateCount = 0;
-            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
-                privateCount++;
-                bc.Emit_Literal(DynValue.NewString(fn.Name));
+            MemberCollection memberAccumulator = new MemberCollection();
+            memberAccumulator.Add(functions);
+            memberAccumulator.Add(fields);
+
+            foreach (IGrouping<MemberModifierFlags, WattleMemberInfo> group in memberAccumulator.GroupBy(x => x.Flags))
+            {
+                int groupCount = 0;
+                
+                foreach (WattleMemberInfo memberInfo in group)
+                {
+                    groupCount++;
+                    bc.Emit_Literal(DynValue.NewString(memberInfo.Name));
+                }
+                
+                bc.Emit_SetFlags(groupCount, group.Key);
             }
-            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
-                privateCount++;
-                bc.Emit_Literal(DynValue.NewString(field.Name));
-            }
-            if (privateCount > 0) {
-                bc.Emit_SetFlags(privateCount, MemberModifierFlags.Private);
-            }
+            
             bc.Emit_TabProps(TableKind.Mixin, MemberModifierFlags.None, true);
             storeValue.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             bc.Emit_Leave(scopeBlock);

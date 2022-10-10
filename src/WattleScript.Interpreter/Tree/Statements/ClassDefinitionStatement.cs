@@ -298,7 +298,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                         //mixin init table
                         //mixin ref
                         mixinRefs[n].Compile(bc);
-                        bc.Emit_MergePriv(0, 3);
+                        bc.Emit_MergeFlags(0, 3);
                         bc.Emit_MixInit(n);
                     }
                     //stack: class, __index, init table
@@ -337,7 +337,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     //Set Base member, copy private field info + leave on stack
                     baseSym.Compile(bc);
                     sym[localName].Compile(bc);
-                    bc.Emit_MergePriv(1, 0);
+                    bc.Emit_MergeFlags(1, 0);
                     bc.Emit_IndexSet(0, 0, "Base");
                     //Base resolved, call __init
                     bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
@@ -352,7 +352,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 sym["table"].Compile(bc);
                 sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                 sym[localName].Compile(bc);
-                bc.Emit_CopyPriv();
+                bc.Emit_CopyFlags();
                 foreach (var field in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
                     field.Expr.CompilePossibleLiteral(bc);

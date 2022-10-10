@@ -630,7 +630,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
 			if (t.Type != DataType.Table)
 				throw new InternalErrorException("SETFLAGS called on non-table object");
-			t.Table.Shape = new WattleShape();
+			t.Table.Shape ??= new WattleShape();
 			while (i.NumVal-- > 0) {
 				t.Table.Shape.i_Members.Add(m_ValueStack.Pop().CastToString(), (MemberModifierFlags)i.NumVal2);
 			}
@@ -642,7 +642,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			ref DynValue src = ref m_ValueStack.Peek(0);
 			if (dest.Type != DataType.Table || src.Type != DataType.Table)
 				throw new InternalErrorException("COPYFLAGS called on non-table object");
-			dest.Table.Shape = src.Table.Shape;
+			dest.Table.Shape ??= src.Table.Shape;
 			m_ValueStack.Pop();
 		}
 

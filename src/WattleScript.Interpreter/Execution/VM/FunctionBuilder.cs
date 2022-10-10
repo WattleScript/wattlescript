@@ -207,12 +207,12 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.SetFlags, num, (int)flags));
 		}
 		
-		public int Emit_MergePriv(int src, int dst)
+		public int Emit_MergeFlags(int src, int dst)
 		{
 			return AppendInstruction(new Instruction(OpCode.MergeFlags, src, dst));
 		}
 		
-		public int Emit_CopyPriv()
+		public int Emit_CopyFlags()
 		{
 			return AppendInstruction(new Instruction(OpCode.CopyFlags));
 		}
