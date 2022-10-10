@@ -91,6 +91,32 @@ namespace WattleScript.Interpreter
 		
 		/// <summary>
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="modifier">The incompatible modifier</param>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The referencing type</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NewCallIncompatibleModifier(string modifier, string name, DynValue value)
+		{
+			throw new ScriptRuntimeException($"{modifier} {ExtTypeStr(value)} '{name}' cannot be instantiated.");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="modifier">The incompatible modifier</param>
+		/// <param name="ancestorName">The name of child class</param>
+		/// <param name="descendantName">The name of parent class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException BaseInvalidModifier(string modifier, string ancestorName, string descendantName)
+		{
+			throw new ScriptRuntimeException($"class '{descendantName}' cannot inherit from {modifier} class '{ancestorName}'.");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
 		/// a specified value is not a mixin
 		/// </summary>
 		/// <param name="name">The name the value was indexed from</param>

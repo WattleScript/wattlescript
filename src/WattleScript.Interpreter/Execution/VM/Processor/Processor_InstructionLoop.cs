@@ -275,8 +275,9 @@ namespace WattleScript.Interpreter.Execution.VM
 						{
 							ref var top = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
-							top.Table.Kind = (TableKind)i.NumVal;
-							top.Table.ReadOnly = i.NumVal2 != 0;
+							top.Table.Kind = (TableKind)i.NumVal2;
+							top.Table.ReadOnly = i.NumVal3 != 0;
+							top.Table.ModifierFlags = (MemberModifierFlags)i.NumVal;
 							break;
 						}
 						case OpCode.SetMetaTab:
@@ -285,6 +286,13 @@ namespace WattleScript.Interpreter.Execution.VM
 							ref var tab = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
 							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
+							
+							// (NumVal > 0) -> whether base class is present
+							if (i.NumVal > 0 && (top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static) || top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Sealed)))
+							{
+								string modifier = top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static) ? "static" : "sealed";
+								throw ScriptRuntimeException.BaseInvalidModifier(modifier, top.Table.Get("Name").String ?? "(null)", currentFrame.Function.strings[i.NumVal]);
+							}
 							tab.Table.MetaTable = top.Table;
 							break;
 						}
@@ -381,6 +389,15 @@ namespace WattleScript.Interpreter.Execution.VM
 							break;
 						case OpCode.NewRange:
 							ExecNewRange(i);
+							break;
+						case OpCode.SetPriv:
+							ExecSetPriv(i);
+							break;
+						case OpCode.CopyPriv:
+							ExecCopyPriv(i);
+							break;
+						case OpCode.MergePriv:
+							ExecMergePriv(i);
 							break;
 						case OpCode.ToNum:
 						{
@@ -583,9 +600,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		private void ExecMkTuple(Instruction i)
 		{
-			Slice<DynValue> slice = new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal, false);
-
-			var v = Internal_AdjustTuple(slice);
+			var v = Internal_AdjustTuple(new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - i.NumVal, i.NumVal));
 			m_ValueStack.RemoveLast(i.NumVal);
 			m_ValueStack.Push(DynValue.NewTuple(v));
 		}
@@ -613,6 +628,40 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		}
 
+		private void ExecSetPriv(Instruction i)
+		{
+			ref DynValue t = ref m_ValueStack.Peek(i.NumVal);
+			if (t.Type != DataType.Table)
+				throw new InternalErrorException("SETPRIV called on non-table object");
+			t.Table.PrivateKeys = new PrivateKeyInfo();
+			while (i.NumVal-- > 0) {
+				t.Table.PrivateKeys.Fields.Add(m_ValueStack.Pop().CastToString());
+			}
+		}
+
+		private void ExecCopyPriv(Instruction i)
+		{
+			ref DynValue dest = ref m_ValueStack.Peek(1);
+			ref DynValue src = ref m_ValueStack.Peek(0);
+			if (dest.Type != DataType.Table || src.Type != DataType.Table)
+				throw new InternalErrorException("COPYPRIV called on non-table object");
+			dest.Table.PrivateKeys = src.Table.PrivateKeys;
+			m_ValueStack.Pop();
+		}
+
+		private void ExecMergePriv(Instruction i)
+		{
+			ref DynValue dest = ref m_ValueStack.Peek(i.NumVal2);
+			ref DynValue src = ref m_ValueStack.Peek(i.NumVal);
+			if (dest.Type != DataType.Table || src.Type != DataType.Table)
+				throw new InternalErrorException("MERGEPRIV called on non-table object");
+			if (src.Table.PrivateKeys != null)
+			{
+				dest.Table.PrivateKeys ??= new PrivateKeyInfo();
+				dest.Table.PrivateKeys.Merge(src.Table.PrivateKeys);
+			}
+		}
+		
 		private void ExecIterPrep()
 		{
 			DynValue v = m_ValueStack.Pop();
@@ -742,7 +791,7 @@ namespace WattleScript.Interpreter.Execution.VM
 				return values;
 			}
 
-			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs, false);
+			return new Slice<DynValue>(m_ValueStack, m_ValueStack.Count - numargs - offsFromTop, numargs);
 		}
 		
 		private void ExecArgs(Instruction I)
@@ -1578,23 +1627,31 @@ namespace WattleScript.Interpreter.Execution.VM
 		private void ExecTblInitI(Instruction i)
 		{
 			// stack: tbl - val,val,val
-			DynValue tbl = i.NumVal3 switch
+			bool lastPos = (i.NumVal3 & 0x80) == 0x80;
+			DynValue tbl = (i.NumVal3 & 0x7F) switch
 			{
-				0 => m_ValueStack.Peek(i.NumVal),
+				0 => m_ValueStack.Peek(i.NumVal2),
 				1 => DynValue.NewTable(m_Script),
 				2 => DynValue.NewPrimeTable(),
 				_ => throw new InternalErrorException("TblInitI NumVal3 invalid")
 			};
-
-			bool lastPos = i.NumVal2 != 0;
 			if (tbl.Type != DataType.Table)
 				throw new InternalErrorException("Unexpected type in table ctor : {0}", tbl);
-			for (int j = i.NumVal - 1; j >= 0; j--) {
-				tbl.Table.InitNextArrayKeys(m_ValueStack.Peek(j), lastPos);
+			var index = i.NumVal + m_Script.Options.IndexTablesFrom;
+			for (int j = i.NumVal2 - 1; j >= 0; j--)
+			{
+				ref var val = ref m_ValueStack.Peek(j);
+				if (lastPos && val.Type == DataType.Tuple) {
+					foreach(var v in val.Tuple)
+						tbl.Table.Set(index++, v);
+				}
+				else
+				{
+					tbl.Table.Set(index++, val.ToScalar());
+				}
 			}
-			m_ValueStack.RemoveLast(i.NumVal);
-			
-			if (i.NumVal3 > 0) m_ValueStack.Push(tbl);
+			m_ValueStack.RemoveLast(i.NumVal2);
+			if ((i.NumVal3 & 0x7F) > 0) m_ValueStack.Push(tbl);
 		}
 
 		private int ExecNewCall(Instruction i, int instructionPtr, bool canAwait)
@@ -1603,6 +1660,8 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (cls.Type != DataType.Table ||
 			    cls.Table.Kind != TableKind.Class)
 				throw ScriptRuntimeException.NotAClass(GetString((int) i.NumValB), cls);
+			if (cls.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
+				throw ScriptRuntimeException.NewCallIncompatibleModifier(MemberModifierFlags.Static.ToString().ToLowerInvariant(), GetString((int) i.NumValB), cls);
 			cls = cls.Table.Get("new");
 			return Internal_ExecCall(canAwait, i.NumVal, instructionPtr);
 		}
@@ -1683,7 +1742,9 @@ namespace WattleScript.Interpreter.Execution.VM
 			// stack: vals.. - base - index
 			bool isNameIndex = i.OpCode == OpCode.IndexSetN;
 			bool isMultiIndex = (i.OpCode == OpCode.IndexSetL);
-
+			// extract privateAccess bool from spare bit in numVal
+			bool accessPrivate = (i.NumVal & 0x40000000) != 0;
+			i.NumVal &= 0x3FFFFFFF;
 			string i_str = GetString((int)i.NumVal3);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
 			DynValue idx = originalIdx.ToScalar();
@@ -1703,6 +1764,12 @@ namespace WattleScript.Interpreter.Execution.VM
 
 						if (!isMultiIndex)
 						{
+							//Private fields - error on write
+							if (!accessPrivate && obj.Table.PrivateKeys != null &&
+							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							{
+								throw new ScriptRuntimeException($"cannot write to private key '{idx.ToPrintString()}'");
+							}
 							//Don't do check for __newindex if there is no metatable to begin with
 							if (obj.Table.MetaTable == null || !obj.Table.Get(idx).IsNil())
 							{
@@ -1788,8 +1855,8 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			// stack: base - index
 			bool isNameIndex = i.OpCode == OpCode.IndexN;
-
-			bool isMultiIndex = (i.OpCode == OpCode.IndexL);
+			bool isMultiIndex = i.OpCode == OpCode.IndexL;
+			bool accessPrivate = i.NumVal3 > 0;
 
 			string i_str = GetString(i.NumVal);
 			DynValue originalIdx = i_str != null ? DynValue.NewString(i_str) : m_ValueStack.Pop();
@@ -1809,6 +1876,14 @@ namespace WattleScript.Interpreter.Execution.VM
 					{
 						if (!isMultiIndex)
 						{
+							//Don't return private fields
+							if (!accessPrivate && obj.Table.PrivateKeys != null &&
+							    obj.Table.PrivateKeys.IsKeyPrivate(idx))
+							{
+								m_ValueStack.Push(DynValue.Nil);
+								return instructionPtr;
+							}
+								
 							var v = obj.Table.Get(idx);
 
 							if (!v.IsNil())

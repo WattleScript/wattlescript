@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -16,9 +17,11 @@ namespace WattleScript.Interpreter.Tree.Statements
         private SymbolRefExpression constructorLocal;
         private SymbolRefExpression initLocal;
         private SymbolRefExpression mixinLocal;
+        private SymbolRefExpression staticThis;
         private string initName;
         
         private SymbolRef classLocalRef;
+        private SymbolRef classGlobalRef;
         private SymbolRefExpression mixinRef;
         private SymbolRefExpression varargsRef;
         private SourceRef defSource;
@@ -27,25 +30,34 @@ namespace WattleScript.Interpreter.Tree.Statements
         private string baseName;
         private Annotation[] annotations;
         private RuntimeScopeBlock classBlock;
+        private RuntimeScopeBlock classStaticBlock;
         //
         private GeneratedClosure newClosure;
         private GeneratedClosure initClosure;
         private GeneratedClosure tostringClosure;
         private GeneratedClosure emptyConstructor;
         private bool tostringImpl;
-
+        
         //Class members
-        private List<(string name, FunctionDefinitionExpression exp)> functions =
-            new List<(string name, FunctionDefinitionExpression exp)>();
-        private List<(string name, Expression exp)> fields 
-            = new List<(string name, Expression exp)>();
+        private MemberCollection functions = new MemberCollection();
+        private MemberCollection fields = new MemberCollection();
         private FunctionDefinitionExpression constructor;
 
         private List<string> mixinNames = new List<string>();
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
+
+        private MemberModifierFlags flags = MemberModifierFlags.None;
+        
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            while (lcontext.Lexer.Current.IsMemberModifier())
+            {
+                MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current, WattleMemberType.Class);
+                lcontext.Lexer.Next();
+            }
+            
             lcontext.Lexer.Next();
+
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
             className = nameToken.Text;
             localName = $"$class:{className}";
@@ -77,10 +89,14 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure = new GeneratedClosure($"{className}.__init", defSource, FunctionFlags.None, false);
             //__tostring()
             tostringClosure = new GeneratedClosure($"{className}.__tostring", defSource, FunctionFlags.TakesSelf, false);
+   
+            MemberModifierFlags modifierFlags = MemberModifierFlags.None;
+
             //parse members
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
             {
+
                 ParseAnnotations(lcontext);
                 switch (lcontext.Lexer.Current.Type)
                 {
@@ -88,12 +104,29 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.SemiColon:
                         lcontext.Lexer.Next();
                         break;
+                    case TokenType.Public:
+                    case TokenType.Static:
+                    case TokenType.Private:
+                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current, WattleMemberType.ClassMember);
+                        lcontext.Lexer.Next();
+                        break;
                     case TokenType.Function:
                     {
                         lcontext.Lexer.Next();
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
                         if (funcName.Text == "tostring") tostringImpl = true;
-                        functions.Add((funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+
+                        MemberUtilities.CheckReserved(funcName, "class");
+
+                        if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                        {
+                            throw new SyntaxErrorException(funcName, "static class '{0}' cannot contain non-static function '{1}'", className, funcName.Text);
+                        }
+
+                        functions.Add(funcName,
+                            new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags),
+                            modifierFlags, true);
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     case TokenType.Local: //var
@@ -105,8 +138,14 @@ namespace WattleScript.Interpreter.Tree.Statements
                             throw new SyntaxErrorException(lcontext.Lexer.Current, "expected name");
                     case TokenType.Name when lcontext.Lexer.Current.Text == className:
                     {
+                        if (flags.HasFlag(MemberModifierFlags.Static))
+                        {
+                            throw new SyntaxErrorException(lcontext.Lexer.Current, "static class '{0}' cannot contain constructor", className);
+                        }
+                        
                         lcontext.Lexer.Next();
                         constructor = new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, false, true);
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     case TokenType.Name:
@@ -116,14 +155,30 @@ namespace WattleScript.Interpreter.Tree.Statements
                         switch (lcontext.Lexer.Current.Type)
                         {
                             case TokenType.Brk_Open_Round:
-                                functions.Add((T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+                                
+                                MemberUtilities.CheckReserved(T, "class");
+
+                                if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                                {
+                                    throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static function '{1}'", className, T.Text);
+                                }
+     
+                                functions.Add(T,
+                                    new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false, modifierFlags),
+                                    modifierFlags, true);
                                 break;
                             case TokenType.Op_Assignment:
+                                
+                                MemberUtilities.CheckReserved(T, "class");
+
+                                if (flags.HasFlag(MemberModifierFlags.Static) && !modifierFlags.HasFlag(MemberModifierFlags.Static))
+                                {
+                                    throw new SyntaxErrorException(T, "static class '{0}' cannot contain non-static field '{1}'", className, T.Text);
+                                }
+
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
-                                initClosure.AddExpression(exp);
-                                fields.Add((T.Text, exp));
-                                string str = ((FunctionDefinitionExpression) exp).ToString();
+                                fields.Add(T, exp, modifierFlags, false);
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -132,6 +187,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 CheckTokenType(lcontext, TokenType.SemiColon); //throws error
                                 break;
                         }
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     default:
@@ -146,6 +202,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         public override void ResolveScope(ScriptLoadingContext lcontext)
         {
             lcontext.Scope.PushBlock();
+            
             //
             if (baseName != null) {
                 var baseLocalRef = lcontext.Scope.DefineBaseRef();
@@ -155,7 +212,8 @@ namespace WattleScript.Interpreter.Tree.Statements
                 lcontext.Scope.DefineBaseEmpty();
             }
             classLocalRef = lcontext.Scope.DefineLocal(localName);
-            classStoreGlobal = new SymbolRefExpression(lcontext, lcontext.Scope.Find(className));
+            classGlobalRef = lcontext.Scope.Find(className);
+            classStoreGlobal = new SymbolRefExpression(lcontext, classGlobalRef);
             classStoreLocal = new SymbolRefExpression(lcontext, classLocalRef);
             if (constructor != null) {
                 var conName = localName + ".__ctor";
@@ -177,6 +235,9 @@ namespace WattleScript.Interpreter.Tree.Statements
             initClosure.AddSymbol(localName);
             initClosure.DefineLocal("table"); //arg 0
             initClosure.DefineLocal("depth"); //arg 1
+            initClosure.DefineLocal("this");
+            foreach(var fn in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
+                initClosure.AddExpression(fn.Expr);
             if (baseName != null)
             {
                 initClosure.AddSymbol("base");
@@ -200,9 +261,17 @@ namespace WattleScript.Interpreter.Tree.Statements
             tostringClosure.DefineLocal("this");
             tostringClosure.ResolveScope(lcontext);
             //functions
-            foreach(var fn in functions)
-                fn.exp.ResolveScope(lcontext);
+            foreach(var fn in functions.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
             constructor?.ResolveScope(lcontext);
+            //statics
+            lcontext.Scope.PushBlock();
+            staticThis = new SymbolRefExpression(lcontext, lcontext.Scope.DefineThisArg("this"));
+            foreach(var fn in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
+            foreach(var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+                fn.Expr.ResolveScope(lcontext);
+            classStaticBlock = lcontext.Scope.PopBlock();
             classBlock = lcontext.Scope.PopBlock();
         }
 
@@ -217,20 +286,23 @@ namespace WattleScript.Interpreter.Tree.Statements
                     mixinSym.Compile(bc);
                     int mixInit = bc.Emit_Jump(OpCode.JtOrPop, -1);
                     sym[localName].Compile(bc);
+                    bc.Emit_Copy(0);
                     bc.Emit_Index("__index");
                     bc.Emit_TblInitN(0, 1);
                     mixinSym.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                     foreach (var n in mixinNames) {
                         //stack:
+                        //class
                         //class __index table
                         //mixin init table
                         //mixin ref
                         mixinRefs[n].Compile(bc);
+                        bc.Emit_MergePriv(0, 3);
                         bc.Emit_MixInit(n);
                     }
-                    //stack: __index, init table
-                    bc.Emit_Swap(0, 1);
-                    bc.Emit_Pop(); //remove __index, just have init table
+                    //stack: class, __index, init table
+                    bc.Emit_Swap(0, 2);
+                    bc.Emit_Pop(2); //remove class and __index, just have init table
                     bc.SetNumVal(mixInit, bc.GetJumpPointForNextInstruction());
                     foreach (var n in mixinNames)
                     {
@@ -259,11 +331,12 @@ namespace WattleScript.Interpreter.Tree.Statements
                     sym[localName].Compile(bc);
                     bc.Emit_Index("__index");
                     bc.Emit_Swap(0, 1);
-                    bc.Emit_SetMetaTab();
+                    bc.Emit_SetMetaTab(className);
                     bc.Emit_Pop();
-                    //Set Base member + leave on stack
+                    //Set Base member, copy private field info + leave on stack
                     baseSym.Compile(bc);
                     sym[localName].Compile(bc);
+                    bc.Emit_MergePriv(1, 0);
                     bc.Emit_IndexSet(0, 0, "Base");
                     //Base resolved, call __init
                     bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
@@ -276,12 +349,16 @@ namespace WattleScript.Interpreter.Tree.Statements
                     bc.Emit_Pop();
                 }
                 sym["table"].Compile(bc);
-                foreach (var field in fields)
+                sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+                sym[localName].Compile(bc);
+                bc.Emit_CopyPriv();
+                foreach (var field in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
-                    bc.Emit_Literal(DynValue.NewString(field.name));
-                    field.exp.CompilePossibleLiteral(bc);
+                    field.Expr.CompilePossibleLiteral(bc);
+                    sym["table"].Compile(bc);
+                    bc.Emit_IndexSet(0, 0, field.Name, false, false, true);
+                    bc.Emit_Pop();
                 }
-                bc.Emit_TblInitN(fields.Count * 2, 0);
                 bc.Emit_Pop();
                 bc.Emit_Ret(0);
             });
@@ -353,12 +430,12 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Literal(DynValue.NewString(className));
             //build __index table
             bc.Emit_Literal(DynValue.NewString("__index"));
-            foreach (var fn in functions)
+            foreach (var fn in functions.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
             {
-                bc.Emit_Literal(DynValue.NewString(fn.name));
-                fn.exp.Compile(bc, fn.name);
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
+                ((FunctionDefinitionExpression)fn.Expr).Compile(bc, fn.Name);
             }
-            bc.Emit_TblInitN(functions.Count * 2, 1);
+            bc.Emit_TblInitN(functions.Count(x => !x.Flags.HasFlag(MemberModifierFlags.Static)) * 2, 1);
             //compile __tostring metamethod
             bc.Emit_Literal(DynValue.NewString("__tostring"));
             CompileToString(bc);
@@ -382,12 +459,48 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
-            bc.Emit_TabProps(TableKind.Class, false);
+            int privateCount = 0;
+            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
+            }
+            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(field.Name));
+            }
+            if (privateCount > 0) {
+                bc.Emit_SetPriv(privateCount);
+            }
+            bc.Emit_TabProps(TableKind.Class, flags, false);
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
             classStoreGlobal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            //static block
+            bc.Emit_Enter(classStaticBlock);
+            staticThis.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
+            //static functions
+            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+            {
+                ((FunctionDefinitionExpression)fn.Expr).Compile(bc, fn.Name);
+                bc.Emit_Load(classGlobalRef);
+                bc.Emit_IndexSet(0, 0, fn.Name, isNameIndex: true);
+                bc.Emit_Pop();
+            }
+            //static fields
+            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Static)))
+            {
+                field.Expr.CompilePossibleLiteral(bc);
+                bc.Emit_Load(classGlobalRef);
+                bc.Emit_IndexSet(0, 0, field.Name, isNameIndex: true);
+                bc.Emit_Pop();
+            }
+
+            //static block end
+            bc.Emit_Leave(classStaticBlock);
+            //class block end
             bc.Emit_Pop();
             bc.Emit_Leave(classBlock);
+
             bc.PopSourceRef();
         }
     }

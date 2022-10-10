@@ -90,6 +90,7 @@ namespace WattleScript.Interpreter.Execution
 			if (closuredFrame == currentFrame) {
 				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, symb);
 				uv.IsBaseClass = symb.IsBaseClass;
+				uv.IsThisArgument = symb.IsThisArgument;
 				uv.Placeholder = symb.Placeholder;
 				return uv;
 			}
@@ -99,6 +100,7 @@ namespace WattleScript.Interpreter.Execution
 				SymbolRef upvalue = CreateUpValue(buildTimeScope, symb, closuredFrame, currentFrame - 1);
 				var uv = m_ClosureBuilders[currentFrame + 1].CreateUpvalue(this, upvalue);
 				uv.IsBaseClass = symb.IsBaseClass;
+				uv.IsThisArgument = symb.IsThisArgument;
 				uv.Placeholder = symb.Placeholder;
 				return uv;
 			}
@@ -113,6 +115,13 @@ namespace WattleScript.Interpreter.Execution
 		{
 			var retVal = DefineLocal("base");
 			retVal.IsBaseClass = true;
+			return retVal;
+		}
+
+		public SymbolRef DefineThisArg(string name)
+		{
+			var retVal = DefineLocal(name);
+			retVal.IsThisArgument = true;
 			return retVal;
 		}
 		

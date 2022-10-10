@@ -1,4 +1,5 @@
 ﻿using System;
+using WattleScript.Interpreter.Tree.Statements;
 
 namespace WattleScript.Interpreter.Tree
 {
@@ -62,6 +63,14 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.New;
 					case "mixin":
 						return TokenType.Mixin;
+					case "static":
+						return TokenType.Static;
+					case "private":
+						return TokenType.Private;
+					case "public":
+						return TokenType.Public;
+					case "sealed":
+						return TokenType.Sealed;
 				}
 			}
 
@@ -124,6 +133,23 @@ namespace WattleScript.Interpreter.Tree
 		{
 			return Type == TokenType.Op_MinusOrSub || Type == TokenType.Not || Type == TokenType.Op_Len ||
 			       Type == TokenType.Op_Inc || Type == TokenType.Op_Dec || Type == TokenType.Op_Not;
+		}
+
+		public bool IsMemberModifier()
+		{
+			return Type == TokenType.Static || Type == TokenType.Private || Type == TokenType.Public || Type == TokenType.Sealed;
+		}
+
+		public MemberModifierFlags ToMemberModiferFlag()
+		{
+			return Type switch
+			{
+				TokenType.Static => MemberModifierFlags.Static,
+				TokenType.Private => MemberModifierFlags.Private,
+				TokenType.Public => MemberModifierFlags.Public,
+				TokenType.Sealed => MemberModifierFlags.Sealed,
+				_ => throw new InvalidCastException("Token is not modifier flag")
+			};
 		}
 
 		public bool IsBinaryOperator()

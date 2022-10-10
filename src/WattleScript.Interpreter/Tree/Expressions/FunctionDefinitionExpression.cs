@@ -31,6 +31,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		SymbolRef m_Env;
 
 		internal SourceRef m_Begin, m_End;
+		internal MemberModifierFlags flags;
 		private ScriptLoadingContext lcontext;
 		List<FunctionDefinitionStatement.FunctionParamRef> paramnames;
 		private bool m_IsConstructor;
@@ -42,6 +43,12 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda)
 			: this(lcontext, self, false, isLambda)
 		{ }
+
+		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool isLambda, MemberModifierFlags flags)
+			: this(lcontext, self, false, isLambda)
+		{
+			this.flags = flags;
+		}
 		
 		public FunctionDefinitionExpression(ScriptLoadingContext lcontext, SelfType self, bool usesGlobalEnv, bool isLambda, bool isConstructor = false)
 			: base(lcontext)
@@ -196,7 +203,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			// method decls with ':' must push an implicit 'self' param
 			if (self != SelfType.None)
-				paramnames.Add(lcontext.Syntax == ScriptSyntax.Wattle ? new FunctionDefinitionStatement.FunctionParamRef("this") : new FunctionDefinitionStatement.FunctionParamRef("self"));
+				paramnames.Add(new FunctionDefinitionStatement.FunctionParamRef(lcontext.Syntax == ScriptSyntax.Wattle ? "this" : "self") { IsThis = true });
 			m_ImplicitThis = self == SelfType.Implicit;
 			
 			bool parsingDefaultParams = false;
@@ -275,7 +282,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				if (!names.Add(paramnames[i].Name))
 					paramnames[i].Name = paramnames[i].Name + "@" + i.ToString();
 				paramnames[i].DefaultValue?.ResolveScope(lcontext);
-				ret[i] = lcontext.Scope.DefineLocal(paramnames[i].Name);
+				if(paramnames[i].IsThis)
+					ret[i] = lcontext.Scope.DefineThisArg(paramnames[i].Name);
+				else
+					ret[i] = lcontext.Scope.DefineLocal(paramnames[i].Name);
 			}
 
 			return ret;
