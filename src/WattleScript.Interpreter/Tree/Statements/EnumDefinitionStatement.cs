@@ -96,7 +96,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             
             bc.PopSourceRef();
             bc.PushSourceRef(assignment);
-            bc.Emit_TabMeta(TableKind.Enum, true);
+            bc.Emit_TabProps(TableKind.Enum, MemberModifierFlags.None, true);
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
             globalSymbol.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);

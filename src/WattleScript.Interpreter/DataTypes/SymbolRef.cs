@@ -33,6 +33,23 @@ namespace WattleScript.Interpreter
 		/// Gets the environment this symbol refers to (for global symbols only)
 		/// </summary>
 		public SymbolRef Environment { get { return i_Env; } }
+		
+		
+		/// <summary>
+		/// Sets whether or not this symbol refers to a class's base class.
+		/// This option is not serialized.
+		/// </summary>
+		public bool IsBaseClass { get; set; }
+		
+		/// <summary>
+		/// Sets whether or not this symbol is the `this` argument of a function
+		/// </summary>
+		public bool IsThisArgument { get; set; }
+		
+		/// <summary>
+		/// Set to true if this symbol is a placeholder (no allocation)
+		/// </summary>
+		public bool Placeholder { get; set; }
 
 
 		/// <summary>

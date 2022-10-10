@@ -18,6 +18,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 	{
 		List<Expression> m_Arguments;
 		Expression m_Function;
+		Expression m_This;
 		string m_Name;
 		string m_DebugErr;
 		private CallKind m_Kind;
@@ -78,10 +79,18 @@ namespace WattleScript.Interpreter.Tree.Expressions
 					};
 			}
 		}
-
+		
 		public override void ResolveScope(ScriptLoadingContext lcontext)
 		{
 			m_Function.ResolveScope(lcontext);
+			if (m_Function is SymbolRefExpression se && (se.Symbol?.IsBaseClass ?? false)) {
+				m_This = new SymbolRefExpression(lcontext, lcontext.Scope.Find("this"));
+				if (m_Name == null && !lcontext.Scope.InConstructor)
+				{
+					throw new SyntaxErrorException(lcontext.Script, SourceRef,
+						"cannot call base() outside of constructor");
+				}
+			}
 			foreach(var arg in m_Arguments)
 				arg.ResolveScope(lcontext);
 		}
@@ -98,6 +107,14 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				bc.Emit_Swap(0, 1);
 				++argslen;
 			}
+			else if (m_This != null && m_Name == null)
+			{
+				m_Function.Compile(bc); //Get constructor
+				bc.Emit_Index("__ctor");
+				m_This.Compile(bc);
+				m_Kind = CallKind.ImplicitThisCall;
+				++argslen;
+			} 
 			else
 			{
 				m_Function.Compile(bc);
@@ -111,9 +128,17 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			if (!string.IsNullOrEmpty(m_Name))
 			{
-				bc.Emit_Copy(0);
-				bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
-				bc.Emit_Swap(0, 1);
+				if (m_This != null)
+				{
+					bc.Emit_Index("__index");
+					bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
+					m_This.Compile(bc);
+				}
+				else {
+					bc.Emit_Copy(0);
+					bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
+					bc.Emit_Swap(0, 1);
+				}
 				++argslen;
 			}
 			

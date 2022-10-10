@@ -272,11 +272,7 @@ namespace WattleScript.Interpreter.Tree
         
         Token CreateToken(TokenType tokenType, int fromLine, int fromCol, string text = null)
         {
-            var ret = new Token(tokenType, sourceIndex, fromLine, fromCol, fromLine, fromCol + text?.Length ?? 0, 0, 0)
-            {
-                Text = text
-            };
-            return ret;
+            return new Token(tokenType, sourceIndex, fromLine, fromCol, fromLine, fromCol + text?.Length ?? 0, 0, 0, cur.Index - (text?.Length ?? 0), cur.Index, text);
         }
         
         public void CheckEndOfLine()

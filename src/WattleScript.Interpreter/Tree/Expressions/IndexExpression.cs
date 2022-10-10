@@ -10,6 +10,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 	{
 		Expression m_BaseExp;
 		Expression m_IndexExp;
+		Expression m_ThisExp;
 		string m_Name;
 		private bool inc;
 		private bool dec;
@@ -72,6 +73,10 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		{
 			m_BaseExp.ResolveScope(lcontext);
 			m_IndexExp?.ResolveScope(lcontext);
+			if (m_BaseExp is SymbolRefExpression se && (se.Symbol?.IsBaseClass ?? false))
+			{
+				m_ThisExp = new SymbolRefExpression(lcontext, lcontext.Scope.Find("this"));
+			}
 		}
 
 
@@ -81,8 +86,22 @@ namespace WattleScript.Interpreter.Tree.Expressions
 		}
 		public void Compile(FunctionBuilder bc, bool duplicate, bool isMethodCall = false)
 		{
-			m_BaseExp.Compile(bc);
-			if (duplicate) bc.Emit_Copy(0);
+			bool accessPrivate = (m_BaseExp is SymbolRefExpression sr && sr.Symbol.IsThisArgument);
+			
+			if (duplicate && m_ThisExp != null)
+			{
+				m_ThisExp.Compile(bc);
+				m_BaseExp.Compile(bc);
+				bc.Emit_Index("__index");
+			} 
+			else if (duplicate) 
+			{
+				m_BaseExp.Compile(bc);
+				bc.Emit_Copy(0);
+			}
+			else {
+				m_BaseExp.Compile(bc);
+			}
 			if (isLength) {
 				if (nilCheck) {
 					bc.NilChainTargets.Push(bc.Emit_Jump(OpCode.JNilChk, -1));
@@ -100,16 +119,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 			}
 			if (m_Name != null)
 			{
-				bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall);
+				bc.Emit_Index(m_Name, true, isMethodCall: isMethodCall, accessPrivate: accessPrivate);
 			}
 			else if (m_IndexExp is LiteralExpression lit && lit.Value.Type == DataType.String)
 			{
-				bc.Emit_Index(lit.Value.String, isMethodCall: isMethodCall);
+				bc.Emit_Index(lit.Value.String, isMethodCall: isMethodCall, accessPrivate: accessPrivate);
 			}
 			else
 			{
 				m_IndexExp.Compile(bc);
-				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression), isMethodCall: isMethodCall);
+				bc.Emit_Index(isExpList: (m_IndexExp is ExprListExpression), isMethodCall: isMethodCall, accessPrivate: accessPrivate);
 			}
 			if (inc)
 			{
@@ -135,6 +154,8 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 		public void CompileAssignment(FunctionBuilder bc, Operator op, int stackofs, int tupleidx)
 		{
+			bool accessPrivate = (m_BaseExp is SymbolRefExpression sr && sr.Symbol.IsThisArgument);
+
 			if (isLength)
 			{ 
 				throw new SyntaxErrorException(null, "Cannot assign to readonly property .length");
@@ -151,16 +172,16 @@ namespace WattleScript.Interpreter.Tree.Expressions
 
 			if (m_Name != null)
 			{
-				bc.Emit_IndexSet(stackofs, tupleidx, m_Name, isNameIndex: true);
+				bc.Emit_IndexSet(stackofs, tupleidx, m_Name, isNameIndex: true, accessPrivate: accessPrivate);
 			}
 			else if (m_IndexExp is LiteralExpression lit && lit.Value.Type == DataType.String)
 			{
-				bc.Emit_IndexSet(stackofs, tupleidx, lit.Value.String);
+				bc.Emit_IndexSet(stackofs, tupleidx, lit.Value.String, accessPrivate: accessPrivate);
 			}
 			else
 			{
 				m_IndexExp.Compile(bc);
-				bc.Emit_IndexSet(stackofs, tupleidx, isExpList: (m_IndexExp is ExprListExpression));
+				bc.Emit_IndexSet(stackofs, tupleidx, isExpList: (m_IndexExp is ExprListExpression), accessPrivate: accessPrivate);
 			}
 
 			if (op != Operator.NotAnOperator) bc.Emit_Pop();

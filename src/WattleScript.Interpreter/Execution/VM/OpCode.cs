@@ -20,9 +20,12 @@ namespace WattleScript.Interpreter.Execution.VM
 		PushString, // Pushes a string to the v-stack
 		Closure,	// Creates a closure on the top of the v-stack, using the symbols for upvalues and num-val for entry point of the function.
 		TblInitN,	// Initializes NumVal named entries, NumVal2 0 = don't create, 1 = create normal, 2 = create shared
-		TblInitI,	// Initializes NumVal table positional entries, NumVal3 0 = don't create, 1 = create normal, 2 = create shared
+		TblInitI,	// Initializes NumVal2 table positional entries, starting at pos NumVal (modifed by IndexFrom)
+            // (NumVal3 & 0x7F) 0 = don't create, 1 = create normal, 2 = create shared
+            // NumVal3 & 0x80 == expand tuple
 		NewRange,   // Creates a range from the v-stack
-		TabMeta,	// Sets v-stack top table kind and readonly flag. Does not pop
+		TabProps,	// Sets v-stack top table modifier flags, kind and readonly flag. Does not pop
+		SetMetaTab, // Sets v-stack - 1 table's metatable to vstack top & pops once.
 		
 		StoreLcl, Local,
 		StoreUpv, Upvalue,
@@ -120,7 +123,15 @@ namespace WattleScript.Interpreter.Execution.VM
 		AnnotS, //NumVal = string or nil
 		AnnotB, //NumVal = bool
 		AnnotT, //pop table from v-stack
-		
+		LoopChk, //Checks if local in NumVal is < threshold. If not, throw error using NumValB as the class name
+		BaseChk, //Checks if v-stack top is a class. If not, throw error using NumVal as the base class name
+		NewCall, //Calls the new() function stored in table at v-stack offset NumVal with NumVal arguments.
+				 //Throws error using class name in NumValB if type check fails
+		MixInit, //Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
+		         //Error check uses NumVal for mixin name
+		SetPriv, //Sets NumVal keys to private (pops NumVal items)
+		MergePriv, //Merges the PrivateKeyInfo of v-stack(NumVal) into v-stack(NumVal2)
+		CopyPriv, //Copies the PrivateKeyInfo of v-stack top into v-stack +1, pops 1 value
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}

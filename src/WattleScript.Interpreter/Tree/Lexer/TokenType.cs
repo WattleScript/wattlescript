@@ -117,6 +117,14 @@ namespace WattleScript.Interpreter.Tree
 		Op_RightExclusiveRange, // ..<
 		
 		Enum,
+		Class,
+		New,
+		Mixin,
+		
+		Public,
+		Static,
+		Private,
+		Sealed,
 		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}

@@ -54,6 +54,82 @@ namespace WattleScript.Interpreter
 
 		/// <summary>
 		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a class hierarchy contains a cycle
+		/// </summary>
+		/// <param name="cls">The class in which it was detected</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException CyclicReference(string cls)
+		{
+			return new ScriptRuntimeException($"class hierarchy contains cyclic reference ({cls})");
+		}
+
+		static string ExtTypeStr(DynValue value)
+		{
+			if (value.Type == DataType.Table)
+			{
+				return value.Table.Kind switch {
+					TableKind.Enum => "enum",
+					TableKind.Mixin => "mixin",
+					TableKind.Class => "class",
+					_ => "table"
+				};
+			}
+			return value.Type.ToLuaTypeString();
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The value that is not a class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NotAClass(string name, DynValue value)
+		{
+			throw new ScriptRuntimeException($"'{name}' is invalid class (expected class, got {ExtTypeStr(value)})");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="modifier">The incompatible modifier</param>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The referencing type</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NewCallIncompatibleModifier(string modifier, string name, DynValue value)
+		{
+			throw new ScriptRuntimeException($"{modifier} {ExtTypeStr(value)} '{name}' cannot be instantiated.");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a class
+		/// </summary>
+		/// <param name="modifier">The incompatible modifier</param>
+		/// <param name="ancestorName">The name of child class</param>
+		/// <param name="descendantName">The name of parent class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException BaseInvalidModifier(string modifier, string ancestorName, string descendantName)
+		{
+			throw new ScriptRuntimeException($"class '{descendantName}' cannot inherit from {modifier} class '{ancestorName}'.");
+		}
+		
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
+		/// a specified value is not a mixin
+		/// </summary>
+		/// <param name="name">The name the value was indexed from</param>
+		///	<param name="value">The value that is not a class</param>
+		/// <returns>The exception to be raised</returns>
+		public static ScriptRuntimeException NotAMixin(string name, DynValue value)
+		{
+			
+			throw new ScriptRuntimeException($"'{name}' is invalid mixin (expected mixin, got {ExtTypeStr(value)})");
+		}
+
+		/// <summary>
+		/// Creates a ScriptRuntimeException with a predefined error message specifying that
 		/// an arithmetic operation was attempted on non-numbers
 		/// </summary>
 		/// <param name="l">The left operand.</param>

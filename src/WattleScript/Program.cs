@@ -94,13 +94,13 @@ namespace WattleScript
 
 		private static void ShowUsage()
 		{
-			Console.WriteLine("usage: wattlescript [-L | --lua] [-h | --help | -X \"command\" | -W <dumpfile> <destfile> [--internals] [--vb] | <script>]");
+			Console.WriteLine("usage: wattlescript [-L | --lua] [-h | --help | -X \"command\" | -W <dumpfile> <destfile> [--class=name] [--namespace=name] [--internals] [--vb] | <script>]");
 		}
 		
 		private static bool CheckArgs(string[] args, out ScriptSyntax syntax)
 		{
 			syntax = ScriptSyntax.Wattle;
-			const bool internals = false;
+			bool internals = false;
 			
 			// General options
 			bool show_help = false;
@@ -122,8 +122,9 @@ namespace WattleScript
 				{"L|lua", "run interpreter in lua mode", v => lua = v != null },
 				{"W|wire", "generate code for hardwiring table", v=> do_hardwire = v != null },
 				{"vb", "set hardwire generator to Visual Basic.NET", v => useVb = v != null },
-				{"class", "hardwire class name", v => classname = v },
-				{"namespace", "hardwire namespace", v => namespacename = v },
+				{"internals", "enable internals for hardwire generator", v => internals = v != null },
+				{"class=", "hardwire class name", v => classname = v },
+				{"namespace=", "hardwire namespace", v => namespacename = v },
 			};
 			
 			List<string> extra;

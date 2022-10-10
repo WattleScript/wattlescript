@@ -16,27 +16,27 @@ namespace WattleScript.Interpreter.Debugging
 		/// <summary>
 		/// Gets the index of the source.
 		/// </summary>
-		public int SourceIdx { get; private set; }
+		public int SourceIdx { get; }
 		/// <summary>
 		/// Gets from which column the source code ref starts
 		/// </summary>
-		public int FromChar { get; private set; }
+		public int FromChar { get; }
 		/// <summary>
 		/// Gets to which column the source code ref ends
 		/// </summary>
-		public int ToChar { get; private set; }
+		public int ToChar { get; }
 		/// <summary>
 		/// Gets from which line the source code ref starts
 		/// </summary>
-		public int FromLine { get; private set; }
+		public int FromLine { get; }
 		/// <summary>
 		/// Gets to which line the source code ref ends
 		/// </summary>
-		public int ToLine { get; private set; }
+		public int ToLine { get; }
 		/// <summary>
 		/// Gets a value indicating whether this instance is a stop "step" in source mode
 		/// </summary>
-		public bool IsStepStop { get; private set; }
+		public bool IsStepStop { get; }
 
 		/// <summary>
 		/// Gets a value indicating whether this instance is a breakpoint
@@ -46,10 +46,18 @@ namespace WattleScript.Interpreter.Debugging
 		/// Gets a value indicating whether this instance cannot be set as a breakpoint
 		/// </summary>
 		public bool CannotBreakpoint { get; private set; }
+		/// <summary>
+		/// Gets character index the source ref starts at 
+		/// </summary>
+		public int FromCharIndex { get; }
+		/// <summary>
+		/// Gets character index the source ref ends at 
+		/// </summary>
+		public int ToCharIndex { get; }
 
 		internal static SourceRef GetClrLocation()
 		{
-			return new SourceRef(0, 0, 0, 0, 0, false) { IsClrLocation = true };
+			return new SourceRef(0, 0, 0, 0, 0, false, 0, 0) { IsClrLocation = true };
 		}
 
 		public SourceRef(SourceRef src, bool isStepStop)
@@ -60,6 +68,8 @@ namespace WattleScript.Interpreter.Debugging
 			FromLine = src.FromLine;
 			ToLine = src.ToLine;
 			IsStepStop = isStepStop;
+			ToCharIndex = src.ToCharIndex;
+			FromCharIndex = src.FromCharIndex;
 		}
 
 		public override bool Equals(object obj)
@@ -81,7 +91,9 @@ namespace WattleScript.Interpreter.Debugging
 			       FromLine == other.FromLine && 
 			       ToLine == other.ToLine && 
 			       IsStepStop == other.IsStepStop && 
-			       CannotBreakpoint == other.CannotBreakpoint;
+			       CannotBreakpoint == other.CannotBreakpoint &&
+			       ToCharIndex == other.ToCharIndex &&
+			       FromCharIndex == other.FromCharIndex;
 		}
 
 		public override int GetHashCode()
@@ -96,6 +108,8 @@ namespace WattleScript.Interpreter.Debugging
 				hashCode = (hashCode * 397) ^ FromLine;
 				hashCode = (hashCode * 397) ^ ToLine;
 				hashCode = (hashCode * 397) ^ IsStepStop.GetHashCode();
+				hashCode = (hashCode * 397) ^ FromCharIndex;
+				hashCode = (hashCode * 397) ^ ToCharIndex;
 				hashCode = (hashCode * 397) ^ CannotBreakpoint.GetHashCode();
 				return hashCode;
 			}
@@ -111,8 +125,12 @@ namespace WattleScript.Interpreter.Debugging
 			return !Equals(left, right);
 		}
 
-
-		public SourceRef(int sourceIdx, int from, int to, int fromline, int toline, bool isStepStop)
+		public SourceRef(int sourceIdx)
+		{
+			SourceIdx = sourceIdx;
+		}
+		
+		public SourceRef(int sourceIdx, int from, int to, int fromline, int toline, bool isStepStop, int charIndexFrom, int charIndexTo)
 		{
 			SourceIdx = sourceIdx;
 			FromChar = from;
@@ -120,6 +138,8 @@ namespace WattleScript.Interpreter.Debugging
 			FromLine = fromline;
 			ToLine = toline;
 			IsStepStop = isStepStop;
+			ToCharIndex = charIndexTo;
+			FromCharIndex = charIndexFrom;
 		}
 
 		/// <summary>
@@ -149,42 +169,35 @@ namespace WattleScript.Interpreter.Debugging
 				{
 					if (col >= FromChar && col <= ToChar)
 						return 0;
-					else if (col < FromChar)
+					if (col < FromChar)
 						return FromChar - col;
-					else
-						return col - ToChar;
+					return col - ToChar;
 				}
-				else
-				{
-					return Math.Abs(line - FromLine) * PER_LINE_FACTOR;
-				}
+
+				return Math.Abs(line - FromLine) * PER_LINE_FACTOR;
 			}
-			else if (line == FromLine)
+			if (line == FromLine)
 			{
 				if (col < FromChar)
 					return FromChar - col;
-				else
-					return 0;
+				return 0;
 			}
-			else if (line == ToLine)
+			if (line == ToLine)
 			{
 				if (col > ToChar)
 					return col - ToChar;
-				else
-					return 0;
+				return 0;
 			}
-			else if (line > FromLine && line < ToLine)
+			if (line > FromLine && line < ToLine)
 			{
 				return 0;
 			}
-			else if (line < FromLine)
+			if (line < FromLine)
 			{
 				return (FromLine - line) * PER_LINE_FACTOR;
 			}
-			else
-			{
-				return (line - ToLine) * PER_LINE_FACTOR;
-			}
+
+			return (line - ToLine) * PER_LINE_FACTOR;
 		}
 
 		/// <summary>
@@ -227,30 +240,21 @@ namespace WattleScript.Interpreter.Debugging
 		/// <returns></returns>
 		public string FormatLocation(Script script, bool forceClassicFormat = false)
 		{
-			SourceCode sc = script.GetSourceCode(this.SourceIdx);
+			SourceCode sc = script.GetSourceCode(SourceIdx);
 
-			if (this.IsClrLocation)
+			if (IsClrLocation)
 				return "[clr]";
 
 			if (script.Options.UseLuaErrorLocations || forceClassicFormat)
 			{
-				return string.Format("{0}:{1}", sc.Name, this.FromLine);
+				return $"{sc.Name}:{FromLine}";
 			}
-			else if (this.FromLine == this.ToLine)
+			if (FromLine == ToLine)
 			{
-				if (this.FromChar == this.ToChar)
-				{
-					return string.Format("{0}:({1},{2})", sc.Name, this.FromLine, this.FromChar, this.ToLine, this.ToChar);
-				}
-				else
-				{
-					return string.Format("{0}:({1},{2}-{4})", sc.Name, this.FromLine, this.FromChar, this.ToLine, this.ToChar);
-				}
+				return FromChar == ToChar ? $"{sc.Name}:({FromLine},{FromChar})" : $"{sc.Name}:({FromLine},{FromChar}-{ToChar})";
 			}
-			else
-			{
-				return string.Format("{0}:({1},{2}-{3},{4})", sc.Name, this.FromLine, this.FromChar, this.ToLine, this.ToChar);
-			}
+			
+			return $"{sc.Name}:({FromLine},{FromChar}-{ToLine},{ToChar})";
 		}
 
 		internal void WriteBinary(BinDumpWriter writer)
@@ -259,17 +263,22 @@ namespace WattleScript.Interpreter.Debugging
 			writer.WriteVarInt32(ToChar - FromChar);
 			writer.WriteVarUInt32((uint)FromLine);
 			writer.WriteVarInt32(ToLine - FromLine);
+			writer.WriteVarUInt32((uint)FromCharIndex);
+			writer.WriteVarInt32(ToCharIndex - FromCharIndex);
 			writer.WriteBoolean(IsStepStop);
 		}
 
 		internal static SourceRef ReadBinary(BinDumpReader reader, int sourceID)
 		{
-			var fromChar = (int) reader.ReadVarUInt32();
+			int fromChar = (int) reader.ReadVarUInt32();
 			int toChar = fromChar + reader.ReadVarInt32();
-			var fromLine = (int) reader.ReadVarUInt32();
+			int fromLine = (int) reader.ReadVarUInt32();
 			int toLine = fromLine + reader.ReadVarInt32();
+			int indexCharFrom = (int) reader.ReadVarUInt32();
+			int indexCharTo = indexCharFrom + reader.ReadVarInt32();
+			bool isStepStop = reader.ReadBoolean();
 
-			return new SourceRef(sourceID, fromChar, toChar, fromLine, toLine, reader.ReadBoolean());
+			return new SourceRef(sourceID, fromChar, toChar, fromLine, toLine, isStepStop, indexCharFrom, indexCharTo);
 		}
 	}
 }
