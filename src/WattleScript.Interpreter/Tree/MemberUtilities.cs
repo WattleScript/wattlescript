@@ -39,7 +39,7 @@ namespace WattleScript.Interpreter.Tree
             
             foreach (var combo in flagConflicts)
             {
-                if ((combo.appliesTo == WattleMemberType.Any || combo.appliesTo == memberType) && source.HasFlag(combo.a) && (combo.b == null || source.HasFlag(combo.b)))
+                if (combo.appliesTo.HasFlag(memberType) && source.HasFlag(combo.a) && (combo.b == null || source.HasFlag(combo.b)))
                 {
                     if (combo.msg != null)
                         throw new SyntaxErrorException(token, combo.msg);
