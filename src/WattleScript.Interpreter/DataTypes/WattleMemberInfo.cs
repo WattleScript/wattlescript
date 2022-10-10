@@ -4,15 +4,18 @@ namespace WattleScript.Interpreter
 {
     internal class WattleMemberInfo
     {
-        public string Name { get; set; }
+        public string Name => Token.Text;
         public MemberModifierFlags Flags { get; set; }
         public Expression Expr { get; set; }
+        public Token Token { get; set; }
+        public bool IsFunction { get; set; }
 
-        public WattleMemberInfo(string name, Expression expr, MemberModifierFlags flags)
+        public WattleMemberInfo(Token token, Expression expr, MemberModifierFlags flags, bool isFunction)
         {
-            Name = name;
+            Token = token;
             Expr = expr;
             Flags = flags;
+            IsFunction = isFunction;
         }
     }   
 }

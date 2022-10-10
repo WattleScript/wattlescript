@@ -297,7 +297,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                         //mixin init table
                         //mixin ref
                         mixinRefs[n].Compile(bc);
-                        bc.Emit_MergePriv(0, 3);
+                        bc.Emit_MergeFlags(0, 3);
                         bc.Emit_MixInit(n);
                     }
                     //stack: class, __index, init table
@@ -336,7 +336,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     //Set Base member, copy private field info + leave on stack
                     baseSym.Compile(bc);
                     sym[localName].Compile(bc);
-                    bc.Emit_MergePriv(1, 0);
+                    bc.Emit_MergeFlags(1, 0);
                     bc.Emit_IndexSet(0, 0, "Base");
                     //Base resolved, call __init
                     bc.SetNumVal(jp2, bc.GetJumpPointForNextInstruction());
@@ -351,7 +351,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                 sym["table"].Compile(bc);
                 sym["this"].CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
                 sym[localName].Compile(bc);
-                bc.Emit_CopyPriv();
+                bc.Emit_CopyFlags();
                 foreach (var field in fields.Where(x => !x.Flags.HasFlag(MemberModifierFlags.Static)))
                 {
                     field.Expr.CompilePossibleLiteral(bc);
@@ -459,18 +459,24 @@ namespace WattleScript.Interpreter.Tree.Statements
             //set metadata and store to local
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
-            int privateCount = 0;
-            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
-                privateCount++;
-                bc.Emit_Literal(DynValue.NewString(fn.Name));
+            // group members by flags
+            MemberCollection memberAccumulator = new MemberCollection();
+            memberAccumulator.Add(functions);
+            memberAccumulator.Add(fields);
+
+            foreach (IGrouping<MemberModifierFlags, WattleMemberInfo> group in memberAccumulator.GroupBy(x => x.Flags))
+            {
+                int groupCount = 0;
+                
+                foreach (WattleMemberInfo memberInfo in group)
+                {
+                    groupCount++;
+                    bc.Emit_Literal(DynValue.NewString(memberInfo.Name));
+                }
+                
+                bc.Emit_SetFlags(groupCount, group.Key);
             }
-            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
-                privateCount++;
-                bc.Emit_Literal(DynValue.NewString(field.Name));
-            }
-            if (privateCount > 0) {
-                bc.Emit_SetPriv(privateCount);
-            }
+
             bc.Emit_TabProps(TableKind.Class, flags, false);
             classStoreLocal.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             //set global to class name
