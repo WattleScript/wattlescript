@@ -12,6 +12,8 @@ namespace WattleScript.Interpreter.Tree.Statements
 		{
 			public string Name { get; set; }
 			public Expression DefaultValue { get; set; }
+			
+			public bool IsThis { get; set; }
 
 			public FunctionParamRef(string name)
 			{

@@ -121,7 +121,10 @@ namespace WattleScript.Interpreter.Tree
 		New,
 		Mixin,
 		
+		Public,
 		Static,
+		Private,
+		Sealed,
 		
 		Using,
 		

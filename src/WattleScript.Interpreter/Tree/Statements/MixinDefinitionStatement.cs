@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
@@ -11,13 +12,11 @@ namespace WattleScript.Interpreter.Tree.Statements
     {
         private SymbolRefExpression storeValue;
         private string name;
-        private List<(string name, FunctionDefinitionExpression exp)> functions =
-            new List<(string name, FunctionDefinitionExpression exp)>();
-
         private GeneratedClosure init;
         private Annotation[] annotations;
-        private List<(string name, Expression exp)> fields 
-            = new List<(string name, Expression exp)>();
+        
+        private MemberCollection functions = new MemberCollection();
+        private MemberCollection fields = new MemberCollection();
 
         private SourceRef sourceRef;
         private RuntimeScopeBlock scopeBlock;
@@ -29,6 +28,8 @@ namespace WattleScript.Interpreter.Tree.Statements
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
             name = nameToken.Text;
             sourceRef = nameToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Brk_Open_Curly));
+            
+            MemberModifierFlags modifierFlags = MemberModifierFlags.None;
             //Body
             while (lcontext.Lexer.Current.Type != TokenType.Brk_Close_Curly &&
                    lcontext.Lexer.Current.Type != TokenType.Eof)
@@ -40,11 +41,18 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.SemiColon:
                         lcontext.Lexer.Next();
                         break;
+                    case TokenType.Public:
+                    case TokenType.Private:
+                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current, WattleMemberType.MixinMember);
+                        lcontext.Lexer.Next();
+                        break;
                     case TokenType.Function:
                     {
                         lcontext.Lexer.Next();
                         var funcName = CheckTokenType(lcontext, TokenType.Name);
-                        functions.Add((funcName.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+                        MemberUtilities.CheckReserved(funcName, "mixin");
+                        functions.Add(funcName, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false), modifierFlags, true);
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     case TokenType.Local: //var
@@ -56,16 +64,17 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.Name:
                     {
                         var T = lcontext.Lexer.Current;
+                        MemberUtilities.CheckReserved(T, "mixin");
                         lcontext.Lexer.Next();
                         switch (lcontext.Lexer.Current.Type)
                         {
                             case TokenType.Brk_Open_Round:
-                                functions.Add((T.Text, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false)));
+                                functions.Add(T, new FunctionDefinitionExpression(lcontext, SelfType.Implicit, false), modifierFlags, true);
                                 break;
                             case TokenType.Op_Assignment:
                                 lcontext.Lexer.Next();
                                 var exp = Expression.Expr(lcontext, true);
-                                fields.Add((T.Text, exp));
+                                fields.Add(T, exp, modifierFlags, false);
                                 break;
                             case TokenType.Comma: //no-op
                             case TokenType.SemiColon:
@@ -74,6 +83,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                                 CheckTokenType(lcontext, TokenType.SemiColon); //throws error
                                 break;
                         }
+                        modifierFlags = MemberModifierFlags.None;
                         break;
                     }
                     default:
@@ -93,8 +103,8 @@ namespace WattleScript.Interpreter.Tree.Statements
                 sym["table"].Compile(bc);
                 foreach (var field in fields)
                 {
-                    bc.Emit_Literal(DynValue.NewString(field.name));
-                    field.exp.CompilePossibleLiteral(bc);
+                    bc.Emit_Literal(DynValue.NewString(field.Name));
+                    field.Expr.CompilePossibleLiteral(bc);
                 }
                 bc.Emit_TblInitN(fields.Count * 2, 0);
                 bc.Emit_Ret(0);
@@ -110,14 +120,26 @@ namespace WattleScript.Interpreter.Tree.Statements
             bc.Emit_Literal(DynValue.NewString("functions"));
             foreach (var fn in functions)
             {
-                bc.Emit_Literal(DynValue.NewString(fn.name));
-                fn.exp.Compile(bc, () => 0, fn.name);
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
+                ((FunctionDefinitionExpression) fn.Expr).Compile(bc, fn.Name);
             }
             bc.Emit_TblInitN(functions.Count * 2, 1);
             bc.Emit_TblInitN(4, 1);
             //set metadata and store global
             foreach(var annot in annotations)
                 bc.Emit_Annot(annot);
+            int privateCount = 0;
+            foreach (var fn in functions.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(fn.Name));
+            }
+            foreach (var field in fields.Where(x => x.Flags.HasFlag(MemberModifierFlags.Private))) {
+                privateCount++;
+                bc.Emit_Literal(DynValue.NewString(field.Name));
+            }
+            if (privateCount > 0) {
+                bc.Emit_SetPriv(privateCount);
+            }
             bc.Emit_TabProps(TableKind.Mixin, MemberModifierFlags.None, true);
             storeValue.CompileAssignment(bc, Operator.NotAnOperator, 0, 0);
             bc.Emit_Leave(scopeBlock);
@@ -131,10 +153,10 @@ namespace WattleScript.Interpreter.Tree.Statements
             storeValue = new SymbolRefExpression(lcontext, lcontext.Scope.CreateGlobalReference(name));
             init.DefineLocal("table");
             foreach(var f in fields)
-                init.AddExpression(f.exp);
+                init.AddExpression(f.Expr);
             init.ResolveScope(lcontext);
             foreach(var f in functions)
-                f.exp.ResolveScope(lcontext);
+                f.Expr.ResolveScope(lcontext);
             scopeBlock = lcontext.Scope.PopBlock();
         }
     }

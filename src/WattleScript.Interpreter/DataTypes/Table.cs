@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using WattleScript.Interpreter.DataStructs;
 
 namespace WattleScript.Interpreter
 {
@@ -10,15 +9,30 @@ namespace WattleScript.Interpreter
 	/// </summary>
 	public class Table : RefIdObject, IScriptPrivateResource
 	{
-		readonly LinkedList<TablePair> m_Values;
-		readonly LinkedListIndex<DynValue, TablePair> m_ValueMap;
-		readonly LinkedListIndex<string, TablePair> m_StringMap;
-		readonly LinkedListArrayIndex<TablePair> m_ArrayMap;
+		private const int ARRAY_PART_THRESHOLD = 5;
+		
+		private readonly LinkedList<TablePair> valueList = new LinkedList<TablePair>();
+		readonly Dictionary<DynValue, LinkedListNode<TablePair>> valueMap = new Dictionary<DynValue, LinkedListNode<TablePair>>();
+		private DynValue[] arrayPart = null;
+		int arrayLength = 0;
+		
+		//Bit 31 = ReadOnly
+		//Bit 30 = ContainsNilEntries
+		//Other bits = TableKind.
+		private uint kindVal = 0;
 
-		int m_InitArray = 0;
-		int m_CachedLength = -1;
-		bool m_ContainsNilEntries = false;
-		int m_IndexFrom => OwnerScript?.Options.IndexTablesFrom ?? 1;
+		private bool containsNilEntries
+		{
+			get => (kindVal & 0x40000000) != 0;
+			set
+			{
+				if (value) kindVal |= 0x40000000;
+				else kindVal &= ~0x40000000U;
+			}
+		}
+
+		
+		int indexFrom => OwnerScript?.Options.IndexTablesFrom ?? 1;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Table"/> class.
@@ -26,10 +40,6 @@ namespace WattleScript.Interpreter
 		/// <param name="owner">The owner script.</param>
 		public Table(Script owner)
 		{
-			m_Values = new LinkedList<TablePair>();
-			m_StringMap = new LinkedListIndex<string, TablePair>(m_Values);
-			m_ArrayMap = new LinkedListArrayIndex<TablePair>(m_Values);
-			m_ValueMap = new LinkedListIndex<DynValue, TablePair>(m_Values);
 			OwnerScript = owner;
 		}
 
@@ -43,7 +53,7 @@ namespace WattleScript.Interpreter
 		{
 			for (int i = 0; i < arrayValues.Length; i++)
 			{
-				Set(DynValue.NewNumber(i + m_IndexFrom), arrayValues[i]);
+				Set(DynValue.NewNumber(i + indexFrom), arrayValues[i]);
 			}
 		}
 
@@ -51,49 +61,69 @@ namespace WattleScript.Interpreter
 		/// Gets the script owning this resource.
 		/// </summary>
 		public Script OwnerScript { get; }
-		
+
 		/// <summary>
 		/// Gets/sets if this is a ReadOnly table.
 		/// Writing to a ReadOnly table will throw an exception
 		/// </summary>
-		public bool ReadOnly { get; set; }
-		
+		public bool ReadOnly
+		{
+			get => (kindVal & 0x80000000) != 0;
+			set
+			{
+				if (value) kindVal |= 0x80000000;
+				else kindVal &= ~0x80000000U;
+			}
+		}
+
 		/// <summary>
 		/// Gets/sets the kind of table.
 		/// This is only for metadata purposes, and does not affect execution.
 		/// </summary>
-		public TableKind Kind { get; set; }
+		public TableKind Kind
+		{
+			get => (TableKind)(kindVal & 0x3FFFFFFF);
+			set => kindVal = kindVal & 0xC0000000 | (uint)value & 0x3FFFFFFF;
+		}
 		
 		/// <summary>
 		/// Gets/sets the modifiers of table.
 		/// This is only for metadata purposes, and does not affect execution.
 		/// </summary>
 		public MemberModifierFlags ModifierFlags { get; set; }
+		
+		/// <summary>
+		/// Holds information relating to private keys (if present)
+		/// </summary>
+		public PrivateKeyInfo PrivateKeys { get; set; }
 
 		/// <summary>
 		/// Removes all items from the Table.
 		/// </summary>
 		public void Clear()
 		{
-			m_Values.Clear();
-			m_StringMap.Clear();
-			m_ArrayMap.Clear();
-			m_ValueMap.Clear();
-            m_CachedLength = -1;
+			valueList.Clear();
+			valueMap.Clear();
+			arrayLength = 0;
+			arrayPart = null;
 		}
 
 		/// <summary>
 		/// Gets the integral key from a double.
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private int GetIntegralKey(double d)
+		private bool TryGetIntegralKey(ref DynValue dv, out int k)
 		{
-			int v = (int)d;
-
-			if (d >= m_IndexFrom && d == v)
-				return v;
-
-			return -1;
+			if (dv.Type != DataType.Number)
+			{
+				k = -1;
+				return false;
+			}
+			k = (int)dv.Number;
+			// ReSharper disable once CompareOfFloatsByEqualityOperator
+			if (dv.Number == k)
+				return true;
+			return false;
 		}
 		
 		/// <summary>
@@ -141,13 +171,10 @@ namespace WattleScript.Interpreter
 
 		private Table ResolveMultipleKeys(object[] keys, out object key)
 		{
-			//Contract.Ensures(Contract.Result<Table>() != null);
-			//Contract.Requires(keys != null);
-
 			Table t = this;
 			key = (keys.Length > 0) ? keys[0] : null;
 
-			for (int i = m_IndexFrom; i < keys.Length; ++i)
+			for (int i = indexFrom; i < keys.Length; ++i)
 			{
 				DynValue vt = t.RawGet(key);
 
@@ -183,7 +210,7 @@ namespace WattleScript.Interpreter
 		public void Append(DynValue value)
 		{
 			this.CheckScriptOwnership(value);
-			PerformTableSet(m_ArrayMap, Length + m_IndexFrom, DynValue.NewNumber(Length + m_IndexFrom), value, true, Length + m_IndexFrom);
+			PerformTableSet(DynValue.NewNumber(Length + indexFrom), value);
 		}
 		
 		/// <summary>
@@ -209,46 +236,103 @@ namespace WattleScript.Interpreter
 
 		#region Set
 
-		private void PerformTableSet<T>(LinkedListIndex<T, TablePair> listIndex, T key, DynValue keyDynValue, DynValue value, bool isNumber, int appendKey)
+		LinkedListNode<TablePair> MapFind(DynValue key)
 		{
-			TablePair prev = listIndex.Set(key, new TablePair(keyDynValue, value));
+			valueMap.TryGetValue(key, out var pair);
+			return pair;
+		}
+		
+		void MapAdd(DynValue key, DynValue value)
+		{
+			var node = valueList.AddLast(new TablePair(key, value));
+			valueMap.Add(key, node);
+		}
+		
+		TablePair MapSet(DynValue key, DynValue value)
+		{
+			LinkedListNode<TablePair> node = MapFind(key);
 
-			// If this is an insert, we can invalidate all iterators and collect dead keys
-			if (m_ContainsNilEntries && value.IsNotNil() && prev.Value.IsNil())
+			if (node == null)
 			{
-				CollectDeadKeys();
+				MapAdd(key, value);
+				return default;
 			}
-			// If this value is nil (and we didn't collect), set that there are nil entries, and invalidate array len cache
-			else if (value.IsNil())
+			else
 			{
-				m_ContainsNilEntries = true;
+				TablePair val = node.Value;
+				node.Value = new TablePair(key, value);
+				return val;
+			}
+		}
 
-				if (isNumber)
-					m_CachedLength = -1;
-			}
-			else if (isNumber)
+		bool KeyInArray(int ik)
+		{
+			return (ik >= 0 && ik <= (arrayPart?.Length ?? 0) + ARRAY_PART_THRESHOLD);
+		}
+
+		int GetNewLength(int minLength)
+		{
+			int i = arrayPart == null ? ARRAY_PART_THRESHOLD : arrayPart.Length * 2;
+			while (valueMap.TryGetValue(DynValue.NewNumber(i), out var node) &&
+			       node.Value.Value.IsNotNil())
+				i++;
+			if (i < minLength) return minLength;
+			return i;
+		}
+
+		void MapToArray(int oldLength)
+		{
+			if (valueMap.Count == 0) return; //Pure array
+			for (int i = oldLength; i < arrayPart.Length; i++)
 			{
-				// If this is an array insert, we might have to invalidate the array length
-				if (prev.Value.IsNilOrNan())
-				{
-					// If this is an array append, let's check the next element before blindly invalidating
-					if (appendKey >= 0)
-					{
-						LinkedListNode<TablePair> next = m_ArrayMap.Find(appendKey + 1);
-						if (next == null ||  next.Value.Value.IsNil())
-						{
-							m_CachedLength += 1;
-						}
-						else
-						{
-							m_CachedLength = -1;
-						}
-					}
-					else
-					{
-						m_CachedLength = -1;
-					}
+				var k = DynValue.NewNumber(i);
+				if (valueMap.TryGetValue(k, out var node)) {
+					arrayPart[i] = node.Value.Value;
+					valueList.Remove(node);
+					valueMap.Remove(k);
+					if (arrayLength < i && arrayPart[i].IsNotNil()) arrayLength = i + 1;
 				}
+			}
+		}
+
+		private void PerformTableSet(DynValue key, DynValue value)
+		{
+			if (TryGetIntegralKey(ref key, out var ik) &&
+			    KeyInArray(ik))
+			{
+				if (arrayPart == null) {
+					arrayPart = new DynValue[GetNewLength(ik + 1)];
+					MapToArray(0);
+				}
+				else if (arrayPart.Length <= ik) {
+					int oldLength = arrayPart.Length;
+					Array.Resize(ref arrayPart, GetNewLength(ik + 1));
+					MapToArray(oldLength);
+				}
+				
+				arrayPart[ik] = value;
+				if (value.IsNil() && arrayLength > ik)
+					arrayLength = ik;
+				else if (value.IsNotNil() && arrayLength <= ik)
+				{
+					//Scan to find new array length
+					for(; ik < arrayPart.Length; ik++) {
+						if (arrayPart[ik].IsNil()) break;
+					}
+					arrayLength = ik;
+				}
+			}
+			else
+			{
+				TablePair prev = MapSet(key, value);
+				// If this is an insert, we can invalidate all iterators and collect dead keys
+				if (containsNilEntries && value.IsNotNil() && prev.Value.IsNil())
+				{
+					CollectDeadKeys();
+				}
+				// If this value is nil (and we didn't collect), set that there are nil entries
+				if (value.IsNil())
+					containsNilEntries = true;
 			}
 		}
 
@@ -263,7 +347,7 @@ namespace WattleScript.Interpreter
 				throw ScriptRuntimeException.TableIndexIsNil();
 
 			this.CheckScriptOwnership(value);
-			PerformTableSet(m_StringMap, key, DynValue.NewString(key), value, false, -1);
+			PerformTableSet(DynValue.NewString(key), value);
 		}
 
 		/// <summary>
@@ -274,7 +358,7 @@ namespace WattleScript.Interpreter
 		public void Set(int key, DynValue value)
 		{
 			this.CheckScriptOwnership(value);
-			PerformTableSet(m_ArrayMap, key, DynValue.NewNumber(key), value, true, -1);
+			PerformTableSet(DynValue.NewNumber(key), value);
 		}
 		
 		/// <summary>
@@ -302,27 +386,10 @@ namespace WattleScript.Interpreter
 					throw ScriptRuntimeException.TableIndexIsNaN();
 			}
 
-			if (key.Type == DataType.String)
-			{
-				Set(key.String, value);
-				return;
-			}
-
-			if (key.Type == DataType.Number)
-			{
-				int idx = GetIntegralKey(key.Number);
-
-				if (idx >= m_IndexFrom)
-				{
-					Set(idx, value);
-					return;
-				}
-			}
-
 			this.CheckScriptOwnership(key);
 			this.CheckScriptOwnership(value);
 
-			PerformTableSet(m_ValueMap, key, key, value, false, -1);
+			PerformTableSet(key, value);
 		}
 
 		/// <summary>
@@ -335,13 +402,7 @@ namespace WattleScript.Interpreter
 			if (ReadOnly) throw ScriptRuntimeException.TableIsReadonly();
 			if (key == null)
 				throw ScriptRuntimeException.TableIndexIsNil();
-
-			if (key is string)
-				Set((string)key, value);
-			else if (key is int)
-				Set((int)key, value);
-			else
-				Set(DynValue.FromObject(OwnerScript, key), value);
+			Set(DynValue.FromObject(OwnerScript, key), value);
 		}
 
 		/// <summary>
@@ -422,30 +483,19 @@ namespace WattleScript.Interpreter
 
 		#region RawGet
 
-		private static DynValue RawGetValue(LinkedListNode<TablePair> linkedListNode)
-		{
-			return (linkedListNode != null) ? linkedListNode.Value.Value : DynValue.Nil;
-		}
+		/// <summary>
+		/// Gets the value associated with the specified key,
+		/// without bringing to Nil the non-existant values.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		public DynValue RawGet(string key) => RawGet(DynValue.NewString(key));
 
 		/// <summary>
 		/// Gets the value associated with the specified key,
 		/// without bringing to Nil the non-existant values.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		public DynValue RawGet(string key)
-		{
-			return RawGetValue(m_StringMap.Find(key));
-		}
-
-		/// <summary>
-		/// Gets the value associated with the specified key,
-		/// without bringing to Nil the non-existant values.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		public DynValue RawGet(int key)
-		{
-			return RawGetValue(m_ArrayMap.Find(key));
-		}
+		public DynValue RawGet(int key) => RawGet(DynValue.NewNumber(key));
 
 		/// <summary>
 		/// Gets the value associated with the specified key,
@@ -454,17 +504,13 @@ namespace WattleScript.Interpreter
 		/// <param name="key">The key.</param>
 		public DynValue RawGet(DynValue key)
 		{
-			if (key.Type == DataType.String)
-				return RawGet(key.String);
-
-			if (key.Type == DataType.Number)
+			if (TryGetIntegralKey(ref key, out int ik) && KeyInArray(ik))
 			{
-				int idx = GetIntegralKey(key.Number);
-				if (idx >= m_IndexFrom)
-					return RawGet(idx);
+				if (arrayPart == null || arrayPart.Length <= ik) return DynValue.Nil;
+				return arrayPart[ik];
 			}
-
-			return RawGetValue(m_ValueMap.Find(key));
+			var node = MapFind(key);
+			return (node != null) ? node.Value.Value : DynValue.Nil;
 		}
 
 		/// <summary>
@@ -472,19 +518,7 @@ namespace WattleScript.Interpreter
 		/// without bringing to Nil the non-existant values.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		public DynValue RawGet(object key)
-		{
-			if (key == null)
-				return DynValue.Nil;
-
-			if (key is string)
-				return RawGet((string)key);
-
-			if (key is int)
-				return RawGet((int)key);
-
-			return RawGet(DynValue.FromObject(OwnerScript, key));
-		}
+		public DynValue RawGet(object key) => RawGet(DynValue.FromObject(OwnerScript, key));
 
 		/// <summary>
 		/// Gets the value associated with the specified keys (expressed as an
@@ -505,58 +539,53 @@ namespace WattleScript.Interpreter
 		#endregion
 
 		#region Remove
-
-		private bool PerformTableRemove<T>(LinkedListIndex<T, TablePair> listIndex, T key, bool isNumber)
+		
+		bool MapRemove(DynValue key)
 		{
-			var removed = listIndex.Remove(key);
-
-			if (removed && isNumber)
+			LinkedListNode<TablePair> node = MapFind(key);
+			if (node != null)
 			{
-				m_CachedLength = -1;
+				valueList.Remove(node);
+				return valueMap.Remove(key);
 			}
-
-			return removed;
+			return false;
 		}
 
-		/// <summary>
-		/// Remove the value associated with the specified key from the table.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
-		public bool Remove(string key)
+		private bool PerformTableRemove(DynValue key)
 		{
-			return PerformTableRemove(m_StringMap, key, false);
-		}
-
-		/// <summary>
-		/// Remove the value associated with the specified key from the table.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
-		public bool Remove(int key)
-		{
-			return PerformTableRemove(m_ArrayMap, key, true);
-		}
-
-		/// <summary>
-		/// Remove the value associated with the specified key from the table.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
-		public bool Remove(DynValue key)
-		{
-			if (key.Type == DataType.String)
-				return Remove(key.String);
-
-			if (key.Type == DataType.Number)
+			if (TryGetIntegralKey(ref key, out int ik) && KeyInArray(ik))
 			{
-				int idx = GetIntegralKey(key.Number);
-				if (idx >= m_IndexFrom)
-					return Remove(idx);
+				if (arrayPart == null || ik >= arrayPart.Length) return false;
+				var retval = arrayPart[ik].IsNotNil();
+				arrayPart[ik] = DynValue.Nil;
+				if (ik < arrayLength) arrayLength = ik;
+				return retval;
 			}
-
-			return PerformTableRemove(m_ValueMap, key, false);
+			return MapRemove(key);
 		}
+
+		/// <summary>
+		/// Remove the value associated with the specified key from the table.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
+		public bool Remove(string key) => PerformTableRemove(DynValue.NewString(key));
+
+		/// <summary>
+		/// Remove the value associated with the specified key from the table.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
+		public bool Remove(int key) => PerformTableRemove(DynValue.NewNumber(key));
+		
+
+		/// <summary>
+		/// Remove the value associated with the specified key from the table.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
+		public bool Remove(DynValue key) => PerformTableRemove(key);
+		
 
 		/// <summary>
 		/// Remove the value associated with the specified key from the table.
@@ -565,12 +594,6 @@ namespace WattleScript.Interpreter
 		/// <returns><c>true</c> if values was successfully removed; otherwise, <c>false</c>.</returns>
 		public bool Remove(object key)
 		{
-			if (key is string)
-				return Remove((string)key);
-
-			if (key is int)
-				return Remove((int)key);
-
 			return Remove(DynValue.FromObject(OwnerScript, key));
 		}
 
@@ -598,7 +621,7 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public void CollectDeadKeys()
 		{
-			for (LinkedListNode<TablePair> node = m_Values.First; node != null; node = node.Next)
+			for (LinkedListNode<TablePair> node = valueList.First; node != null; node = node.Next)
 			{
 				if (node.Value.Value.IsNil())
 				{
@@ -606,47 +629,58 @@ namespace WattleScript.Interpreter
 				}
 			}
 
-			m_ContainsNilEntries = false;
-			m_CachedLength = -1;
+			containsNilEntries = false;
 		}
 
 
 		/// <summary>
 		/// Returns the next pair from a value
 		/// </summary>
+
+		TablePair? FirstMapNode()
+		{
+			LinkedListNode<TablePair> node = valueList.First;
+			if (node == null)
+				return TablePair.Nil;
+			else
+			{
+				if (node.Value.Value.IsNil())
+					return NextKey(node.Value.Key);
+				else
+					return node.Value;
+			}
+		}
 		public TablePair? NextKey(DynValue v)
 		{
 			if (v.IsNil())
 			{
-				LinkedListNode<TablePair> node = m_Values.First;
-
-				if (node == null)
-					return TablePair.Nil;
-				else
+				if (arrayPart != null)
 				{
-					if (node.Value.Value.IsNil())
-						return NextKey(node.Value.Key);
-					else
-						return node.Value;
+					for (int i = 0; i < arrayPart.Length; i++)
+					{
+						if (arrayPart[i].IsNotNil())
+							return new TablePair(DynValue.NewNumber(i), arrayPart[i]);
+					}
 				}
+				return FirstMapNode();
 			}
 
-			if (v.Type == DataType.String)
+			if (arrayPart != null && TryGetIntegralKey(ref v, out int ik) &&
+			    KeyInArray(ik))
 			{
-				return GetNextOf(m_StringMap.Find(v.String));
-			}
-
-			if (v.Type == DataType.Number)
-			{
-				int idx = GetIntegralKey(v.Number);
-
-				if (idx >= m_IndexFrom)
+				//Invalid array index
+				if (ik >= arrayPart.Length || arrayPart[ik].IsNil())
+					return null;
+				//Search
+				for (int i = ik + 1; i < arrayPart.Length; i++)
 				{
-					return GetNextOf(m_ArrayMap.Find(idx));
+					if (arrayPart[i].IsNotNil())
+						return new TablePair(DynValue.NewNumber(i), arrayPart[i]);
 				}
+				return FirstMapNode();
 			}
 
-			return GetNextOf(m_ValueMap.Find(v));
+			return GetNextOf(MapFind(v));
 		}
 
 		private TablePair? GetNextOf(LinkedListNode<TablePair> linkedListNode)
@@ -670,42 +704,8 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// Gets the length of the "array part".
 		/// </summary>
-		public int Length
-		{
-			get
-			{
-				if (m_CachedLength < 0)
-				{
-					m_CachedLength = 0;
-
-					for (int i = m_IndexFrom; m_ArrayMap.ContainsKey(i) && !m_ArrayMap.Find(i).Value.Value.IsNil(); i++)
-						m_CachedLength++;
-				}
-
-				return m_CachedLength;
-			}
-		}
-
-		internal void InitNextArrayKeys(DynValue val, bool lastpos)
-		{
-			if (val.Type == DataType.Tuple && lastpos)
-			{
-				foreach (DynValue v in val.Tuple)
-					InitNextArrayKeys(v, true);
-			}
-			else
-			{
-				if (m_IndexFrom > 0)
-				{
-					Set(++m_InitArray, val.ToScalar());	
-				}
-				else
-				{
-					Set(m_InitArray++, val.ToScalar());	
-				}
-			}
-		}
-
+		public int Length => arrayLength - indexFrom < 0 ? 0 : arrayLength - indexFrom;
+		
 		/// <summary>
 		/// Gets the meta-table associated with this instance.
 		/// </summary>
@@ -721,54 +721,83 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		public List<Annotation> Annotations { get; set; }
 
-
+		IEnumerable<TablePair> IteratePairs()
+		{
+			if (arrayPart != null) {
+				for (int i = 0; i < arrayPart.Length; i++)
+				{
+					if (arrayPart[i].IsNotNil())
+						yield return new TablePair(DynValue.NewNumber(i), arrayPart[i]);
+				}
+			}
+			foreach (var x in valueList)
+				yield return x;
+		}
 
 		/// <summary>
 		/// Enumerates the key/value pairs.
 		/// </summary>
 		/// <returns></returns>
-		public IEnumerable<TablePair> Pairs
+		public IEnumerable<TablePair> Pairs => IteratePairs();
+
+		
+		IEnumerable<DynValue> IterateKeys()
 		{
-			get
-			{
-				return m_Values.Select(n => new TablePair(n.Key, n.Value));
+			if (arrayPart != null) {
+				for (int i = 0; i < arrayPart.Length; i++)
+				{
+					if (arrayPart[i].IsNotNil())
+						yield return DynValue.NewNumber(i);
+				}
 			}
+			foreach (var x in valueList)
+				yield return x.Key;
 		}
 
 		/// <summary>
 		/// Enumerates the keys.
 		/// </summary>
 		/// <returns></returns>
-		public IEnumerable<DynValue> Keys
+		public IEnumerable<DynValue> Keys => IterateKeys();
+
+		
+		IEnumerable<DynValue> IterateValues()
 		{
-			get
-			{
-				return m_Values.Select(n => n.Key);
+			if (arrayPart != null) {
+				for (int i = 0; i < arrayPart.Length; i++)
+				{
+					if (arrayPart[i].IsNotNil())
+						yield return arrayPart[i];
+				}
 			}
+			foreach (var x in valueList)
+				yield return x.Value;
 		}
 
 		/// <summary>
 		/// Enumerates the values
 		/// </summary>
 		/// <returns></returns>
-		public IEnumerable<DynValue> Values
+		public IEnumerable<DynValue> Values => IterateValues();
+
+
+		IEnumerable<DynValue> IteratePairsReverse()
 		{
-			get
-			{
-				return m_Values.Select(n => n.Value);
+			if (arrayPart != null) {
+				for (int i = 0; i < arrayPart.Length; i++)
+				{
+					if (arrayPart[i].IsNotNil())
+						yield return DynValue.NewTuple( arrayPart[i], DynValue.NewNumber(i));
+				}
 			}
+			foreach (var x in valueList)
+				yield return DynValue.NewTuple(x.Value, x.Key);
 		}
-		
+
 		/// <summary>
 		/// Enumerates value, key
 		/// </summary>
 
-		public IEnumerable<DynValue> ReversePair
-		{
-			get
-			{
-				return m_Values.Select(n => DynValue.NewTuple(n.Value, n.Key));
-			}
-		}
+		public IEnumerable<DynValue> ReversePair => IteratePairsReverse();
 	}
 }

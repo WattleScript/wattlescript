@@ -17,7 +17,7 @@ namespace WattleScript.Interpreter.Tree
 		public abstract void Compile(FunctionBuilder bc);
 
 
-		protected static Token UnexpectedTokenType(Token t)
+		internal static Token UnexpectedTokenType(Token t)
 		{
 			throw new SyntaxErrorException(t, "unexpected symbol near '{0}'", t.Text)
 			{

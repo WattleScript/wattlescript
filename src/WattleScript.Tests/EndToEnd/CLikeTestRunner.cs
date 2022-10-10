@@ -23,7 +23,7 @@ public class CLikeTestRunner
     }
     
     [Test, TestCaseSource(nameof(GetTestCases))]
-    public async Task RunThrowErros(string path)
+    public async Task RunThrowErrors(string path)
     {
         await RunCore(path);
     }

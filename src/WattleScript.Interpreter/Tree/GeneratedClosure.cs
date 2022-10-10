@@ -55,7 +55,10 @@ namespace WattleScript.Interpreter.Tree
             }
             foreach (var s in locals)
             {
-                referenced[s] = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(s));
+                if (s == "this")
+                    referenced[s] = new SymbolRefExpression(lcontext, lcontext.Scope.DefineThisArg("this"));
+                else
+                    referenced[s] = new SymbolRefExpression(lcontext, lcontext.Scope.DefineLocal(s));
             }
             extra?.Invoke(lcontext);
             foreach(var e in toResolve) e.ResolveScope(lcontext);

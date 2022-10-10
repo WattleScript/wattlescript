@@ -199,9 +199,23 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public int Emit_TabProps(TableKind kind, MemberModifierFlags flags, bool isReadOnly)
 		{
-			return AppendInstruction(new Instruction(OpCode.TabProps, (int) kind, (int)flags, isReadOnly ? (uint)1 : 0));
+			return AppendInstruction(new Instruction(OpCode.TabProps, (int) flags, (int)kind, isReadOnly ? (uint)1 : 0));
 		}
 		
+		public int Emit_SetPriv(int num)
+		{
+			return AppendInstruction(new Instruction(OpCode.SetPriv, num));
+		}
+		
+		public int Emit_MergePriv(int src, int dst)
+		{
+			return AppendInstruction(new Instruction(OpCode.MergePriv, src, dst));
+		}
+		
+		public int Emit_CopyPriv()
+		{
+			return AppendInstruction(new Instruction(OpCode.CopyPriv));
+		}
 
 		public int Emit_Pop(int num = 1)
 		{
@@ -265,7 +279,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						if (itemCount > 0) 
 						{
 							//We don't support tuples so we don't need lastpos
-							Emit_TblInitI(false, itemCount, 2);
+							Emit_TblInitI(0, itemCount, 2, false);
 							created = true;
 						}
 						tblInitI = false;
@@ -296,7 +310,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			if (itemCount > 0 || !created) {
 				if (tblInitI && itemCount > 0)
 				{
-					Emit_TblInitI(false, itemCount, 2);
+					Emit_TblInitI(0, itemCount, 2, false);
 				}
 				else {
 					Emit_TblInitN(itemCount * 2, created ? 0 : 2);
@@ -569,7 +583,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public int Emit_SetMetaTab()
 		{
-			return AppendInstruction(new Instruction(OpCode.SetMetaTab));
+			return AppendInstruction(new Instruction(OpCode.SetMetaTab, 0));
 		}
 		
 		public int Emit_SetMetaTab(string name)
@@ -577,23 +591,26 @@ namespace WattleScript.Interpreter.Execution.VM
 			return AppendInstruction(new Instruction(OpCode.SetMetaTab, StringArg(name)));
 		}
 
-		public int Emit_TblInitI(bool lastpos, int count, int create)
+		public int Emit_TblInitI(int start, int count, int create, bool lastpos)
 		{
-			return AppendInstruction(new Instruction(OpCode.TblInitI, count, lastpos ? 1 : 0, (uint)create));
+			if (lastpos) create |= 0x80;
+			return AppendInstruction(new Instruction(OpCode.TblInitI, start, count, (uint)create));
 		}
 
-		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false)
+		public int Emit_Index(string index = null, bool isNameIndex = false, bool isExpList = false, bool isMethodCall = false, bool accessPrivate = false)
 		{
 			OpCode o;
 			if (isNameIndex) o = OpCode.IndexN;
 			else if (isExpList) o = OpCode.IndexL;
 			else o = OpCode.Index;
-			return AppendInstruction(new Instruction(o, StringArg(index), isMethodCall ? 1 : 0));
+			return AppendInstruction(new Instruction(o, StringArg(index), isMethodCall ? 1 : 0, accessPrivate ? 1U : 0));
 		}
 
-		public int Emit_IndexSet(int stackofs, int tupleidx, string index = null, bool isNameIndex = false, bool isExpList = false)
+		public int Emit_IndexSet(int stackofs, int tupleidx, string index = null, bool isNameIndex = false, bool isExpList = false, bool accessPrivate = false)
 		{
 			OpCode o;
+			if (stackofs >= 0x40000000) throw new InternalErrorException("stackofs >= 0x40000000");
+			if (accessPrivate) stackofs |= 0x40000000;
 			if (isNameIndex) o = OpCode.IndexSetN;
 			else if (isExpList) o = OpCode.IndexSetL;
 			else o = OpCode.IndexSet;
