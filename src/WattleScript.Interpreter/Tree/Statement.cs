@@ -245,8 +245,9 @@ namespace WattleScript.Interpreter.Tree
 					return new ClassDefinitionStatement(lcontext);
 				case TokenType.Mixin:
 					return new MixinDefinitionStatement(lcontext);
-				// all member modifier keywords
+				// all member modifier keywords 
 				case TokenType.Static:
+				case TokenType.Sealed:
 					lcontext.Lexer.SavePos();
 					HashSet<string> flags = new HashSet<string>();
 

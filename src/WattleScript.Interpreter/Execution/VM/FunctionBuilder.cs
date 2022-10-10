@@ -583,7 +583,7 @@ namespace WattleScript.Interpreter.Execution.VM
 
 		public int Emit_SetMetaTab()
 		{
-			return AppendInstruction(new Instruction(OpCode.SetMetaTab));
+			return AppendInstruction(new Instruction(OpCode.SetMetaTab, 0));
 		}
 		
 		public int Emit_SetMetaTab(string name)

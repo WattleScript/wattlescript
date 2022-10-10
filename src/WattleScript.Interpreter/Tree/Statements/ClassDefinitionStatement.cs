@@ -50,10 +50,9 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
-            
             while (lcontext.Lexer.Current.IsMemberModifier())
             {
-                MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current);
+                MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current, WattleMemberType.Class);
                 lcontext.Lexer.Next();
             }
             
@@ -108,7 +107,7 @@ namespace WattleScript.Interpreter.Tree.Statements
                     case TokenType.Public:
                     case TokenType.Static:
                     case TokenType.Private:
-                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current);
+                        MemberUtilities.AddModifierFlag(ref modifierFlags, lcontext.Lexer.Current, WattleMemberType.ClassMember);
                         lcontext.Lexer.Next();
                         break;
                     case TokenType.Function:
