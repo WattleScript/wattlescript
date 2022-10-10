@@ -1,12 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>1.0.0</Version>
+        <Title>WattleScript.Hardwire</Title>
+        <Authors>WattleScript Contributors</Authors>
+        <Description>WattleScript is a scripting engine written in C# for runtimes supporting .NET Standard 2.0 and newer. (.NET 4.7.2+, .NET Core 3.1+). It is a dual-language environment, providing support for Lua 5.2 code as well as its own language, Wattle.</Description>
+        <PackageProjectUrl>https://wattlescript.github.io/</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/WattleScript/wattlescript/blob/main/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/WattleScript/wattlescript</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>wattle,embedded-language,dsl,lua,scripting</PackageTags>
+        <PackageReleaseNotes>Milestone 6 (beta 1)
+https://github.com/WattleScript/wattlescript/wiki/roadmap#milestone-6-completed-101022</PackageReleaseNotes>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <PackageIcon>wattlescript-2.png</PackageIcon>
+        <TargetFrameworks>net5.0;net6.0;net7.0;netstandard2.0;netstandard2.1</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
       <ProjectReference Include="..\WattleScript.Interpreter\WattleScript.Interpreter.csproj" />
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="System.CodeDom" Version="4.7.0" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="..\WattleScript\wattlescript-2.png">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+        <Link>wattlescript-2.png</Link>
+      </None>
     </ItemGroup>
 </Project>
  

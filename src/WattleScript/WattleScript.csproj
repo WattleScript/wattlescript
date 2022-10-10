@@ -1,13 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+      <LangVersion>10</LangVersion>
+      <ApplicationIcon>wattlescript.ico</ApplicationIcon>
+      <AssemblyVersion>0.6</AssemblyVersion>
+      <FileVersion>0.6</FileVersion>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>0.6-beta1</Version>
+        <Title>WattleScript</Title>
+        <Authors>WattleScript Contributors</Authors>
+        <Description>WattleScript is a scripting engine written in C# for runtimes supporting .NET Standard 2.0 and newer. (.NET 4.7.2+, .NET Core 3.1+). It is a dual-language environment, providing support for Lua 5.2 code as well as its own language, Wattle.</Description>
+        <PackageProjectUrl>https://wattlescript.github.io/</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/WattleScript/wattlescript/blob/main/LICENSE</PackageLicenseUrl>
+        <PackageIcon>wattlescript-2.png</PackageIcon>
+        <RepositoryUrl>https://github.com/WattleScript/wattlescript</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>wattle,embedded-language,dsl,lua,scripting</PackageTags>
+        <PackageReleaseNotes>Milestone 6 (beta 1)
+https://github.com/WattleScript/wattlescript/wiki/roadmap#milestone-6-completed-101022</PackageReleaseNotes>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\WattleScript.Hardwire\WattleScript.Hardwire.csproj" />
       <ProjectReference Include="..\WattleScript.Interpreter\WattleScript.Interpreter.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="wattlescript-2.png" />
+      <Content Include="wattlescript-2.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </Content>
     </ItemGroup>
 
 </Project>

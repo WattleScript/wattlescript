@@ -5,6 +5,7 @@ using System.Reflection;
 using WattleScript.Interpreter.DataStructs;
 using WattleScript.Interpreter.Interop.BasicDescriptors;
 using WattleScript.Interpreter.Interop.StandardDescriptors;
+using ReferenceEqualityComparer = WattleScript.Interpreter.DataStructs.ReferenceEqualityComparer;
 
 namespace WattleScript.Interpreter.Interop
 {
