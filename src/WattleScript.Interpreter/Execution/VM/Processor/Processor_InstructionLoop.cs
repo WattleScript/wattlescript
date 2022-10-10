@@ -286,9 +286,12 @@ namespace WattleScript.Interpreter.Execution.VM
 							ref var tab = ref m_ValueStack.Peek();
 							if (top.Type != DataType.Table) throw new InternalErrorException("v-stack top NOT table");
 							if (tab.Type != DataType.Table) throw new InternalErrorException("v-stack tab NOT table");
-							if (top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static))
+							
+							// (NumVal > 0) -> whether base class is present
+							if (i.NumVal > 0 && (top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static) || top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Sealed)))
 							{
-								throw ScriptRuntimeException.BaseInvalidModifier(MemberModifierFlags.Static.ToString().ToLowerInvariant(), top.Table.Get("Name").String ?? "(null)", currentFrame.Function.strings[i.NumVal]);
+								string modifier = top.Table.ModifierFlags.HasFlag(MemberModifierFlags.Static) ? "static" : "sealed";
+								throw ScriptRuntimeException.BaseInvalidModifier(modifier, top.Table.Get("Name").String ?? "(null)", currentFrame.Function.strings[i.NumVal]);
 							}
 							tab.Table.MetaTable = top.Table;
 							break;

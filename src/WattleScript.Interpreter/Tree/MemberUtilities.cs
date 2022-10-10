@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace WattleScript.Interpreter.Tree
 {
@@ -12,10 +13,11 @@ namespace WattleScript.Interpreter.Tree
             "__tostring",
         };
 
-        private static readonly (MemberModifierFlags a, MemberModifierFlags b, string msg)[] flagConflicts =
+        private static readonly (MemberModifierFlags a, MemberModifierFlags? b, WattleMemberType appliesTo, string msg)[] flagConflicts =
         {
-            (MemberModifierFlags.Private, MemberModifierFlags.Static, "members declared static may not be private"),
-            (MemberModifierFlags.Public, MemberModifierFlags.Private, null)
+            (MemberModifierFlags.Private, MemberModifierFlags.Static, WattleMemberType.ClassMember, "members declared static may not be private"),
+            (MemberModifierFlags.Public, MemberModifierFlags.Private, WattleMemberType.Any, null),
+            (MemberModifierFlags.Sealed, MemberModifierFlags.Static, WattleMemberType.Any, null)
         };
 
         public static void CheckReserved(Token name, string buildKind)
@@ -26,7 +28,7 @@ namespace WattleScript.Interpreter.Tree
             }
         }
         
-        public static void AddModifierFlag(ref MemberModifierFlags source, Token token)
+        public static void AddModifierFlag(ref MemberModifierFlags source, Token token, WattleMemberType memberType)
         {
             var flag = token.ToMemberModiferFlag();
             if (source.HasFlag(flag))
@@ -37,14 +39,18 @@ namespace WattleScript.Interpreter.Tree
             
             foreach (var combo in flagConflicts)
             {
-                if (source.HasFlag(combo.a) && source.HasFlag(combo.b))
+                if (combo.appliesTo.HasFlag(memberType) && source.HasFlag(combo.a) && (combo.b == null || source.HasFlag(combo.b)))
                 {
                     if (combo.msg != null)
                         throw new SyntaxErrorException(token, combo.msg);
-                    throw new SyntaxErrorException(token,
-                        "conflicting modifiers '{0}' and '{1}'",
-                        combo.a.ToString().ToLowerInvariant(),
-                        combo.b.ToString().ToLowerInvariant());
+                    
+                    if (combo.b != null)
+                        throw new SyntaxErrorException(token,
+                            "conflicting modifiers '{0}' and '{1}'",
+                            combo.a.ToString().ToLowerInvariant(),
+                            combo.b.ToString().ToLowerInvariant());
+                    
+                    throw new SyntaxErrorException(token, $"{memberType.ToString().ToLowerInvariant()} cannot be declared with modifier '{combo.a.ToString()}'");
                 }
             }
         }
