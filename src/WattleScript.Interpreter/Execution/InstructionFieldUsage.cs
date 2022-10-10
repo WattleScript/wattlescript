@@ -38,7 +38,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushNil:
 				case OpCode.PushTrue:
 				case OpCode.PushFalse:
-				case OpCode.CopyPriv:
+				case OpCode.CopyFlags:
 					return InstructionFieldUsage.None;
 				case OpCode.Pop:
 				case OpCode.Copy:
@@ -53,7 +53,6 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.Less:
 				case OpCode.Eq:
 				case OpCode.CNot:
-				case OpCode.SetPriv:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Jump:
 				case OpCode.Jf:
@@ -70,7 +69,8 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.JLclInit:
 				case OpCode.Args:
 				case OpCode.TblInitN:
-				case OpCode.MergePriv:
+				case OpCode.MergeFlags:
+				case OpCode.SetFlags:
 					return InstructionFieldUsage.NumVal | InstructionFieldUsage.NumVal2;
 				case OpCode.Local:
 				case OpCode.Upvalue:

@@ -7,7 +7,7 @@ namespace WattleScript.Interpreter.Tree
     {
         private List<WattleMemberInfo> items = new List<WattleMemberInfo>();
         private HashSet<string> names = new HashSet<string>();
-        
+
         public IEnumerator<WattleMemberInfo> GetEnumerator()
         {
             return items.GetEnumerator();
@@ -30,7 +30,31 @@ namespace WattleScript.Interpreter.Tree
                     );
             }
             names.Add(nameToken.Text);
-            items.Add(new WattleMemberInfo(nameToken.Text, expression, modifiers));
+            items.Add(new WattleMemberInfo(nameToken, expression, modifiers, isFunction));
+        }
+
+        public void Add(WattleMemberInfo info)
+        {
+            if (names.Contains(info.Name))
+            {
+                throw new SyntaxErrorException(
+                    info.Token, 
+                    "duplicate declaration of a {0} '{1}'", 
+                    info.IsFunction ? "function" : "field",
+                    info.Name
+                );
+            }
+            
+            names.Add(info.Name);
+            items.Add(info);
+        }
+        
+        public void Add(MemberCollection memberCollection)
+        {
+            foreach (WattleMemberInfo info in memberCollection)
+            {
+                Add(info);
+            }
         }
 
         public int Count => items.Count;
