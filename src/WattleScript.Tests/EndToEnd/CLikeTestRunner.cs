@@ -46,8 +46,13 @@ public class CLikeTestRunner
         script.Options.AnnotationPolicy = new CustomPolicy(AnnotationValueParsingPolicy.ForceTable);
         script.Globals["CurrentLine"] = (ScriptExecutionContext c, CallbackArguments a) => c.CallingLocation.FromLine;
         script.Globals["CurrentColumn"] = (ScriptExecutionContext c, CallbackArguments a) => c.CallingLocation.FromChar;
-        script.UsingHandler = (path) =>
+        script.Options.ScriptLoader.UsingResolver = (path) =>
         {
+            if (path == "caller")
+            {
+                return Module.LocalModule;
+            }
+            
             if (File.Exists($"{scriptFolderPath}\\{path}.wtlib"))
             {
                 string libText = File.ReadAllText($"{scriptFolderPath}\\{path}.wtlib");

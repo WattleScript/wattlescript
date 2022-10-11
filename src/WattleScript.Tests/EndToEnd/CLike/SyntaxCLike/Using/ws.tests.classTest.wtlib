@@ -1,5 +1,5 @@
-class C() {
-    function print(x) {
-        print(x)
-    }
-}
+using caller
+
+print("test")
+
+class ClassB { cInst = nil;  ClassB() { this.cInst = new ClassC() } }

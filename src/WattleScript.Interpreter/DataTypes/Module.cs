@@ -4,6 +4,8 @@ namespace WattleScript.Interpreter
 {
     public class Module
     {
+        public static Module LocalModule = new Module(true);
+
         /// <summary>
         /// Gets/sets the Wattlescript source code of this module 
         /// </summary>
@@ -18,6 +20,13 @@ namespace WattleScript.Interpreter
         /// Gets/sets the Stream with Wattlescript bytecode of this module. If not null, this has priority over <see cref="Bytecode"/>
         /// </summary>
         public Stream Stream { get; set; }
+        
+        internal bool IsEntryRef { get; set; }
+
+        internal Module(bool isEntryRef)
+        {
+            IsEntryRef = isEntryRef;
+        }
         
         public Module(string code)
         {

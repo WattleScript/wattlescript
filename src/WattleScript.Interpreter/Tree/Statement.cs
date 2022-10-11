@@ -25,6 +25,33 @@ namespace WattleScript.Interpreter.Tree
 
 		public abstract void ResolveScope(ScriptLoadingContext lcontext);
 
+		static void ProcessUsing(ScriptLoadingContext lcontext)
+		{
+			int line = lcontext.Lexer.Current.FromLine;
+			bool canBeDot = false;
+			
+			lcontext.Lexer.Next();
+
+			while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
+			{
+				Token tkn = lcontext.Lexer.Current;
+
+				if (tkn.FromLine != line || tkn.ToLine != line)
+				{
+					break;
+				}
+				
+				canBeDot = canBeDot switch
+				{
+					false when tkn.Type != TokenType.Name => throw new SyntaxErrorException(tkn, $"unexpected token '{tkn.Text}' found in using statement"),
+					true when tkn.Type != TokenType.Dot => throw new SyntaxErrorException(tkn, $"unexpected token '{tkn.Text}' found in using statement"),
+					_ => !canBeDot
+				};
+				
+				lcontext.Lexer.Next();
+			}
+		}
+		
 		static void ProcessDirective(ScriptLoadingContext lcontext)
 		{
 			var str = lcontext.Lexer.Current.Text;
@@ -142,6 +169,21 @@ namespace WattleScript.Interpreter.Tree
 			}
 		}
 
+		protected static void ParseStaticImports(ScriptLoadingContext lcontext)
+		{
+			while (true)
+			{
+				switch (lcontext.Lexer.Current.Type)
+				{
+					case TokenType.Using:
+						ProcessUsing(lcontext);
+						continue;
+				}
+
+				break;
+			}
+		}
+		
 		protected static void ParseAnnotations(ScriptLoadingContext lcontext)
 		{
 			//Process Annotations

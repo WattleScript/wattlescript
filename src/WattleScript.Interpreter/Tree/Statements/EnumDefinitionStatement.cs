@@ -5,8 +5,11 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
-    class EnumDefinitionStatement : Statement
+    class EnumDefinitionStatement : Statement, IStaticallyImportableStatement
     {
+        public Token NameToken { get; }
+        public string DefinitionType => "enum";
+        
         private string enumName;
         private SourceRef assignment;
         private SourceRef buildCode;
@@ -24,6 +27,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             var start = lcontext.Lexer.Current;
             lcontext.Lexer.Next();
             var name = CheckTokenType(lcontext, TokenType.Name);
+            NameToken = name;
             enumName = name.Text;
             assignment = start.GetSourceRef(name);
             var buildStart = CheckTokenType(lcontext, TokenType.Brk_Open_Curly);

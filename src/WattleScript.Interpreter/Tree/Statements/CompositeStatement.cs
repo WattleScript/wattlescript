@@ -16,6 +16,13 @@ namespace WattleScript.Interpreter.Tree.Statements
 	{
 		List<Statement> m_Statements = new List<Statement>();
 
+		public void InsertStatements(List<Statement> statements)
+		{
+			// push to front
+			statements.AddRange(m_Statements);
+			m_Statements = statements;
+		}
+
 		public CompositeStatement(ScriptLoadingContext lcontext, BlockEndType endType)
 			: base(lcontext)
 		{
@@ -23,6 +30,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			{
 				try
 				{
+					ParseStaticImports(lcontext);
 					ParseAnnotations(lcontext);
 					Token t = lcontext.Lexer.Current;
 					if (t.IsEndOfBlock()) break;
@@ -90,6 +98,10 @@ namespace WattleScript.Interpreter.Tree.Statements
 					case TokenType.Directive:
 					case TokenType.Do:
 					case TokenType.If:
+					case TokenType.Switch:
+					case TokenType.Enum:
+					case TokenType.Class:
+					case TokenType.Mixin:
 					{
 						goto endSynchronize;
 					}

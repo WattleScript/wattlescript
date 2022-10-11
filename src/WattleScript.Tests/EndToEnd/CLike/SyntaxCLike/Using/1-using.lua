@@ -1,3 +1,8 @@
 using ws.tests.classTest
 
-new C().print("hello")
+print("hello world")
+
+class ClassA : ClassB {}
+class ClassC {}
+
+a = new ClassA()

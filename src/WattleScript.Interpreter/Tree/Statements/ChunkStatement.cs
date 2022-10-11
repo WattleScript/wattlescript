@@ -6,7 +6,8 @@ namespace WattleScript.Interpreter.Tree.Statements
 {
 	class ChunkStatement : Statement, IClosureBuilder
 	{
-		Statement m_Block;
+		public CompositeStatement Block { get; }
+		
 		RuntimeScopeFrame m_StackFrame;
 		SymbolRef m_Env;
 		SymbolRef m_VarArgs;
@@ -15,7 +16,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		public ChunkStatement(ScriptLoadingContext lcontext)
 			: base(lcontext)
 		{
-			m_Block = new CompositeStatement(lcontext, BlockEndType.Normal);
+			Block = new CompositeStatement(lcontext, BlockEndType.Normal);
 
 			if (lcontext.Lexer.Current.Type != TokenType.Eof)
 				throw new SyntaxErrorException(lcontext.Lexer.Current, "<eof> expected near '{0}'", lcontext.Lexer.Current.Text);
@@ -30,7 +31,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			m_VarArgs = lcontext.Scope.DefineLocal(WellKnownSymbols.VARARGS);
 			m_Env = lcontext.Scope.DefineLocal(WellKnownSymbols.ENV);
 
-			m_Block.ResolveScope(lcontext);
+			Block.ResolveScope(lcontext);
 			
 			m_StackFrame = lcontext.Scope.PopFunction();
 		}
@@ -42,7 +43,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 			bc.Emit_Load(SymbolRef.Upvalue(WellKnownSymbols.ENV, 0));
 			bc.Emit_Store(m_Env, 0, 0);
 			bc.Emit_Pop();
-			m_Block.Compile(bc);
+			Block.Compile(bc);
 			bc.Emit_Ret(0);
 			
 			var proto = bc.GetProto("<chunk-root>", m_StackFrame);

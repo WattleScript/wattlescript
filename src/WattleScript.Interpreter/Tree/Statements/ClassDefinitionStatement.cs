@@ -8,8 +8,11 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
-    class ClassDefinitionStatement : Statement
+    class ClassDefinitionStatement : Statement, IStaticallyImportableStatement
     {
+        public Token NameToken { get; }
+        public string DefinitionType => "class";
+
         //Class construction related
         private SymbolRefExpression classStoreGlobal;
         private SymbolRefExpression classStoreLocal;
@@ -59,6 +62,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             lcontext.Lexer.Next();
 
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
+            NameToken = nameToken;
             className = nameToken.Text;
             localName = $"$class:{className}";
             //base class

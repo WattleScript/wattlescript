@@ -14,7 +14,7 @@ namespace WattleScript.Interpreter.Execution
 		public Lexer Lexer { get; set; }
 		
 		public ScriptSyntax Syntax { get; set; }
-		public Dictionary<string, Module> Modules { get; set; } 
+		public Linker Using { get; set; } 
 
 		//Compiler state
 		internal List<Annotation> ChunkAnnotations { get; set; } = new List<Annotation>();

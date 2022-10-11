@@ -8,8 +8,11 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
-    class MixinDefinitionStatement : Statement
+    class MixinDefinitionStatement : Statement, IStaticallyImportableStatement
     {
+        public Token NameToken { get; }
+        public string DefinitionType => "mixin";
+        
         private SymbolRefExpression storeValue;
         private string name;
         private GeneratedClosure init;
@@ -26,6 +29,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             annotations = lcontext.FunctionAnnotations.ToArray();
             lcontext.Lexer.Next();
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
+            NameToken = nameToken;
             name = nameToken.Text;
             sourceRef = nameToken.GetSourceRef(CheckTokenType(lcontext, TokenType.Brk_Open_Curly));
             
