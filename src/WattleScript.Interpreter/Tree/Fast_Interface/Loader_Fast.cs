@@ -43,7 +43,7 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 				Source = source,
 				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, lexerAutoSkipComments, script.Options.Syntax, script.Options.Directives, defines, lexerKeepInsignificantChars),
 				Syntax = script.Options.Syntax,
-				Using = staticImport
+				Linker = staticImport
 			};
 		}
 

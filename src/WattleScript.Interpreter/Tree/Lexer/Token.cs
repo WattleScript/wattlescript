@@ -73,6 +73,8 @@ namespace WattleScript.Interpreter.Tree
 						return TokenType.Sealed;
 					case "using":
 						return TokenType.Using;
+					case "namespace":
+						return TokenType.Namespace;
 				}
 			}
 

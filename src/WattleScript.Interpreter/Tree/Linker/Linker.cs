@@ -17,6 +17,8 @@ namespace WattleScript.Interpreter.Tree
     
     internal class Linker
     {
+        public string CurrentNamespace { get; set; } = "";
+        
         private Script script;
         private int sourceIndex;
         private bool outputChars = true;
@@ -25,6 +27,7 @@ namespace WattleScript.Interpreter.Tree
         private bool anyNonUsingEncounterd = false;
         private string text;
         private StringBuilder usingIdent = new StringBuilder();
+        private string lastNamespace;
 
         //public string ProcessedSource => output.ToString();
         public Dictionary<string, Module> ResolvedUsings = new Dictionary<string, Module>();
@@ -40,6 +43,52 @@ namespace WattleScript.Interpreter.Tree
             lcontextLocal = Loader_Fast.CreateLoadingContext(script, script.GetSourceCode(sourceIndex), text, defines, false, true, this);
         }
 
+        public void StoreNamespace()
+        {
+            lastNamespace = CurrentNamespace;
+        }
+
+        public void RestoreNamespace()
+        {
+            CurrentNamespace = lastNamespace;
+        }
+
+        void ProcessNamespaceStatement(ScriptLoadingContext lcontext)
+        {
+            CheckTokenType(lcontext, TokenType.Namespace);
+            bool canBeDot = false;
+            StringBuilder namespaceIdent = new StringBuilder();
+
+            while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
+            {
+                Token tkn = lcontext.Lexer.Current;
+
+                if (!canBeDot && tkn.Type != TokenType.Name)
+                {
+                    break;
+                }
+
+                if (canBeDot && tkn.Type != TokenType.Dot)
+                {
+                    break;
+                }
+
+                canBeDot = !canBeDot;
+
+                namespaceIdent.Append(tkn.Text);
+                lcontext.Lexer.Next();
+            }
+
+            string namespaceIdentStr = namespaceIdent.ToString();
+            lcontext.Linker.CurrentNamespace = namespaceIdentStr;
+
+            if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
+            {
+                CheckTokenType(lcontext, TokenType.Brk_Open_Curly);
+                Loop(lcontext, true);
+            }
+        }
+        
         void ProcessUsingStatement(ScriptLoadingContext lcontext)
         {
             CheckTokenType(lcontext, TokenType.Using);
@@ -138,26 +187,22 @@ namespace WattleScript.Interpreter.Tree
             Process(lcontextLib);
         }
 
-        void Process(ScriptLoadingContext lcontext)
+        void Loop(ScriptLoadingContext lcontext, bool breakOnNextBlockEnd = false)
         {
-            if (!text.Contains("using")) // heuristic, will trip on comments, variable names, etc. but might be worth it
-            {
-                // PushToOutput(text);
-                // return;
-            }
-
-            int previousCharTo = 0;
-
-
             while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
             {
                 lcontext.Lexer.Next();
                 afterUsingStatement:
                 Token tkn = lcontext.Lexer.Current;
 
-
                 switch (tkn.Type)
                 {
+                    case TokenType.Brk_Close_Curly when breakOnNextBlockEnd:
+                        break;
+                    case TokenType.Namespace:
+                        anyNonUsingEncounterd = true;
+                        ProcessNamespaceStatement(lcontext);
+                        break;
                     case TokenType.Using:
                         firstUsingEncountered = true;
                         ProcessUsingStatement(lcontext);
@@ -179,7 +224,17 @@ namespace WattleScript.Interpreter.Tree
                         break;
                 }
             }
+        }
 
+        void Process(ScriptLoadingContext lcontext)
+        {
+            if (!text.Contains("using")) // heuristic, will trip on comments, variable names, etc. but might be worth it
+            {
+                // PushToOutput(text);
+                // return;
+            }
+
+            Loop(lcontext);
             int z = 0;
         }
 

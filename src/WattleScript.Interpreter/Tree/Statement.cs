@@ -265,6 +265,8 @@ namespace WattleScript.Interpreter.Tree
 					return DispatchForLoopStatement(lcontext);
 				case TokenType.Repeat:
 					return new RepeatStatement(lcontext);
+				case TokenType.Namespace:
+					return new NamespaceStatement(lcontext);
 				case TokenType.Function:
 					return new FunctionDefinitionStatement(lcontext, false, null);
 				case TokenType.Local:

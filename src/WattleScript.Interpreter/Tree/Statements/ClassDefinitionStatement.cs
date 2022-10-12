@@ -12,6 +12,7 @@ namespace WattleScript.Interpreter.Tree.Statements
     {
         public Token NameToken { get; }
         public string DefinitionType => "class";
+        public string Namespace { get; }
 
         //Class construction related
         private SymbolRefExpression classStoreGlobal;
@@ -53,6 +54,8 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            Namespace = lcontext.Linker.CurrentNamespace;
+            
             while (lcontext.Lexer.Current.IsMemberModifier())
             {
                 MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current, WattleMemberType.Class);

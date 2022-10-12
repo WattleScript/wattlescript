@@ -12,6 +12,7 @@ namespace WattleScript.Interpreter.Tree.Statements
     {
         public Token NameToken { get; }
         public string DefinitionType => "mixin";
+        public string Namespace { get; }
         
         private SymbolRefExpression storeValue;
         private string name;
@@ -26,6 +27,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public MixinDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            Namespace = lcontext.Linker.CurrentNamespace;
             annotations = lcontext.FunctionAnnotations.ToArray();
             lcontext.Lexer.Next();
             var nameToken = CheckTokenType(lcontext, TokenType.Name);

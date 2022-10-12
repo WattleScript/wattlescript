@@ -11,5 +11,6 @@ namespace WattleScript.Interpreter.Tree
 	{
 		public Token NameToken { get; }
 		public string DefinitionType { get; }
+		public string Namespace { get; }
 	}
 }

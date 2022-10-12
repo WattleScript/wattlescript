@@ -9,6 +9,7 @@ namespace WattleScript.Interpreter.Tree.Statements
     {
         public Token NameToken { get; }
         public string DefinitionType => "enum";
+        public string Namespace { get; }
         
         private string enumName;
         private SourceRef assignment;
@@ -21,6 +22,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         public EnumDefinitionStatement(ScriptLoadingContext lcontext)
             : base(lcontext)
         {
+            Namespace = lcontext.Linker.CurrentNamespace;
             annotations = lcontext.FunctionAnnotations.ToArray();
             lcontext.FunctionAnnotations = new List<Annotation>();
             //lexer is at "enum"
