@@ -18,6 +18,20 @@ namespace WattleScript.Interpreter.Tree.Expressions
         {
             lcontext.Lexer.Next(); //lexer at "new" token
             var classTok = CheckTokenType(lcontext, TokenType.Name);
+
+            if (lcontext.Lexer.Current.Type == TokenType.Dot) // possible namespace qualifier
+            {
+                List<Token> namespaceQualifier = ParseNamespace(lcontext, true);
+                namespaceQualifier.Insert(0, classTok);
+
+                if (namespaceQualifier.Count < 2) // at least ident-dot
+                {
+                    throw new SyntaxErrorException(namespaceQualifier[namespaceQualifier.Count - 1], $"Got unexpected token '{namespaceQualifier[namespaceQualifier.Count - 1].Text}' while parsing namespace");
+                }
+
+                classTok = CheckTokenType(lcontext, TokenType.Name);
+            }
+            
             className = classTok.Text;
             CheckTokenType(lcontext, TokenType.Brk_Open_Round);
             if (lcontext.Lexer.Current.Type == TokenType.Brk_Close_Round)

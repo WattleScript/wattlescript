@@ -1,4 +1,6 @@
-﻿using WattleScript.Interpreter.Execution;
+﻿using System.Collections.Generic;
+using System.Linq;
+using WattleScript.Interpreter.Execution;
 using WattleScript.Interpreter.Execution.VM;
 
 namespace WattleScript.Interpreter.Tree
@@ -23,6 +25,41 @@ namespace WattleScript.Interpreter.Tree
 			{
 				IsPrematureStreamTermination = (t.Type == TokenType.Eof)
 			};
+		}
+
+		/// <summary>
+		/// Parses a sequence of tokens in form of (name->dot->name->..)
+		/// </summary>
+		/// <param name="lcontext">Current ScriptLoadingContext</param>
+		/// <param name="currentTokenShouldBeDot">Whether the first token should be "name" or "dot"</param>
+		/// <returns>A list of tokens representing the qualifier</returns>
+		protected static List<Token> ParseNamespace(ScriptLoadingContext lcontext, bool currentTokenShouldBeDot)
+		{
+			List<Token> tokens = new List<Token>();
+
+			while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
+			{
+				if (currentTokenShouldBeDot && lcontext.Lexer.PeekNext().Type != TokenType.Name)
+				{
+					break;
+				}
+
+				if (!currentTokenShouldBeDot && lcontext.Lexer.PeekNext().Type != TokenType.Dot)
+				{
+					break;
+				}
+
+				currentTokenShouldBeDot = !currentTokenShouldBeDot;
+				tokens.Add(lcontext.Lexer.Current);
+				lcontext.Lexer.Next();
+			}
+
+			if (tokens.Last().Type == TokenType.Dot)
+			{
+				tokens.Remove(tokens.Last());
+			}
+			
+			return tokens;
 		}
 
 		protected static Token CheckTokenTypeEx(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)

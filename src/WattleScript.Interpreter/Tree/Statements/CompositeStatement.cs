@@ -26,7 +26,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 		public CompositeStatement(ScriptLoadingContext lcontext, BlockEndType endType)
 			: base(lcontext)
 		{
-			lcontext.Linker.StoreNamespace();
+			lcontext.Linker?.StoreNamespace();
 			
 			while (true)
 			{
@@ -72,7 +72,7 @@ namespace WattleScript.Interpreter.Tree.Statements
 				}
 			}
 
-			lcontext.Linker.RestoreNamespace();
+			lcontext.Linker?.RestoreNamespace();
 			
 			// eat away all superfluos ';'s
 			while (lcontext.Lexer.Current.Type == TokenType.SemiColon)
