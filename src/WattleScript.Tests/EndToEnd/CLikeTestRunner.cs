@@ -59,6 +59,7 @@ public class CLikeTestRunner
                 return new Module(libText);
             }
 
+            Assert.Fail($"Library file {scriptFolderPath}\\{path}.wtlib not found");
             throw new ScriptRuntimeException($"Library file {scriptFolderPath}\\{path}.wtlib not found");
         };
 
