@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using WattleScript.Interpreter.Debugging;
 using WattleScript.Interpreter.Execution;
@@ -29,9 +30,15 @@ namespace WattleScript.Interpreter.Tree
         private StringBuilder usingIdent = new StringBuilder();
         private string lastNamespace;
 
+        internal class StatementInfo
+        {
+            public IStaticallyImportableStatement Statement { get; set; }
+            public bool Compiled { get; set; }
+        }
+        
         //public string ProcessedSource => output.ToString();
         public Dictionary<string, Module> ResolvedUsings = new Dictionary<string, Module>();
-        public Dictionary<string, Dictionary<string, IStaticallyImportableStatement>> ImportMap = new Dictionary<string, Dictionary<string, IStaticallyImportableStatement>>();
+        public Dictionary<string, Dictionary<string, StatementInfo>> ImportMap = new Dictionary<string, Dictionary<string, StatementInfo>>();
 
 
         public Linker(Script script, int sourceIndex, string text, Dictionary<string, DefineNode> defines = null)
@@ -57,33 +64,14 @@ namespace WattleScript.Interpreter.Tree
         {
             CheckTokenType(lcontext, TokenType.Namespace);
             bool canBeDot = false;
-            StringBuilder namespaceIdent = new StringBuilder();
+            List<Token> namespaceTokens = ParseNamespace(lcontext, false, true);
 
-            while (lcontext.Lexer.PeekNext().Type != TokenType.Eof)
-            {
-                Token tkn = lcontext.Lexer.Current;
-
-                if (!canBeDot && tkn.Type != TokenType.Name)
-                {
-                    break;
-                }
-
-                if (canBeDot && tkn.Type != TokenType.Dot)
-                {
-                    break;
-                }
-
-                canBeDot = !canBeDot;
-
-                namespaceIdent.Append(tkn.Text);
-                lcontext.Lexer.Next();
-            }
-
-            string namespaceIdentStr = namespaceIdent.ToString();
+            string namespaceIdentStr = string.Join(string.Empty, namespaceTokens.Select(x => x.Text)).ToString();
             lcontext.Linker.CurrentNamespace = namespaceIdentStr;
 
-            if (lcontext.Lexer.Current.Type == TokenType.Brk_Open_Curly)
+            if (lcontext.Lexer.PeekNext().Type == TokenType.Brk_Open_Curly)
             {
+                lcontext.Lexer.Next();
                 CheckTokenType(lcontext, TokenType.Brk_Open_Curly);
                 Loop(lcontext, true);
             }
@@ -145,30 +133,32 @@ namespace WattleScript.Interpreter.Tree
 
         void EnlistNamespace(string nmspc)
         {
-            ImportMap.GetOrCreate(nmspc, () => new Dictionary<string, IStaticallyImportableStatement>());
+            ImportMap.GetOrCreate(nmspc, () => new Dictionary<string, StatementInfo>());
         }
 
         void EnlistMember(IStaticallyImportableStatement statement)
         {
-            EnlistNamespace("test");
+            string nmspc = statement.Namespace ?? "";
+            
+            EnlistNamespace(nmspc);
 
-            if (ImportMap["test"].TryGetValue(statement.NameToken.Text, out _))
+            if (ImportMap[nmspc].TryGetValue(statement.NameToken.Text, out _))
             {
                 throw new SyntaxErrorException(statement.NameToken, $"Member '{statement.NameToken.Text}' is already defined as {statement.DefinitionType}");
             }
 
-            ImportMap["test"].Add(statement.NameToken.Text, statement);
+            ImportMap[nmspc].Add(statement.NameToken.Text, new StatementInfo() {Compiled = false, Statement = statement});
         }
 
         public List<Statement> Export()
         {
             List<Statement> statements = new List<Statement>();
 
-            foreach (KeyValuePair<string, Dictionary<string, IStaticallyImportableStatement>> nmspc in ImportMap)
+            foreach (KeyValuePair<string, Dictionary<string, StatementInfo>> nmspc in ImportMap)
             {
-                foreach (KeyValuePair<string, IStaticallyImportableStatement> member in nmspc.Value)
+                foreach (KeyValuePair<string, StatementInfo> member in nmspc.Value)
                 {
-                    statements.Add((Statement) member.Value);
+                    statements.Add((Statement) member.Value.Statement);
                 }
             }
 
@@ -210,15 +200,15 @@ namespace WattleScript.Interpreter.Tree
                     case TokenType.Enum:
                         anyNonUsingEncounterd = true;
                         EnlistMember(new EnumDefinitionStatement(lcontext));
-                        break;
+                        goto afterUsingStatement;
                     case TokenType.Class:
                         anyNonUsingEncounterd = true;
                         EnlistMember(new ClassDefinitionStatement(lcontext));
-                        break;
+                        goto afterUsingStatement;
                     case TokenType.Mixin:
                         anyNonUsingEncounterd = true;
                         EnlistMember(new MixinDefinitionStatement(lcontext));
-                        break;
+                        goto afterUsingStatement;
                     default:
                         anyNonUsingEncounterd = true;
                         break;
@@ -236,6 +226,29 @@ namespace WattleScript.Interpreter.Tree
 
             Loop(lcontext);
             int z = 0;
+        }
+
+        public void Link(string nmspc)
+        {
+            if (ResolvedUsings.ContainsKey(nmspc))
+            {
+                return;
+            }
+            
+            Module resolvedModule = script.Options.ScriptLoader.UsingResolver(nmspc);
+
+            if (resolvedModule == null)
+            {
+                throw new LinkerException($"module '{nmspc}' failed to resolve");
+            }
+
+            if (resolvedModule.IsEntryRef)
+            {
+                return;
+            }
+            
+            ResolvedUsings.Add(nmspc, resolvedModule);
+            Process(nmspc, resolvedModule.Code);
         }
 
         public void Process()

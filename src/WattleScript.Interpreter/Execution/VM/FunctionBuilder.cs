@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Schema;
 using WattleScript.Interpreter.Debugging;
+using WattleScript.Interpreter.Tree;
 
 namespace WattleScript.Interpreter.Execution.VM
 {
@@ -419,6 +420,24 @@ namespace WattleScript.Interpreter.Execution.VM
 		public int Emit_MixInit(string mixinName)
 		{
 			return AppendInstruction(new Instruction(OpCode.MixInit, StringArg(mixinName)));
+		}
+
+		public int Emit_PrepNmspc(List<Token> namespaceComponents)
+		{
+			if (namespaceComponents == null)
+			{
+				throw new InternalErrorException("List of namespace components cannot be null");
+			}
+
+			int parts = 0;
+
+			foreach (Token token in namespaceComponents.Where(x => x.Type == TokenType.Name))
+			{
+				parts++;
+				Emit_IndexSet(0, 0, token.Text, true);
+			}
+			
+			return AppendInstruction(new Instruction(OpCode.PrepNmspc, parts));
 		}
 
 		public int Emit_NewCall(int argCount, string className)

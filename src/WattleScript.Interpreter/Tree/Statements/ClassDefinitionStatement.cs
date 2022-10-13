@@ -51,9 +51,11 @@ namespace WattleScript.Interpreter.Tree.Statements
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
 
         private MemberModifierFlags flags = MemberModifierFlags.None;
+        private ScriptLoadingContext lcontext;
         
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            this.lcontext = lcontext;
             Namespace = lcontext.Linker.CurrentNamespace;
             
             while (lcontext.Lexer.Current.IsMemberModifier())
@@ -423,6 +425,19 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public override void Compile(FunctionBuilder bc)
         {
+            if (lcontext.Linker.ImportMap.ContainsKey(Namespace))
+            {
+                if (lcontext.Linker.ImportMap[Namespace].ContainsKey(className))
+                {
+                    if (lcontext.Linker.ImportMap[Namespace][className].Compiled)
+                    {
+                        return;
+                    }
+
+                    lcontext.Linker.ImportMap[Namespace][className].Compiled = true;
+                }
+            }
+            
             bc.PushSourceRef(defSource);
             bc.Emit_Enter(classBlock);
             //mixin names

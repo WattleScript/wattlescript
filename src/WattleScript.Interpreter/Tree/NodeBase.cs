@@ -27,13 +27,22 @@ namespace WattleScript.Interpreter.Tree
 			};
 		}
 
+		internal static void ParseSemicolons(ScriptLoadingContext lcontext)
+		{
+			while (lcontext.Lexer.PeekNext().Type == TokenType.SemiColon)
+			{
+				lcontext.Lexer.Next();
+			}
+		}
+
 		/// <summary>
 		/// Parses a sequence of tokens in form of (name->dot->name->..)
 		/// </summary>
 		/// <param name="lcontext">Current ScriptLoadingContext</param>
 		/// <param name="currentTokenShouldBeDot">Whether the first token should be "name" or "dot"</param>
+		/// <param name="includeLastToken"></param>
 		/// <returns>A list of tokens representing the qualifier</returns>
-		protected static List<Token> ParseNamespace(ScriptLoadingContext lcontext, bool currentTokenShouldBeDot)
+		internal static List<Token> ParseNamespace(ScriptLoadingContext lcontext, bool currentTokenShouldBeDot, bool includeLastToken = false)
 		{
 			List<Token> tokens = new List<Token>();
 
@@ -41,11 +50,19 @@ namespace WattleScript.Interpreter.Tree
 			{
 				if (currentTokenShouldBeDot && lcontext.Lexer.PeekNext().Type != TokenType.Name)
 				{
+					if (includeLastToken)
+					{
+						tokens.Add(lcontext.Lexer.Current);
+					}
 					break;
 				}
 
 				if (!currentTokenShouldBeDot && lcontext.Lexer.PeekNext().Type != TokenType.Dot)
 				{
+					if (includeLastToken)
+					{
+						tokens.Add(lcontext.Lexer.Current);
+					}
 					break;
 				}
 
@@ -62,7 +79,7 @@ namespace WattleScript.Interpreter.Tree
 			return tokens;
 		}
 
-		protected static Token CheckTokenTypeEx(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
+		internal static Token CheckTokenTypeEx(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
 		{
 			if (lcontext.Syntax != ScriptSyntax.Lua)
 			{
@@ -90,7 +107,7 @@ namespace WattleScript.Interpreter.Tree
 
 
 
-		protected static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
+		internal static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2)
 		{
 			Token t = lcontext.Lexer.Current;
 			if (t.Type != tokenType1 && t.Type != tokenType2)
@@ -100,7 +117,7 @@ namespace WattleScript.Interpreter.Tree
 
 			return t;
 		}
-		protected static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2, TokenType tokenType3)
+		internal static Token CheckTokenType(ScriptLoadingContext lcontext, TokenType tokenType1, TokenType tokenType2, TokenType tokenType3)
 		{
 			Token t = lcontext.Lexer.Current;
 			if (t.Type != tokenType1 && t.Type != tokenType2 && t.Type != tokenType3)
@@ -111,14 +128,14 @@ namespace WattleScript.Interpreter.Tree
 			return t;
 		}
 
-		protected static void CheckTokenTypeNotNext(ScriptLoadingContext lcontext, TokenType tokenType)
+		internal static void CheckTokenTypeNotNext(ScriptLoadingContext lcontext, TokenType tokenType)
 		{
 			Token t = lcontext.Lexer.Current;
 			if (t.Type != tokenType)
 				UnexpectedTokenType(t);
 		}
 
-		protected static Token CheckMatch(ScriptLoadingContext lcontext, Token originalToken, TokenType expectedTokenType, string expectedTokenText)
+		internal static Token CheckMatch(ScriptLoadingContext lcontext, Token originalToken, TokenType expectedTokenType, string expectedTokenText)
 		{
 			Token t = lcontext.Lexer.Current;
 			if (t.Type != expectedTokenType)

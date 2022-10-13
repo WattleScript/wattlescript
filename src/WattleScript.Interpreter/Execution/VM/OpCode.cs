@@ -118,20 +118,21 @@ namespace WattleScript.Interpreter.Execution.VM
 		// OOP
 		// AnnotX instructions, add annotation to table
 		//NumValB = annotation name string
-		AnnotI, //NumVal = int
-		AnnotN, //NumVal = number
-		AnnotS, //NumVal = string or nil
-		AnnotB, //NumVal = bool
-		AnnotT, //pop table from v-stack
-		LoopChk, //Checks if local in NumVal is < threshold. If not, throw error using NumValB as the class name
-		BaseChk, //Checks if v-stack top is a class. If not, throw error using NumVal as the base class name
-		NewCall, //Calls the new() function stored in table at v-stack offset NumVal with NumVal arguments.
-				 //Throws error using class name in NumValB if type check fails
-		MixInit, //Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
-		         //Error check uses NumVal for mixin name
-		SetFlags, //Sets WattleFieldsInfo for NumVal keys, using modifier in NumVal2 (pops NumVal Items)
-		MergeFlags, //Merges the WattleFieldsInfo of v-stack(NumVal) into v-stack(NumVal2)
-		CopyFlags, //Copies the WattleFieldsInfo of v-stack top into v-stack +1, pops 1 value
+		AnnotI,     // NumVal = int
+		AnnotN,     // NumVal = number
+		AnnotS,     // NumVal = string or nil
+		AnnotB,     // NumVal = bool
+		AnnotT,     // pop table from v-stack
+		LoopChk,    // Checks if local in NumVal is < threshold. If not, throw error using NumValB as the class name
+		BaseChk,    // Checks if v-stack top is a class. If not, throw error using NumVal as the base class name
+		NewCall,    // Calls the new() function stored in table at v-stack offset NumVal with NumVal arguments.
+				    // Throws error using class name in NumValB if type check fails
+		MixInit,    // Checks type of mixin on v-stack top, stores init to v-stack + 1, adds functions to v-stack + 2, pops top
+		            // Error check uses NumVal for mixin name
+		SetFlags,   // Sets WattleFieldsInfo for NumVal keys, using modifier in NumVal2 (pops NumVal Items)
+		MergeFlags, // Merges the WattleFieldsInfo of v-stack(NumVal) into v-stack(NumVal2)
+		CopyFlags,  // Copies the WattleFieldsInfo of v-stack top into v-stack +1, pops 1 value
+		PrepNmspc,  // Pop next NumVal values from v-stack (namespace components), next [todo] NewCall/../.. will use this for namespace resolution. This should cover static class access eg. val = myNamespace.myStaticClass.staticField or myNamespace.myStaticClass.staticMethod()
 		// Meta
 		Invalid,	// Crashes the executor with an unrecoverable NotImplementedException. This MUST always be the last opcode in enum
 	}
