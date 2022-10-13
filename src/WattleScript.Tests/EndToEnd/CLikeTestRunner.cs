@@ -58,8 +58,8 @@ public class CLikeTestRunner
                 string libText = File.ReadAllText($"{scriptFolderPath}\\{path}.wtlib");
                 return new Module(libText);
             }
-            
-            return null;
+
+            throw new ScriptRuntimeException($"Library file {scriptFolderPath}\\{path}.wtlib not found");
         };
 
         return script;
