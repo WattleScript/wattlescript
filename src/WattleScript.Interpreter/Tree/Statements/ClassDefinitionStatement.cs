@@ -425,7 +425,7 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public override void Compile(FunctionBuilder bc)
         {
-            if (lcontext.Linker.ImportMap.ContainsKey(Namespace))
+            if (false && lcontext.Linker.ImportMap.ContainsKey(Namespace))
             {
                 if (lcontext.Linker.ImportMap[Namespace].ContainsKey(className))
                 {
