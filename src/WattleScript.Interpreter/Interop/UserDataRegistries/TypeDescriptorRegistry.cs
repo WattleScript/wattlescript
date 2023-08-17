@@ -188,6 +188,11 @@ namespace WattleScript.Interpreter.Interop.UserDataRegistries
 
 			if (result != oldDescriptor)
 			{
+				lock (cache_Lock) {
+					_descriptorCacheInterfaces = new Dictionary<Type, IUserDataDescriptor>();
+					_descriptorCacheNoInterfaces = new Dictionary<Type, IUserDataDescriptor>();
+				}
+
 				if (result == null)
 				{
 					s_TypeRegistry.Remove(type);
@@ -227,6 +232,35 @@ namespace WattleScript.Interpreter.Interop.UserDataRegistries
 		}
 
 
+		private static Dictionary<Type, IUserDataDescriptor> _descriptorCacheNoInterfaces =
+			new Dictionary<Type, IUserDataDescriptor>();
+		
+		private static Dictionary<Type, IUserDataDescriptor> _descriptorCacheInterfaces =
+			new Dictionary<Type, IUserDataDescriptor>();
+
+		private static object cache_Lock = new object();
+
+		internal static IUserDataDescriptor GetDescriptorForType(Type type, bool searchInterfaces)
+		{
+			lock (cache_Lock)
+			{
+				if (searchInterfaces && _descriptorCacheInterfaces.TryGetValue(type, out var cached))
+					return cached;
+				if (!searchInterfaces && _descriptorCacheNoInterfaces.TryGetValue(type, out cached))
+					return cached;
+			}
+			var created = GetDescriptorForType_Internal(type, searchInterfaces);
+			lock (cache_Lock)
+			{
+				if (searchInterfaces)
+					_descriptorCacheInterfaces[type] = created;
+				else
+					_descriptorCacheNoInterfaces[type] = created;
+			}
+
+			return created;
+		}
+		
 
 		/// <summary>
 		/// Gets the best possible type descriptor for a specified CLR type.
@@ -234,15 +268,15 @@ namespace WattleScript.Interpreter.Interop.UserDataRegistries
 		/// <param name="type">The CLR type for which the descriptor is desired.</param>
 		/// <param name="searchInterfaces">if set to <c>true</c> interfaces are used in the search.</param>
 		/// <returns></returns>
-		internal static IUserDataDescriptor GetDescriptorForType(Type type, bool searchInterfaces)
+		internal static IUserDataDescriptor GetDescriptorForType_Internal(Type type, bool searchInterfaces)
 		{
 			lock (s_Lock)
 			{
 				IUserDataDescriptor typeDescriptor = null;
 
 				// if the type has been explicitly registered, return its descriptor as it's complete
-				if (s_TypeRegistry.ContainsKey(type))
-					return s_TypeRegistry[type];
+				if (s_TypeRegistry.TryGetValue(type, out var existingType))
+					return existingType;
 
 				if (RegistrationPolicy.AllowTypeAutoRegistration(type))
 				{

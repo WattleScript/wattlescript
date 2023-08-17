@@ -29,7 +29,7 @@ namespace WattleScript.Interpreter.Interop.Converters
 			{
 				DynValue key = ClrToScriptConversions.ObjectToDynValue(script, kvp.Key);
 				DynValue val = ClrToScriptConversions.ObjectToDynValue(script, kvp.Value);
-				t.Set(key, val);
+				t.MapAdd(key, val);
 			}
 
 			return t;

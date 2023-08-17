@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using WattleScript.Interpreter.Interop.Converters;
 
 namespace WattleScript.Interpreter
 {
@@ -242,7 +243,7 @@ namespace WattleScript.Interpreter
 			return pair;
 		}
 		
-		void MapAdd(DynValue key, DynValue value)
+		internal void MapAdd(DynValue key, DynValue value)
 		{
 			var node = valueList.AddLast(new TablePair(key, value));
 			valueMap.Add(key, node);
