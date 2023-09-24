@@ -8,19 +8,34 @@ namespace WattleScript.Interpreter
 	/// <summary>
 	/// Class giving access to details of the environment where the script is executing
 	/// </summary>
-	public class ScriptExecutionContext : IScriptPrivateResource
+	public struct ScriptExecutionContext : IScriptPrivateResource
 	{
 		Processor m_Processor;
 		CallbackFunction m_Callback;
-		
-		internal bool CanAwait { get; set; }
+		private SourceRef m_CallingLocation;
+		private int m_Flags;
+
+		private const int FLAG_ISDYNAMIC = (1 << 0);
+		private const int FLAG_CANAWAIT = (1 << 1);
+
+		internal bool CanAwait
+		{
+			get => (m_Flags & FLAG_CANAWAIT) != 0;
+			set
+			{
+				if (value)
+					m_Flags |= FLAG_CANAWAIT;
+				else
+					m_Flags &= ~FLAG_CANAWAIT;
+			}
+		}
 
 		internal ScriptExecutionContext(Processor p, CallbackFunction callBackFunction, SourceRef sourceRef, bool isDynamic = false)
 		{
-			IsDynamicExecution = isDynamic;
+			m_Flags = isDynamic ? FLAG_ISDYNAMIC : 0;
 			m_Processor = p;
 			m_Callback = callBackFunction;
-			CallingLocation = sourceRef;
+			m_CallingLocation = sourceRef;
 		}
 
 		/// <summary>
@@ -28,20 +43,12 @@ namespace WattleScript.Interpreter
 		/// Under a dynamic execution, most methods of ScriptExecutionContext are not reliable as the
 		/// processing engine of the script is not "really" running or is not available.
 		/// </summary>
-		public bool IsDynamicExecution
-		{
-			get;
-			private set;
-		}
+		public bool IsDynamicExecution => (m_Flags & FLAG_ISDYNAMIC) != 0;
 
 		/// <summary>
 		/// Gets the location of the code calling back 
 		/// </summary>
-		public SourceRef CallingLocation
-		{
-			get;
-			private set;
-		}
+		public SourceRef CallingLocation => m_CallingLocation;
 
 		/// <summary>
 		/// Gets or sets the additional data associated to this CLR function call.

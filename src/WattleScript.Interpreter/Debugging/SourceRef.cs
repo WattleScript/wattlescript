@@ -8,10 +8,43 @@ namespace WattleScript.Interpreter.Debugging
 	/// </summary>
 	public class SourceRef
 	{
+		private int Flags = 0;
+		private const int FLAG_CLRLOCATION = (1 << 0);
+		private const int FLAG_BREAKPOINT = (1 << 1);
+		private const int FLAG_CANNOT_BREAKPOINT = (1 << 2);
+		private const int FLAG_STEPSTOP = (1 << 3);
+		//Flags accessors
+
+
 		/// <summary>
 		/// Gets a value indicating whether this location is inside CLR .
 		/// </summary>
-		public bool IsClrLocation { get; private set; }
+		public bool IsClrLocation => (Flags & FLAG_CLRLOCATION) != 0;
+
+		/// <summary>
+		/// Gets a value indicating whether this instance is a stop "step" in source mode
+		/// </summary>
+		public bool IsStepStop => (Flags & FLAG_STEPSTOP) != 0;
+
+		/// <summary>
+		/// Gets a value indicating whether this instance is a breakpoint
+		/// </summary>
+		public bool Breakpoint
+		{
+			get => (Flags & FLAG_BREAKPOINT) != 0;
+			set
+			{
+				if (value)
+					Flags |= FLAG_BREAKPOINT;
+				else
+					Flags &= ~FLAG_BREAKPOINT;
+			}
+		}
+
+		/// <summary>
+		/// Gets a value indicating whether this instance cannot be set as a breakpoint
+		/// </summary>
+		public bool CannotBreakpoint => (Flags & FLAG_CANNOT_BREAKPOINT) != 0;
 
 		/// <summary>
 		/// Gets the index of the source.
@@ -33,19 +66,7 @@ namespace WattleScript.Interpreter.Debugging
 		/// Gets to which line the source code ref ends
 		/// </summary>
 		public int ToLine { get; }
-		/// <summary>
-		/// Gets a value indicating whether this instance is a stop "step" in source mode
-		/// </summary>
-		public bool IsStepStop { get; }
-
-		/// <summary>
-		/// Gets a value indicating whether this instance is a breakpoint
-		/// </summary>
-		public bool Breakpoint;
-		/// <summary>
-		/// Gets a value indicating whether this instance cannot be set as a breakpoint
-		/// </summary>
-		public bool CannotBreakpoint { get; private set; }
+		
 		/// <summary>
 		/// Gets character index the source ref starts at 
 		/// </summary>
@@ -57,7 +78,7 @@ namespace WattleScript.Interpreter.Debugging
 
 		internal static SourceRef GetClrLocation()
 		{
-			return new SourceRef(0, 0, 0, 0, 0, false, 0, 0) { IsClrLocation = true };
+			return new SourceRef(0, 0, 0, 0, 0, false, 0, 0) { Flags = FLAG_CLRLOCATION };
 		}
 
 		public SourceRef(SourceRef src, bool isStepStop)
@@ -67,7 +88,7 @@ namespace WattleScript.Interpreter.Debugging
 			ToChar = src.ToChar;
 			FromLine = src.FromLine;
 			ToLine = src.ToLine;
-			IsStepStop = isStepStop;
+			Flags = isStepStop ? FLAG_STEPSTOP : 0;
 			ToCharIndex = src.ToCharIndex;
 			FromCharIndex = src.FromCharIndex;
 		}
@@ -81,17 +102,14 @@ namespace WattleScript.Interpreter.Debugging
 			return false;
 		}
 
-		protected bool Equals(SourceRef other)
+		public bool Equals(SourceRef other)
 		{
-			return Breakpoint == other.Breakpoint && 
-			       IsClrLocation == other.IsClrLocation && 
+			return Flags == other.Flags && 
 			       SourceIdx == other.SourceIdx && 
 			       FromChar == other.FromChar && 
 			       ToChar == other.ToChar && 
 			       FromLine == other.FromLine && 
 			       ToLine == other.ToLine && 
-			       IsStepStop == other.IsStepStop && 
-			       CannotBreakpoint == other.CannotBreakpoint &&
 			       ToCharIndex == other.ToCharIndex &&
 			       FromCharIndex == other.FromCharIndex;
 		}
@@ -100,17 +118,14 @@ namespace WattleScript.Interpreter.Debugging
 		{
 			unchecked
 			{
-				var hashCode = Breakpoint.GetHashCode();
-				hashCode = (hashCode * 397) ^ IsClrLocation.GetHashCode();
+				var hashCode = Flags.GetHashCode();
 				hashCode = (hashCode * 397) ^ SourceIdx;
 				hashCode = (hashCode * 397) ^ FromChar;
 				hashCode = (hashCode * 397) ^ ToChar;
 				hashCode = (hashCode * 397) ^ FromLine;
 				hashCode = (hashCode * 397) ^ ToLine;
-				hashCode = (hashCode * 397) ^ IsStepStop.GetHashCode();
 				hashCode = (hashCode * 397) ^ FromCharIndex;
 				hashCode = (hashCode * 397) ^ ToCharIndex;
-				hashCode = (hashCode * 397) ^ CannotBreakpoint.GetHashCode();
 				return hashCode;
 			}
 		}
@@ -128,6 +143,7 @@ namespace WattleScript.Interpreter.Debugging
 		public SourceRef(int sourceIdx)
 		{
 			SourceIdx = sourceIdx;
+			
 		}
 		
 		public SourceRef(int sourceIdx, int from, int to, int fromline, int toline, bool isStepStop, int charIndexFrom, int charIndexTo)
@@ -137,7 +153,7 @@ namespace WattleScript.Interpreter.Debugging
 			ToChar = to;
 			FromLine = fromline;
 			ToLine = toline;
-			IsStepStop = isStepStop;
+			Flags = isStepStop ? FLAG_STEPSTOP : 0;
 			ToCharIndex = charIndexTo;
 			FromCharIndex = charIndexFrom;
 		}
@@ -228,7 +244,7 @@ namespace WattleScript.Interpreter.Debugging
 		/// <returns></returns>
 		public SourceRef SetNoBreakPoint()
 		{
-			CannotBreakpoint = true;
+			Flags |= FLAG_CANNOT_BREAKPOINT;
 			return this;
 		}
 

@@ -34,16 +34,16 @@ namespace WattleScript.Interpreter
 		/// </summary>
 		/// <param name="context">The context.</param>
 		/// <returns></returns>
-		public DynValue Evaluate(ScriptExecutionContext context = null)
+		public DynValue Evaluate(ScriptExecutionContext? context = null)
 		{
-			context = context ?? OwnerScript.CreateDynamicExecutionContext();
+			var ctx = context ?? OwnerScript.CreateDynamicExecutionContext();
 
-			this.CheckScriptOwnership(context.GetScript());
+			this.CheckScriptOwnership(ctx.GetScript());
 
 			if (!m_Constant.IsNil())
 				return m_Constant;
 
-			return m_Exp.Eval(context);
+			return m_Exp.Eval(ctx);
 		}
 
 		/// <summary>
