@@ -587,18 +587,16 @@ namespace WattleScript.Interpreter
 		}
 
 		/// <summary>
-		/// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+		/// Determines whether the specified <see cref="WattleScript.Interpreter.DynValue" />, is equal to this instance.
 		/// </summary>
-		/// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+		/// <param name="obj">The <see cref="WattleScript.Interpreter.DynValue" /> to compare with this instance.</param>
 		/// <returns>
-		///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+		///   <c>true</c> if the specified <see cref="WattleScript.Interpreter.DynValue" /> is equal to this instance; otherwise, <c>false</c>.
 		/// </returns>
-		public override bool Equals(object obj)
+		public bool Equals(DynValue other)
 		{
-			if (!(obj is DynValue other)) return false;
-			
 			if ((other.Type == DataType.Nil && this.Type == DataType.Void)
-				|| (other.Type == DataType.Void && this.Type == DataType.Nil))
+			    || (other.Type == DataType.Void && this.Type == DataType.Nil))
 				return true;
 
 			if (other.Type != this.Type) return false;
@@ -632,27 +630,40 @@ namespace WattleScript.Interpreter
 				case DataType.Thread:
 					return Coroutine == other.Coroutine;
 				case DataType.UserData:
-					{
-						UserData ud1 = this.UserData;
-						UserData ud2 = other.UserData;
+				{
+					UserData ud1 = this.UserData;
+					UserData ud2 = other.UserData;
 
-						if (ud1 == null || ud2 == null)
-							return false;
-
-						if (ud1.Descriptor != ud2.Descriptor)
-							return false;
-
-						if (ud1.Object == null && ud2.Object == null)
-							return true;
-
-						if (ud1.Object != null && ud2.Object != null)
-							return ud1.Object.Equals(ud2.Object);
-
+					if (ud1 == null || ud2 == null)
 						return false;
-					}
+
+					if (ud1.Descriptor != ud2.Descriptor)
+						return false;
+
+					if (ud1.Object == null && ud2.Object == null)
+						return true;
+
+					if (ud1.Object != null && ud2.Object != null)
+						return ud1.Object.Equals(ud2.Object);
+
+					return false;
+				}
 				default:
 					return false;
 			}
+		}
+
+		/// <summary>
+		/// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+		/// </summary>
+		/// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+		/// <returns>
+		///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+		/// </returns>
+		public override bool Equals(object obj)
+		{
+			if (!(obj is DynValue other)) return false;
+			return Equals(other);
 		}
 
 
