@@ -19,7 +19,7 @@ namespace WattleScript.Interpreter.Execution.VM
 		//32 bits
 		public int NumVal
 		{
-			get => (int) (_data >> 7);
+			get => (int) ((_data >> 7) & 0xFFFFFFFF);
 			set => _data = (_data & ~0x7fffffff80UL) | ((ulong) (uint) value) << 7;
 		}
 
