@@ -1129,13 +1129,22 @@ namespace WattleScript.Interpreter.Execution.VM
 			}
 		}
 
+		// The .NET optimizer seems to break on this instruction on ARM
+		// The bytecode format should be reduced to 32-bit to help with this
+		[MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+		void UnpackSwitch(Instruction i, out uint strCount, out uint numCount)
+		{
+			strCount = (uint)i.NumVal;
+			numCount = i.NumValB;
+		}
+		
 		private int ExecSwitch(int currentPtr, Instruction i, ref CallStackItem cframe)
 		{
 			//Decode
 			//First 3 table entries are present with bit flags
 			int nil = -1, ctrue = -1, cfalse = -1;
 			int strOff = 1;
-			uint strCount = (uint)i.NumVal;
+			UnpackSwitch(i, out var strCount, out var numCount);
 			if ((strCount & 0x80000000) != 0)
 				nil = strOff++;
 			if ((strCount & 0x40000000) != 0)
@@ -1146,10 +1155,14 @@ namespace WattleScript.Interpreter.Execution.VM
 			strCount &= 0x1FFFFFFF;
 			//get number entries
 			int numOff = (int) (strOff + strCount);
-			uint numCount = i.NumValB;
 			//default comes immediately after switch case
 			int defaultPtr = (int)(currentPtr + numOff + numCount);
-			int GetJump(FunctionProto p, int offset) => (int) (currentPtr + (p.code[currentPtr + offset].NumValB));
+			int GetJump(FunctionProto p, int offset)
+			{
+				UnpackSwitch(p.code[currentPtr + offset], out _, out var b);
+				return (int)(currentPtr + b);
+			}
+
 			var value = m_ValueStack.Pop().ToScalar();
 			switch (value.Type)
 			{
@@ -1167,11 +1180,12 @@ namespace WattleScript.Interpreter.Execution.VM
 					for (int j = 0; j < numCount; j++)
 					{
 						var ins = cframe.Function.code[currentPtr + numOff + j];
-						if (ins.OpCode == OpCode.SInteger && ins.NumVal == d) {
-							return (int) (currentPtr + ins.NumValB);
+						UnpackSwitch(ins, out var a, out var b);
+						if (ins.OpCode == OpCode.SInteger && a == d) {
+							return (int) (currentPtr + b);
 						}
-						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.numbers[ins.NumVal]) {
-							return (int) (currentPtr + ins.NumValB);
+						if (ins.OpCode == OpCode.SNumber && d == cframe.Function.numbers[a]) {
+							return (int) (currentPtr + b);
 						}
 					}
 					return defaultPtr;
@@ -1180,8 +1194,9 @@ namespace WattleScript.Interpreter.Execution.VM
 					for (int j = 0; j < strCount; j++)
 					{
 						var ins = cframe.Function.code[currentPtr + strOff + j];
-						if (s == cframe.Function.strings[ins.NumVal]) {
-							return (int) (currentPtr + ins.NumValB);
+						UnpackSwitch(ins, out var a, out var b);
+						if (s == cframe.Function.strings[a]) {
+							return (int) (currentPtr + b);
 						}
 					}
 					return defaultPtr;
@@ -1277,7 +1292,7 @@ namespace WattleScript.Interpreter.Execution.VM
 			{
 				m_ValueStack.Pop();
 				m_ValueStack.Set(0, DynValue.NewNumber((int)(
-					(uint)ln >> (int)rn
+					(uint)(int)ln >> (int)rn
 				))); 
 			}
 			else

@@ -594,7 +594,7 @@ namespace WattleScript.Interpreter.Tree.Expressions
 				case Operator.BitRShiftA:
 					return (int) d1 >> (int) d2;
 				case Operator.BitRShiftL:
-					return (int) ((uint) d1 >> (int) d2);
+					return (int) ((uint)(int) d1 >> (int) d2);
 				case Operator.Add:
 				case Operator.AddConcat:
 					return d1 + d2;
