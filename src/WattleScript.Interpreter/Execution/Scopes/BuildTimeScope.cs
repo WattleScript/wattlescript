@@ -24,6 +24,11 @@ namespace WattleScript.Interpreter.Execution
 			m_Frames.Last().HasVarArgs = true;
 		}
 
+		public void PushBlock(string nmspc)
+		{
+			m_Frames.Last().PushBlock(nmspc);
+		}
+		
 		public void PushBlock()
 		{
 			m_Frames.Last().PushBlock();

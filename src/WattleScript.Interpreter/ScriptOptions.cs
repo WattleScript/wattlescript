@@ -152,5 +152,10 @@ namespace WattleScript.Interpreter
 		/// If set to 0, this property is ignored (no limit is applied).
 		/// </summary>
 		public ulong InstructionLimit { get; set; } = 0;
+		
+		/// <summary>
+		/// Gets/sets CoreModules used in script.
+		/// </summary>
+		internal CoreModules CoreModules { get; set; }
 	}
 }

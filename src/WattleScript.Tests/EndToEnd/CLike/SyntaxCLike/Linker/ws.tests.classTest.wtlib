@@ -1,0 +1,6 @@
+using caller
+
+namespace ws.tests.classTest {
+    print("test")
+    class ClassB { cInst = nil;  ClassB() { this.cInst = new ClassC() } }
+}

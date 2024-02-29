@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace WattleScript.Interpreter.Loaders
 {
@@ -36,5 +37,10 @@ namespace WattleScript.Interpreter.Loaders
 		/// <param name="globalContext">The global context.</param>
 		/// <returns></returns>
 		string ResolveModuleName(string modname, Table globalContext);
+		/// <summary>
+		/// Resolves the name of a module imported by "using" statement
+		/// </summary>
+		/// <returns></returns>
+		public Func<string, Module> UsingResolver { get; set; }
 	}
 }

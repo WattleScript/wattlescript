@@ -98,6 +98,7 @@ namespace WattleScript.Interpreter.Execution
 				case OpCode.PushInt:
 				case OpCode.BaseChk:
 				case OpCode.SetMetaTab:
+				case OpCode.PrepNmspc:
 					return InstructionFieldUsage.NumVal;
 				case OpCode.Call:
 				case OpCode.ThisCall:

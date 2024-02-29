@@ -8,8 +8,12 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
-    class ClassDefinitionStatement : Statement
+    class ClassDefinitionStatement : Statement, IStaticallyImportableStatement
     {
+        public Token NameToken { get; }
+        public string DefinitionType => "class";
+        public string Namespace { get; }
+
         //Class construction related
         private SymbolRefExpression classStoreGlobal;
         private SymbolRefExpression classStoreLocal;
@@ -47,9 +51,13 @@ namespace WattleScript.Interpreter.Tree.Statements
         private Dictionary<string, SymbolRefExpression> mixinRefs = new Dictionary<string, SymbolRefExpression>();
 
         private MemberModifierFlags flags = MemberModifierFlags.None;
+        private ScriptLoadingContext lcontext;
         
         public ClassDefinitionStatement(ScriptLoadingContext lcontext) : base(lcontext)
         {
+            this.lcontext = lcontext;
+            Namespace = lcontext.Linker.CurrentNamespace;
+            
             while (lcontext.Lexer.Current.IsMemberModifier())
             {
                 MemberUtilities.AddModifierFlag(ref flags, lcontext.Lexer.Current, WattleMemberType.Class);
@@ -59,6 +67,7 @@ namespace WattleScript.Interpreter.Tree.Statements
             lcontext.Lexer.Next();
 
             var nameToken = CheckTokenType(lcontext, TokenType.Name);
+            NameToken = nameToken;
             className = nameToken.Text;
             localName = $"$class:{className}";
             //base class
@@ -416,6 +425,19 @@ namespace WattleScript.Interpreter.Tree.Statements
         
         public override void Compile(FunctionBuilder bc)
         {
+            if (false && lcontext.Linker.ImportMap.ContainsKey(Namespace))
+            {
+                if (lcontext.Linker.ImportMap[Namespace].ContainsKey(className))
+                {
+                    if (lcontext.Linker.ImportMap[Namespace][className].Compiled)
+                    {
+                        return;
+                    }
+
+                    lcontext.Linker.ImportMap[Namespace][className].Compiled = true;
+                }
+            }
+            
             bc.PushSourceRef(defSource);
             bc.Emit_Enter(classBlock);
             //mixin names

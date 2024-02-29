@@ -76,6 +76,12 @@ namespace WattleScript.Interpreter.Loaders
 		}
 
 		/// <summary>
+		/// Resolves the name of a module imported by "using" statement
+		/// </summary>
+		/// <returns></returns>
+		public Func<string, Module> UsingResolver { get; set; }
+
+		/// <summary>
 		/// Gets or sets the modules paths used by the "require" function. If null, the default paths are used (using
 		/// environment variables etc.). 
 		/// </summary>

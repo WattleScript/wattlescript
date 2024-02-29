@@ -410,6 +410,9 @@ namespace WattleScript.Interpreter.Execution.VM
 							}
 							break;
 						}
+						case OpCode.PrepNmspc:
+							ExecPrepNamespace(i);
+							break;
 						case OpCode.Invalid:
 							throw new NotImplementedException($"Invalid opcode {i.OpCode}");
 						default:
@@ -660,6 +663,14 @@ namespace WattleScript.Interpreter.Execution.VM
 				dest.Table.Members ??= new WattleMembersInfo();
 				dest.Table.Members.Merge(src.Table.Members);
 			}
+		}
+
+		private void ExecPrepNamespace(Instruction i)
+		{
+			for (int j = 0; j < i.NumVal; j++)
+			{
+				DynValue component = m_ValueStack.Pop();
+			} 
 		}
 		
 		private void ExecIterPrep()

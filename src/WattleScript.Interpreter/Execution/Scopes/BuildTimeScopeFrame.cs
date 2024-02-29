@@ -19,6 +19,11 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			m_ScopeTreeHead = m_ScopeTreeRoot = new BuildTimeScopeBlock(null);
 		}
 
+		internal void PushBlock(string nmspc)
+		{
+			m_ScopeTreeHead = m_ScopeTreeHead.AddChild(nmspc);
+		}
+		
 		internal void PushBlock()
 		{
 			m_ScopeTreeHead = m_ScopeTreeHead.AddChild();

@@ -15,6 +15,8 @@ namespace WattleScript.Interpreter.Loaders
 @"Loading scripts from files is not automatically supported on {0}. 
 Please implement your own IScriptLoader (possibly, extending ScriptLoaderBase for easier implementation),
 use a preexisting loader like EmbeddedResourcesScriptLoader or UnityAssetsScriptLoader or load scripts from strings.", frameworkname);
+			
+			UsingResolver = s => throw new PlatformNotSupportedException(m_Error);
 		}
 
 		public object LoadFile(string file, Table globalContext)
@@ -31,5 +33,7 @@ use a preexisting loader like EmbeddedResourcesScriptLoader or UnityAssetsScript
 		{
 			throw new PlatformNotSupportedException(m_Error);
 		}
+
+		public Func<string, Module> UsingResolver { get; set; }
 	}
 }

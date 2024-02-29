@@ -126,6 +126,9 @@ namespace WattleScript.Interpreter.Tree
 		Private,
 		Sealed,
 		
+		Using,
+		Namespace,
+		
 		Preprocessor_Defined //Reserved only in preprocessor
 	}
 
