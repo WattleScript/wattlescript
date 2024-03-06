@@ -89,6 +89,10 @@ namespace WattleScript.Interpreter
 		/// Prototype table for changing types. PrototypeMethods must also be set.
 		/// </summary>
 		PrototypeTable = 0x40000,
+		/// <summary>
+		/// The "ranges" package (introduced by WattleScript).
+		/// </summary>
+		Ranges = 0x80000,
 		
 		/// <summary>
 		/// A sort of "hard" sandbox preset, including string, math, table, bit32 packages, constants and table iterators.
@@ -105,17 +109,21 @@ namespace WattleScript.Interpreter
 		/// <summary>
 		/// A softer sandbox preset + prototypes, adding metatables support, error handling, coroutine, time functions, json parsing and dynamic evaluations.
 		/// </summary>
-		Preset_SoftSandboxWattle = Preset_SoftSandbox | PrototypeMethods | PrototypeTable,
+		Preset_SoftSandboxWattle = Preset_SoftSandbox | PrototypeMethods | PrototypeTable | Ranges,
+		/// <summary>
+		/// Shared base of <see cref="Preset_DefaultWattle"/> and <see cref="Preset_Default"/>
+		/// </summary>
+		Preset_DefaultShared =  LoadMethods | OS_System | IO,
 		/// <summary>
 		/// The default preset. Includes everything except "debug" as now.
 		/// Beware that using this preset allows scripts unlimited access to the system.
 		/// </summary>
-		Preset_Default = Preset_SoftSandbox | LoadMethods | OS_System | IO,
+		Preset_Default = Preset_SoftSandbox | Preset_DefaultShared,
 		/// <summary>
 		/// The default preset + prototypes. Includes everything except "debug" as now.
 		/// Beware that using this preset allows scripts unlimited access to the system.
 		/// </summary>
-		Preset_DefaultWattle = Preset_Default | PrototypeMethods | PrototypeTable,
+		Preset_DefaultWattle = Preset_SoftSandboxWattle | Preset_DefaultShared | PrototypeMethods | PrototypeTable,
 		/// <summary>
 		/// The complete package.
 		/// Beware that using this preset allows scripts unlimited access to the system.

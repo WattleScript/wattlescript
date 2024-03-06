@@ -7,9 +7,9 @@ namespace WattleScript.Interpreter.CoreLib
     [WattleScriptModule(Namespace = "prototype")]
     public class PrototypeModule
     {
-        private const string NUMBER_PROTOTABLE = "681bf104-NUMBER-PROTO";
-        private const string BOOLEAN_PROTOTABLE = "77813cb0-BOOLEAN-PROTO";
-        private const string RANGE_PROTOTABLE = "88c45cc7-RANGE-PROTO";
+        internal const string NUMBER_PROTOTABLE = "681bf104-NUMBER-PROTO";
+        internal const string BOOLEAN_PROTOTABLE = "77813cb0-BOOLEAN-PROTO";
+        internal const string RANGE_PROTOTABLE = "88c45cc7-RANGE-PROTO";
 
         public static void WattleScriptInit(Table globalTable, Table proto)
         {
@@ -30,8 +30,10 @@ namespace WattleScript.Interpreter.CoreLib
             void Register(string prototableIdent, DataType protoType)
             {
                 //register
-                var tab = new Table(sc);
-                var funcs = new Table(sc);
+                Table tab = new Table(sc);
+                DynValue mFuncs = sc.Registry.Get(prototableIdent);
+                Table funcs = mFuncs.IsNil() ? new Table(sc) : mFuncs.Table;
+                
                 tab.Set("__index", DynValue.NewTable(funcs));
                 sc.SetTypeMetatable(protoType, tab);
                 sc.Registry.Set(prototableIdent, DynValue.NewTable(funcs));
