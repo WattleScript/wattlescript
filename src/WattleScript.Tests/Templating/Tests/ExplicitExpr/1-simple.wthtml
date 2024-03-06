@@ -1,0 +1,4 @@
+@{
+ x = 'myAttr'
+}
+<div @(x)></div>

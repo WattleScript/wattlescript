@@ -1,0 +1,11 @@
+@{
+    say = (what) => {
+        x = ')/**/\''
+        /*comment*/
+        <div attr="1">
+            <div attr="2">@what</div>
+            @x
+        </div>
+    }
+}
+@say("hello")

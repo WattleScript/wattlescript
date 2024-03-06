@@ -1,0 +1,6 @@
+@if (2 > 1) {
+    <div>else</div>
+}
+@elseif (1 >= 1) {
+    <div>else2</div>
+}

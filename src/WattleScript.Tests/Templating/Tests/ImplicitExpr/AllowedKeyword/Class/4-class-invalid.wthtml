@@ -1,0 +1,7 @@
+@class MyClassB :: MyClassA with M1, M2, d {
+
+}
+@{
+    myClass = new MyClassB()
+}
+<div>@myClass.X()</div>

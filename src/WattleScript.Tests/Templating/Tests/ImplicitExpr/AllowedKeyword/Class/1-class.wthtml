@@ -1,0 +1,9 @@
+@class MyClass {
+    X = () => {
+        return "hello"
+    }
+}
+@{
+    myClass = new MyClass()
+}
+<div>@myClass.X()</div>

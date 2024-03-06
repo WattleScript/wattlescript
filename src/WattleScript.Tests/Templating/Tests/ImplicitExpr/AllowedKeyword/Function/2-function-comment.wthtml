@@ -1,0 +1,5 @@
+@function @* server comment *@ MyFunc(n) {
+    <div>@n</div>
+}
+
+@MyFunc(10)

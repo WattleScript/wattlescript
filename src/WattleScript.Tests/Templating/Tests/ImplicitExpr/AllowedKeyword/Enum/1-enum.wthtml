@@ -1,0 +1,6 @@
+@enum Colors {
+    Red,
+    Green,
+    Blue
+}
+<div>Color @Colors.Green</div>

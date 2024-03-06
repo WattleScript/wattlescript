@@ -1,0 +1,4 @@
+@{ 
+    x = 10
+}
+@{if x > 2 then }<div>@x</div>@{ end }

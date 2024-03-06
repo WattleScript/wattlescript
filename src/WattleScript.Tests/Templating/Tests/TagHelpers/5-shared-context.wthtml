@@ -1,0 +1,5 @@
+<radio-buttons name="rating">
+    <radio-button value="1">Good</radio-button>
+    <radio-button value="2">Average</radio-button>
+    <radio-button value="3">Bad</radio-button>
+</radio-buttons>

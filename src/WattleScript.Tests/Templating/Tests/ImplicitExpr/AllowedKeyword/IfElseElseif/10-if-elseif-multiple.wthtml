@@ -1,0 +1,12 @@
+@if (1 > 2) {
+    <div>10</div>
+}
+else if (2 > 2)  {
+    <div>5</div>
+}
+else if (3 > 2) {
+    <div>4</div>
+}
+else {
+    <div>1</div>
+}

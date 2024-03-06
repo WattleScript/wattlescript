@@ -1,0 +1,11 @@
+@{
+    @tagHelper("multi-1")
+    function TagMulti1(ctx) {
+        <div>multi 1: @render_tag_content(ctx["content"])</div>
+    }
+    
+    @tagHelper("multi-2")
+    function TagMulti2(ctx) {
+        <div>multi 2</div>
+    }
+}

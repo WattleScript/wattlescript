@@ -1,0 +1,6 @@
+@{
+    myFn = () => {
+        return "hello world"
+    }
+}
+<div>@myFn()</div>

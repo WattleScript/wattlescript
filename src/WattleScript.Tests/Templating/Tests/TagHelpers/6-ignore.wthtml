@@ -1,0 +1,10 @@
+@{
+    i = 0
+}
+<ignore>
+    @{
+        i = 10
+    }
+</ignore>
+
+I value is: @i

@@ -1,0 +1,8 @@
+@{
+    i = 0;
+}
+<content-tag>
+    @{
+        i = 10
+    }
+</content-tag><div>i: @i</div>

@@ -1,0 +1,7 @@
+@if (2 > 1) {
+<div>
+    <span>10</span>
+    <mytag />
+    <span>20</span>
+</div>
+}

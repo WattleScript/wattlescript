@@ -1,0 +1,6 @@
+@{
+    say = (what) => {
+        <div>@what</div>
+    }
+}
+@say("hello")

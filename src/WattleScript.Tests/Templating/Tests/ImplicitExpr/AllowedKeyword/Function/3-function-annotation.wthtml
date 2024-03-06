@@ -1,0 +1,8 @@
+@{
+    @bind('myText')
+    function MyFunc(n) {
+        <div>@n</div>
+    }
+}
+
+@MyFunc(10)

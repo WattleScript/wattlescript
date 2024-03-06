@@ -1,0 +1,6 @@
+@{
+    @tagHelper("my-tag")
+    function TagMyTag(ctx) {
+        <div>My tag!</div>
+    }
+}

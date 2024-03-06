@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Find Unclosed Tags - Unclosed Tag Checker - HTML5 - by Alicia Ramirez</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-354118-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-354118-1');
+    </script>
+</head>
+<body>
+<header>
+    <h1>Closing Tag Checker for HTML5</h1>
+    <p class="byline"><a href="https://www.aliciaramirez.com/contact/">By Alicia Ramirez</a></p>
+</header>
+<main>
+    <p>In HTML5, under certain circumstances, <a href="http://webdesign.about.com/od/htmltags/qt/optional-html-end-tags-when-to-include-them.htm">some closing tags are optional</a>. If you leave those closing tags out, the <a href="https://validator.w3.org/">W3C validator</a> will not point them out, since they are technically not an error. Some people, though, may want to close all their tags anyway. </p>
+    <p>If you experience any problems, or have any suggestions, <a href="https://www.aliciaramirez.com/contact/" title="Go to my contact page">let me know</a>.</p>
+    <h2>Before you start</h2>
+    <p><strong>Make sure <a href="https://validator.w3.org/">your code is valid</a></strong>, or you could get unexpected results. The script assumes you have valid HTML5 code, but would like to make sure you didn't leave any tags, unintentionally, unclosed.</p>
+    <h2>Paste your code here:</h2>
+    <textarea id="unclosed-tags-source"></textarea><br><br>
+    <input class="button" type="button" id="unclosed-tags-submit" value="Check it!">
+    <div id="results" class="hidden"></div>
+    <br><br>
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <br>
+
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-5972993975134339" data-ad-slot="4065378182" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <br>
+</main>
+<footer>&copy; 2016</footer>
+<script src="js/jquery-1.10.2.min.js"></script>
+<script src="js/numberfy.js"></script>
+<script>
+
+    let submitBtn = document.querySelector("#unclosed-tags-submit");
+    submitBtn.addEventListener("click", checkTags);
+    let source = document.querySelector("#unclosed-tags-source");
+
+    function checkTags() {
+
+        var DOMHolderArray = new Array();
+        var tagsArray = new Array();
+        var lines = source.value.split('\n');
+        for (var x = 0; x < lines.length; x++) {
+            var tagsArray = lines[x].match(/<(\/{1})?\w+((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>/g);
+            if (tagsArray) {
+                for (var i = 0; i < tagsArray.length; i++) {
+                    if (tagsArray[i].indexOf('</') >= 0) {
+                        elementToPop = tagsArray[i].substr(2, tagsArray[i].length - 3);
+                        elementToPop = elementToPop.replace(/ /g, '');
+                        for (var j = DOMHolderArray.length - 1; j >= 0; j--) {
+                            if (DOMHolderArray[j].element == elementToPop) {
+                                DOMHolderArray.splice(j, 1);
+                                if (elementToPop != 'html') {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        var tag = new Object();
+                        tag.full = tagsArray[i];
+                        tag.line = x + 1;
+                        if (tag.full.indexOf(' ') > 0) {
+                            tag.element = tag.full.substr(1, tag.full.indexOf(' ') - 1);
+                        } else {
+                            tag.element = tag.full.substr(1, tag.full.length - 2);
+                        }
+                        var selfClosingTags = new Array('area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr');
+                        var isSelfClosing = false;
+                        for (var y = 0; y < selfClosingTags.length; y++) {
+                            if (selfClosingTags[y].localeCompare(tag.element) == 0) {
+                                isSelfClosing = true;
+                            }
+                        }
+                        if (isSelfClosing == false) {
+                            DOMHolderArray.push(tag);
+                        }
+                    }
+
+                }
+            }
+        }
+
+        var message = '';
+        if (DOMHolderArray.length == 0) {
+            message += '<p class="no-errors">Congratulations! No unclosed tags.</p>';
+        } else {
+            if (DOMHolderArray.length == 1) {
+                message += '<p>The following tag doesn\'t seem to be closed:</p>';
+            } else {
+                message += '<p>The following tags don\'t seem to be closed:</p>';
+            }
+
+            message += '<ul class="results">';
+            for (var i = 0; i < DOMHolderArray.length; i++) {
+                var zebraClass;
+                if (i % 2 == 0) {
+                    zebraClass = ' class="even"';
+                } else {
+                    zebraClass = ' class="odd"';
+                }
+                var tagSanitized = DOMHolderArray[i].full.replace(/>/g, '&gt;');
+                tagSanitized = DOMHolderArray[i].full.replace(/</g, '&lt;');
+                message += '<li' + zebraClass + '><span class="line-number">Line ' + DOMHolderArray[i].line + '</span>: ' + tagSanitized + '</li>';
+            }
+
+            message += '</ul>';
+        }
+
+
+        let results = document.querySelector("#results");
+        results.innerHTML = message;
+        results.classList.remove("hidden");
+        $('#unclosed-tags-source').numberfy();
+    }
+
+
+</script>
+</body>
+</html>

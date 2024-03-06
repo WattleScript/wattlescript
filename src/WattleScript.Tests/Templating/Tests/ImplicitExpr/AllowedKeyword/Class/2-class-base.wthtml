@@ -1,0 +1,12 @@
+@class MyClassA {
+    X = () => {
+        return "hello"
+    }    
+}
+@class MyClassB : MyClassA {
+
+}
+@{
+    myClass = new MyClassB()
+}
+<div>@myClass.X()</div>

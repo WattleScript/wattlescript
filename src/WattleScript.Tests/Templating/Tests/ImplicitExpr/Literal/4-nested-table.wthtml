@@ -1,0 +1,4 @@
+@{
+    tbl = [ ["hello world"] ]
+}
+<div>@tbl[0][0]</div>
