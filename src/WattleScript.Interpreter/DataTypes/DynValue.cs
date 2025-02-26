@@ -14,7 +14,7 @@ namespace WattleScript.Interpreter
 	/// A class representing a value in a Lua/WattleScript script.
 	/// </summary>
 	[StructLayout(LayoutKind.Explicit)]
-	public struct DynValue
+	public struct DynValue : IEquatable<DynValue>
 	{
 		private static readonly object m_NumberTag = new object();
 		[FieldOffset(0)]
