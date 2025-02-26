@@ -109,14 +109,13 @@ namespace WattleScript.Interpreter
 		/// <param name="coreModules">The core modules to be pre-registered in the default global table.</param>
 		public Script(CoreModules coreModules)
 		{
-			Options = new ScriptOptions(DefaultOptions);
+			Options = new ScriptOptions(DefaultOptions) { CoreModules = coreModules };
 			PerformanceStats = new PerformanceStatistics();
 			Registry = new Table(this);
 
 			m_MainProcessor = new Processor(this, m_GlobalTable);
 			m_GlobalTable = new Table(this).RegisterCoreModules(coreModules);
 		}
-
 
 		/// <summary>
 		/// Gets or sets the script loader which will be used as the value of the

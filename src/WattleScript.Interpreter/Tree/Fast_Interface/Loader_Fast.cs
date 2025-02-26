@@ -36,42 +36,53 @@ namespace WattleScript.Interpreter.Tree.Fast_Interface
 			}
 		}
 
-		private static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, 
-			string preprocessedCode = null,
-			Dictionary<string, DefineNode> defines = null)
+		internal static ScriptLoadingContext CreateLoadingContext(Script script, SourceCode source, string preprocessedCode = null, Dictionary<string, DefineNode> defines = null, bool lexerAutoSkipComments = true, bool lexerKeepInsignificantChars = false, Linker staticImport = null)
 		{
 			return new ScriptLoadingContext(script)
 			{
 				Source = source,
-				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, true, script.Options.Syntax, script.Options.Directives, defines),
-				Syntax = script.Options.Syntax
+				Lexer = new Lexer(source.SourceID, preprocessedCode ?? source.Code, lexerAutoSkipComments, script.Options.Syntax, script.Options.Directives, defines, lexerKeepInsignificantChars),
+				Syntax = script.Options.Syntax,
+				Linker = staticImport
 			};
 		}
 
-		internal static FunctionProto LoadChunk(Script script, SourceCode source)
+		internal static FunctionProto LoadChunk(Script script, SourceCode source, Linker staticImport = null)
 		{
 			
 	#if !DEBUG_PARSER
 			try
 			{
 	#endif
-				ScriptLoadingContext lcontext;
 				ChunkStatement stat;
 
 				using (script.PerformanceStats.StartStopwatch(Diagnostics.PerformanceCounter.AstCreation))
 				{
+					ScriptLoadingContext lcontext;
+					bool staticImportIsNull = staticImport == null;
+					
 					if (script.Options.Syntax == ScriptSyntax.Wattle)
 					{
-						var preprocess = new Preprocessor(script, source.SourceID, source.Code);
+						Preprocessor preprocess = new Preprocessor(script, source.SourceID, source.Code);
 						preprocess.Process();
-						lcontext = CreateLoadingContext(script, source, preprocess.ProcessedSource,
-							preprocess.Defines);
+
+						staticImport ??= new Linker(script, source.SourceID, preprocess.ProcessedSource, preprocess.Defines);
+						staticImport.Process();
+						
+						lcontext = CreateLoadingContext(script, source, preprocess.ProcessedSource, preprocess.Defines, staticImport: staticImport);
 					}
 					else
 					{
 						lcontext = CreateLoadingContext(script, source);
 					}
+					
 					stat = new ChunkStatement(lcontext);
+
+					if (script.Options.Syntax == ScriptSyntax.Wattle && staticImportIsNull)
+					{
+						stat.Block.InsertStatements(staticImport?.Export());	
+					}
+					
 					lcontext.Scope = new BuildTimeScope();
 					stat.ResolveScope(lcontext);
 				}

@@ -5,8 +5,12 @@ using WattleScript.Interpreter.Tree.Expressions;
 
 namespace WattleScript.Interpreter.Tree.Statements
 {
-    class EnumDefinitionStatement : Statement
+    class EnumDefinitionStatement : Statement, IStaticallyImportableStatement
     {
+        public Token NameToken { get; }
+        public string DefinitionType => "enum";
+        public string Namespace { get; }
+        
         private string enumName;
         private SourceRef assignment;
         private SourceRef buildCode;
@@ -18,12 +22,14 @@ namespace WattleScript.Interpreter.Tree.Statements
         public EnumDefinitionStatement(ScriptLoadingContext lcontext)
             : base(lcontext)
         {
+            Namespace = lcontext.Linker.CurrentNamespace;
             annotations = lcontext.FunctionAnnotations.ToArray();
             lcontext.FunctionAnnotations = new List<Annotation>();
             //lexer is at "enum"
             var start = lcontext.Lexer.Current;
             lcontext.Lexer.Next();
             var name = CheckTokenType(lcontext, TokenType.Name);
+            NameToken = name;
             enumName = name.Text;
             assignment = start.GetSourceRef(name);
             var buildStart = CheckTokenType(lcontext, TokenType.Brk_Open_Curly);

@@ -16,13 +16,23 @@ namespace WattleScript.Interpreter.Tree.Statements
 	{
 		List<Statement> m_Statements = new List<Statement>();
 
+		public void InsertStatements(List<Statement> statements)
+		{
+			// push to front
+			statements.AddRange(m_Statements);
+			m_Statements = statements;
+		}
+
 		public CompositeStatement(ScriptLoadingContext lcontext, BlockEndType endType)
 			: base(lcontext)
 		{
+			lcontext.Linker?.StoreNamespace();
+			
 			while (true)
 			{
 				try
 				{
+					ParseStaticImports(lcontext);
 					ParseAnnotations(lcontext);
 					Token t = lcontext.Lexer.Current;
 					if (t.IsEndOfBlock()) break;
@@ -62,6 +72,8 @@ namespace WattleScript.Interpreter.Tree.Statements
 				}
 			}
 
+			lcontext.Linker?.RestoreNamespace();
+			
 			// eat away all superfluos ';'s
 			while (lcontext.Lexer.Current.Type == TokenType.SemiColon)
 				lcontext.Lexer.Next();
@@ -90,6 +102,10 @@ namespace WattleScript.Interpreter.Tree.Statements
 					case TokenType.Directive:
 					case TokenType.Do:
 					case TokenType.If:
+					case TokenType.Switch:
+					case TokenType.Enum:
+					case TokenType.Class:
+					case TokenType.Mixin:
 					{
 						goto endSynchronize;
 					}

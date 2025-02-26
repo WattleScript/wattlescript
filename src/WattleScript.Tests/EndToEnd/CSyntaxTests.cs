@@ -144,10 +144,10 @@ namespace WattleScript.Interpreter.Tests.EndToEnd
         {
             var s = new Script();
             s.Options.Syntax = ScriptSyntax.Wattle;
-            s.Options.Directives.Add("using");
-            var chunk = s.LoadString("using a.b.c;");
+            s.Options.Directives.Add("usingDirective");
+            var chunk = s.LoadString("usingDirective a.b.c;");
             var a = chunk.Function.Annotations[0];
-            Assert.AreEqual("using", a.Name);
+            Assert.AreEqual("usingDirective", a.Name);
             Assert.AreEqual("a.b.c", a.Value.String);
         }
         

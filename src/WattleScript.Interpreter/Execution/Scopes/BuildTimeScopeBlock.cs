@@ -10,8 +10,10 @@ namespace WattleScript.Interpreter.Execution.Scopes
 		internal BuildTimeScopeBlock Parent { get; private set; }
 		internal List<BuildTimeScopeBlock> ChildNodes { get; private set; }
 		internal RuntimeScopeBlock ScopeBlock { get; private set; }
+		internal string Namespace { get; private set; }
+		
 		Dictionary<string, SymbolRef> m_DefinedNames = new Dictionary<string, SymbolRef>();
-	
+
 		internal void Rename(string name)
 		{
 			SymbolRef sref = m_DefinedNames[name];
@@ -19,17 +21,17 @@ namespace WattleScript.Interpreter.Execution.Scopes
 			m_DefinedNames.Add(string.Format("@{0}_{1}", name, Guid.NewGuid().ToString("N")), sref);
 		}
 
-		internal BuildTimeScopeBlock(BuildTimeScopeBlock parent)
+		internal BuildTimeScopeBlock(BuildTimeScopeBlock parent, string nmspc = "")
 		{
 			Parent = parent;
 			ChildNodes = new List<BuildTimeScopeBlock>();
 			ScopeBlock = new RuntimeScopeBlock();
+			Namespace = nmspc;
 		}
 
-
-		internal BuildTimeScopeBlock AddChild()
+		internal BuildTimeScopeBlock AddChild(string nmspc = "")
 		{
-			BuildTimeScopeBlock block = new BuildTimeScopeBlock(this);
+			BuildTimeScopeBlock block = new BuildTimeScopeBlock(this, nmspc);
 			ChildNodes.Add(block);
 			return block;
 		}
