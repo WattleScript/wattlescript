@@ -202,12 +202,32 @@ namespace WattleScript
 			{
 				var script = new Script(syntax == ScriptSyntax.Lua ? CoreModules.Preset_Default : CoreModules.Preset_DefaultWattle);
 				script.Options.Syntax = syntax;
+				var scriptArgs = new Table(script);
+				for (int i = 1; i < extra.Count; i++)
+				{
+					scriptArgs[i] = extra[i];
+				}
+				script.Globals["arg"] = scriptArgs;
 				if (!File.Exists(extra[0]))
 				{
 					Console.Error.WriteLine("File not found: {0}", extra[0]);
 					Environment.Exit(2);
 				}
-				script.DoFile(extra[0]);
+
+				try
+				{
+					script.DoFile(extra[0]);
+				}
+				catch (InterpreterException ex)
+				{
+					Console.Error.WriteLine(ex.DecoratedMessage ?? ex.Message);
+					Environment.Exit(1);
+				}
+				catch (Exception ex)
+				{
+					Console.Error.WriteLine(ex.ToString());
+					Environment.Exit(1);
+				}
 				return true;
 			}
 
