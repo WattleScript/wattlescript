@@ -115,7 +115,7 @@ public static partial class HardwireInterop
             if (!m.Constructor)
             {
                 tw.Append("self.");
-                tw.Append(m.Name);
+                tw.Append(m.PropertyName?? m.Name);
             }
             else
             {

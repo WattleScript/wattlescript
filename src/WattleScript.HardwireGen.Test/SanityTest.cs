@@ -43,4 +43,17 @@ public class SanityTest
         sc.Globals["data"] = new GenericExtra<string>() { Value = "Hello" };
         Assert.AreEqual(1234, sc.DoString("return data.DoThing()").CastToInt());
     }
+
+    [Test]
+    public void Property()
+    {
+        var sc = new Script(CoreModules.None);
+        var p = new WithProperty();
+        sc.Globals["data"] = p;
+        Assert.AreEqual(6, sc.DoString(@"
+        data.Property = 3
+        return data.Property + 3
+        ").CastToInt());
+        Assert.AreEqual(3, p.Property);
+    }
 }

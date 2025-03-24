@@ -255,7 +255,7 @@ public partial class HardwireSourceGenerator : IIncrementalGenerator
                 overloads.Add(new HardwireOverload(clsName, o.ReturnsVoid, new(parameters.ToArray())));
             }
 
-            hardwireMethods.Add(new(m.PropertyName ?? m.Name, m.Property, m.Constructor, new(overloads.ToArray())));
+            hardwireMethods.Add(new(m.Name, m.PropertyName, m.Property, m.Constructor, new(overloads.ToArray())));
         }
 
         foreach (var f in fields.Values)

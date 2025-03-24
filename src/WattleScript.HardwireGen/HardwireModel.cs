@@ -15,7 +15,7 @@ public record struct TypeOrDiagnostic(HardwireType? Type, CachedDiagnostic? Diag
 public record struct HardwireField(string ClassName, string Name, string Type, bool Read, bool Write);
 public record struct HardwireParameter(string Name, string Type, bool IsParams);
 public record struct HardwireOverload(string ClassName, bool ReturnsVoid, EquatableArray<HardwireParameter> Parameters);
-public record struct HardwireMethod(string Name, bool Property,  bool Constructor, EquatableArray<HardwireOverload> Overloads);
+public record struct HardwireMethod(string Name, string? PropertyName, bool Property, bool Constructor, EquatableArray<HardwireOverload> Overloads);
 
 public record struct CachedDiagnostic(int DiagnosticIndex, string Target, string? Target2, CachedLocation? Location);
 
