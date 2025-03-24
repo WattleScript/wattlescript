@@ -6,13 +6,18 @@ namespace WattleScript.HardwireGen.Test;
 public class MyWattleData
 {
     public string Value = "";
-    public void SetString(string value)
-    {
-        Value = value;
-    }
 
     public int Add4(int a)
     {
         return a + 4;
+    }
+
+    public MyWattleData()
+    {
+    }
+
+    public MyWattleData(string value)
+    {
+        Value = value;
     }
 }

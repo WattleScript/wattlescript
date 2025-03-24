@@ -13,6 +13,17 @@ public class SanityTest
     }
 
     [Test]
+    public void Constructor()
+    {
+        var sc = new Script(CoreModules.None);
+        sc.Globals["MyWattleData"] = typeof(MyWattleData);
+        var r = sc.DoString("return MyWattleData.__new('Hello')");
+        Assert.IsInstanceOf<MyWattleData>(r.ToObject());
+        var wd = r.ToObject<MyWattleData>();
+        Assert.AreEqual("Hello", wd.Value);
+    }
+
+    [Test]
     public void CallMethod()
     {
         var sc = new Script(CoreModules.None);

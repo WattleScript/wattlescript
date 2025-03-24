@@ -166,7 +166,11 @@ public partial class HardwireSourceGenerator : IIncrementalGenerator
                     if (method.MethodKind == MethodKind.Constructor)
                     {
                         if (!methods.ContainsKey("__new"))
-                            methods.Add("__new", new TypeMethod() { Constructor = true });
+                        {
+                            var ctor = new TypeMethod() { Constructor = true };
+                            ctor.SetName("__new");
+                            methods.Add("__new", ctor);
+                        }
                         methods["__new"].AddMethod(0, method);
                     }
                     else
