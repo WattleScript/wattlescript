@@ -11,7 +11,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WattleScript.Hardwire", "Wa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WattleScript.HardwireGen", "WattleScript.HardwireGen\WattleScript.HardwireGen.csproj", "{961B856C-A72C-4D89-903C-2B801B348FD2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WattleScript.Tests", "WattleScript.Tests\WattleScript.Tests.csproj", "{416B592B-1943-4379-8824-5D9EC62484A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WattleScript.Interpreter.Tests", "WattleScript.Interpreter.Tests\WattleScript.Interpreter.Tests.csproj", "{416B592B-1943-4379-8824-5D9EC62484A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WattleScript.HardwireGen.Test", "WattleScript.HardwireGen.Test\WattleScript.HardwireGen.Test.csproj", "{EF6F005F-A071-45C1-970E-A1D2FCA81358}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -86,5 +88,17 @@ Global
 		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x64.Build.0 = Release|Any CPU
 		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x86.ActiveCfg = Release|Any CPU
 		{416B592B-1943-4379-8824-5D9EC62484A7}.Release|x86.Build.0 = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|x64.Build.0 = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Debug|x86.Build.0 = Debug|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|x64.ActiveCfg = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|x64.Build.0 = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|x86.ActiveCfg = Release|Any CPU
+		{EF6F005F-A071-45C1-970E-A1D2FCA81358}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

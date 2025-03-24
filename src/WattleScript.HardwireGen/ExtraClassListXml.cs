@@ -5,21 +5,19 @@ using System.Xml.Serialization;
 namespace WattleScript.HardwireGen
 {
     [XmlRoot("WattleScript")]
-    public class ExtraClassList
+    public class ExtraClassListXml
     {
         [XmlElement]
-        public string[] ExtraType;
-        [XmlElement] 
-        public string[] BlacklistType;
-        private static XmlSerializer cl = new XmlSerializer(typeof(ExtraClassList));
-        public static ExtraClassList Get(string file)
+        public string[] ExtraType = Array.Empty<string>();
+        private static XmlSerializer cl = new XmlSerializer(typeof(ExtraClassListXml));
+        public static ExtraClassListXml? Get(string file)
         {
-            string text;
+            string? text;
             if ((text = ReadAllText(file)) != null)
             {
                 try
                 {
-                    return (ExtraClassList) cl.Deserialize(new StringReader(text));
+                    return (ExtraClassListXml) cl.Deserialize(new StringReader(text));
                 }
                 catch (Exception)
                 {
@@ -29,7 +27,7 @@ namespace WattleScript.HardwireGen
             return null;
         }
 
-        static string ReadAllText(string file)
+        static string? ReadAllText(string file)
         {
             try
             {

@@ -5,6 +5,8 @@
         <Nullable>disable</Nullable>
 
         <IsPackable>false</IsPackable>
+
+        <RootNamespace>WattleScript.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

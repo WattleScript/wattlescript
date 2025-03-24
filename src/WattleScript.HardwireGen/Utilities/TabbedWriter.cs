@@ -29,7 +29,34 @@ namespace WattleScript.HardwireGen
                 for (int i = 0; i < tabsCount; i++) builder.Append("    ");
             }
         }
-        
+
+        public struct BlockHandle : IDisposable
+        {
+            public TabbedWriter Writer;
+            public BlockHandle(TabbedWriter tw)
+            {
+                Writer = tw;
+            }
+            public void Dispose()
+            {
+                Writer.UnIndent().AppendLine("}");
+            }
+        }
+
+        public BlockHandle Block()
+        {
+            AppendLine("{").Indent();
+            return new BlockHandle(this);
+        }
+
+        public TabbedWriter AppendEditorHiddenLine()
+        {
+            StartLine();
+            builder.AppendLine("[System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
+            lineStarted = false;
+            return this;
+        }
+
         public TabbedWriter AppendLine(string line)
         {
             StartLine();
