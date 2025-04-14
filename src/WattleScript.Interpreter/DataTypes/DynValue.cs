@@ -459,11 +459,17 @@ namespace WattleScript.Interpreter
 
 				string typeString = this.Type.ToLuaTypeString();
 
-				if (m_Object is UserData ud)
+				switch (m_Object)
 				{
-					string str = ud.Descriptor.AsString(ud.Object);
-					if (str != null)
-						return str;
+					case UserData ud:
+					{
+						string str = ud.Descriptor.AsString(ud.Object);
+						if (str != null)
+							return str;
+						break;
+					}
+					case Range range:
+						return $"{range.From}..{range.To}";
 				}
 
 				return refid.FormatTypeString(typeString);
