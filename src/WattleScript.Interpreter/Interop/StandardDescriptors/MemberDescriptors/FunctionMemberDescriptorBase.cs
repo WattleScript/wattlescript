@@ -141,7 +141,7 @@ namespace WattleScript.Interpreter.Interop
 			for (int i = 0; i < pars.Length; i++)
 			{
 				// keep track of out and ref params
-				if (parameters[i].Type.IsByRef)
+				if (parameters[i].TypeByRef)
 				{
 					if (outParams == null) outParams = new List<int>();
 					outParams.Add(i);
@@ -208,7 +208,7 @@ namespace WattleScript.Interpreter.Interop
 					for (int ii = 0; ii < extraArgs.Count; ii++)
 					{
 						vararg.SetValue(ScriptToClrConversions.DynValueToObjectOfType(extraArgs[ii], VarArgsElementType,
-						null, false), ii);
+						false, null, false), ii);
 					}
 
 					pars[i] = vararg;
@@ -219,7 +219,7 @@ namespace WattleScript.Interpreter.Interop
 				{
 					var arg = args.RawGet(j, false);
 					pars[i] = ScriptToClrConversions.DynValueToObjectOfType(arg, parameters[i].Type,
-						parameters[i].DefaultValue, parameters[i].HasDefaultValue);
+						parameters[i].TypeByRef, parameters[i].DefaultValue, parameters[i].HasDefaultValue);
 					j += 1;
 				}
 			}

@@ -140,8 +140,8 @@ namespace WattleScript.Interpreter.Interop.Converters
 
 			foreach (var kvp in table.Pairs)
 			{
-				object key = ScriptToClrConversions.DynValueToObjectOfType(kvp.Key, keyType, null, false);
-				object val = ScriptToClrConversions.DynValueToObjectOfType(kvp.Value, valueType, null, false);
+				object key = ScriptToClrConversions.DynValueToObjectOfType(kvp.Key, keyType, false, null, false);
+				object val = ScriptToClrConversions.DynValueToObjectOfType(kvp.Value, valueType, false, null, false);
 
 				dic.Add(key, val);
 			}
@@ -159,7 +159,7 @@ namespace WattleScript.Interpreter.Interop.Converters
 			for (int i = 1, l = table.Length; i <= l; i++)
 			{
 				DynValue v = table.Get(i);
-				object o = ScriptToClrConversions.DynValueToObjectOfType(v, itemType, null, false);
+				object o = ScriptToClrConversions.DynValueToObjectOfType(v, itemType, false, null, false);
 				lst.Add(o);
 			}
 
@@ -188,7 +188,7 @@ namespace WattleScript.Interpreter.Interop.Converters
 			for (int i = 1, l = table.Length; i <= l; i++)
 			{
 				DynValue v = table.Get(i);
-				object o = ScriptToClrConversions.DynValueToObjectOfType(v, itemType, null, false);
+				object o = ScriptToClrConversions.DynValueToObjectOfType(v, itemType, false, null, false);
 				lst.Add(o);
 			}
 

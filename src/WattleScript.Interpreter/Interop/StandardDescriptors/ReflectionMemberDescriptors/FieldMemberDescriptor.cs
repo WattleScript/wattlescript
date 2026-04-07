@@ -159,7 +159,7 @@ namespace WattleScript.Interpreter.Interop
 			if (IsReadonly || IsConst)
 				throw new ScriptRuntimeException("userdata field '{0}.{1}' cannot be written to.", this.FieldInfo.DeclaringType.Name, this.Name);
 
-			object value = ScriptToClrConversions.DynValueToObjectOfType(v, this.FieldInfo.FieldType, null, false);
+			object value = ScriptToClrConversions.DynValueToObjectOfType(v, this.FieldInfo.FieldType, false, null, false);
 
 			try
 			{

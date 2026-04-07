@@ -167,7 +167,7 @@ namespace WattleScript.Interpreter.Interop
 					else
 					{
 						o = Interop.Converters.ScriptToClrConversions.DynValueToObjectOfType(value,
-							pi.PropertyType, null, false);
+							pi.PropertyType, false,null, false);
 					}
 
 					pi.GetSetMethod(true).Invoke(obj, new object[] { o });

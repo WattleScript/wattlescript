@@ -186,10 +186,10 @@ namespace WattleScript.Interpreter.Interop.Converters
         /// <summary>
         /// Converts a DynValue to a CLR object of a specific type
         /// </summary>
-        internal static object DynValueToObjectOfType(DynValue value, Type desiredType, object defaultValue,
+        internal static object DynValueToObjectOfType(DynValue value, Type desiredType, bool typeByRef, object defaultValue,
             bool isOptional)
         {
-            if (desiredType.IsByRef)
+            if (typeByRef)
                 desiredType = desiredType.GetElementType();
 
             var converter =
@@ -320,9 +320,9 @@ namespace WattleScript.Interpreter.Interop.Converters
         /// Implementation must follow that of DynValueToObjectOfType.. it's not very DRY in that sense.
         /// However here we are in perf-sensitive path.. TODO : double-check the gain and see if a DRY impl is better.
         /// </summary>
-        internal static int DynValueToObjectOfTypeWeight(DynValue value, Type desiredType, bool isOptional)
+        internal static int DynValueToObjectOfTypeWeight(DynValue value, Type desiredType, bool desiredByRef, bool isOptional)
         {
-            if (desiredType.IsByRef)
+            if (desiredByRef)
                 desiredType = desiredType.GetElementType();
 
             var customConverter =

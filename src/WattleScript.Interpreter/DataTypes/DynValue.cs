@@ -1051,7 +1051,7 @@ namespace WattleScript.Interpreter
 		public object ToObject(Type desiredType)
 		{
 			//Contract.Requires(desiredType != null);
-			return WattleScript.Interpreter.Interop.Converters.ScriptToClrConversions.DynValueToObjectOfType(this, desiredType, null, false);
+			return WattleScript.Interpreter.Interop.Converters.ScriptToClrConversions.DynValueToObjectOfType(this, desiredType, false, null, false);
 		}
 
 		/// <summary>

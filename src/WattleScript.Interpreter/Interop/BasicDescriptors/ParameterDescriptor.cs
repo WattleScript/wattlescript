@@ -45,7 +45,11 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 		/// Gets the original type of the parameter before any restriction has been applied.
 		/// </summary>
 		public Type OriginalType { get { return m_OriginalType ?? Type; } }
-
+		
+		///
+		/// Gets the IsByRef result of the Type
+		/// 
+		public bool TypeByRef { get; private set; }
 
 		/// <summary>
 		/// If the type got restricted, the original type before the restriction.
@@ -72,6 +76,7 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 			IsOut = isOut;
 			IsRef = isRef;
 			IsVarArgs = isVarArgs;
+			TypeByRef = type.IsByRef;
 		}
 
 		/// <summary>
@@ -95,6 +100,7 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 			IsOut = isOut;
 			IsRef = isRef;
 			IsVarArgs = isVarArgs;
+			TypeByRef = type.IsByRef;
 
 			if (typeRestriction != null)
 			{
@@ -116,6 +122,7 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 			IsOut = pi.IsOut;
 			IsRef = pi.ParameterType.IsByRef;
 			IsVarArgs = (pi.ParameterType.IsArray && pi.GetCustomAttributes(typeof(ParamArrayAttribute), true).Any());
+			TypeByRef = pi.ParameterType.IsByRef;
 		}
 
 

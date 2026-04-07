@@ -33,7 +33,7 @@ namespace WattleScript.Interpreter.Interop.StandardDescriptors.HardwiredDescript
 		public void SetValue(Script script, object obj, DynValue value)
 		{
 			this.CheckAccess(MemberDescriptorAccess.CanWrite, obj);
-			object v = ScriptToClrConversions.DynValueToObjectOfType(value, MemberType, null, false);
+			object v = ScriptToClrConversions.DynValueToObjectOfType(value, MemberType, false, null, false);
 			SetValueImpl(script, obj, v);
 		}
 

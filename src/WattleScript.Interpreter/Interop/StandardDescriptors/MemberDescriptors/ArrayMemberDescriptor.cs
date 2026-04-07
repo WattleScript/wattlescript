@@ -58,7 +58,7 @@ namespace WattleScript.Interpreter.Interop
 
 			Type elemType = array.GetType().GetElementType();
 
-			object objValue = ScriptToClrConversions.DynValueToObjectOfType(value, elemType, null, false);
+			object objValue = ScriptToClrConversions.DynValueToObjectOfType(value, elemType, false, null, false);
 
 			array.SetValue(objValue, indices);
 

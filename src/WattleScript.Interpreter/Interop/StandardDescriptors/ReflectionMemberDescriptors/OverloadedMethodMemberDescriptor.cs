@@ -403,9 +403,9 @@ namespace WattleScript.Interpreter.Interop
 		private static int CalcScoreForSingleArgument(ParameterDescriptor desc, Type parameterType, DynValue arg, bool isOptional)
 		{
 			int score = ScriptToClrConversions.DynValueToObjectOfTypeWeight(arg,
-				parameterType, isOptional);
+				parameterType, desc.TypeByRef, isOptional);
 
-			if (parameterType.IsByRef || desc.IsOut || desc.IsRef)
+			if (desc.TypeByRef || desc.IsOut || desc.IsRef)
 				score = Math.Max(0, score + ScriptToClrConversions.WEIGHT_BYREF_BONUSMALUS);
 
 			return score;

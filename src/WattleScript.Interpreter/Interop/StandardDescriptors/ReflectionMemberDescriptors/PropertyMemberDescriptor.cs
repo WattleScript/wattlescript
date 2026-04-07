@@ -230,7 +230,7 @@ namespace WattleScript.Interpreter.Interop
 			if (m_Setter == null)
 				throw new ScriptRuntimeException("userdata property '{0}.{1}' cannot be written to.", this.PropertyInfo.DeclaringType.Name, this.Name);
 
-			object value = ScriptToClrConversions.DynValueToObjectOfType(v, this.PropertyInfo.PropertyType, null, false);
+			object value = ScriptToClrConversions.DynValueToObjectOfType(v, this.PropertyInfo.PropertyType, false, null, false);
 
 			try
 			{
