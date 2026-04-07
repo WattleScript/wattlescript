@@ -33,13 +33,14 @@ public static partial class HardwireInterop
     
     static void GenerateField(TabbedWriter tw, string typeName, HardwireField f)
     {
-        tw.Append("private sealed class ").Append(f.ClassName).Append(" : ").AppendLine(CLS_PROP_FIELD);
+        tw.Append("private sealed class ").Append(f.ClassName).Append(" : ").Append(CLS_PROP_FIELD)
+            .Append("<").Append(f.Type).AppendLine(">");
         tw.AppendLine("{").Indent();
         tw.Append("internal ").Append(f.ClassName).AppendLine("() :");
         var access = 0;
         if (f.Read) access += 1; //CanRead
         if (f.Write) access += 2; //CanWrite
-        tw.Indent().Append("base(typeof(").Append(f.Type).Append("),")
+        tw.Indent().Append("base(")
             .Append(f.Name.ToLiteral()).Append(",false,")
             .Append("(WattleScript.Interpreter.Interop.BasicDescriptors.MemberDescriptorAccess)")
             .Append(access.ToString()).AppendLine(")").UnIndent();
@@ -48,19 +49,19 @@ public static partial class HardwireInterop
         if (f.Read)
         {
             tw.AppendLine(
-                    "protected override object GetValueImpl(WattleScript.Interpreter.Script script, object obj) {")
+                    $"protected override {f.Type} GetValueImpl(WattleScript.Interpreter.Script script, object obj) {{")
                 .Indent();
             tw.Append("var self = (").Append(typeName).AppendLine(")obj;");
-            tw.Append("return (object)self.").Append(f.Name).AppendLine(";");
+            tw.Append("return self.").Append(f.Name).AppendLine(";");
             tw.UnIndent().AppendLine("}");
         }
         if (f.Write)
         {
             tw.AppendLine(
-                    "protected override void SetValueImpl(WattleScript.Interpreter.Script script, object obj, object value) {")
+                    $"protected override void SetValueImpl(WattleScript.Interpreter.Script script, object obj, {f.Type} value) {{")
                 .Indent();
             tw.Append("var self = (").Append(typeName).AppendLine(")obj;");
-            tw.Append("self.").Append(f.Name).Append(" = (").Append(f.Type).AppendLine(")value;");
+            tw.Append("self.").Append(f.Name).AppendLine(" = value;");
             tw.UnIndent().AppendLine("}");
         }
         tw.UnIndent().AppendLine("}");
