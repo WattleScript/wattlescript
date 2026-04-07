@@ -11,8 +11,7 @@ namespace WattleScript.Interpreter.Interop
 	/// <summary>
 	/// Class providing easier marshalling of CLR properties
 	/// </summary>
-	public class PropertyMemberDescriptor : IMemberDescriptor, IOptimizableDescriptor,
-		IWireableDescriptor
+	public class PropertyMemberDescriptor : IMemberDescriptor, IOptimizableDescriptor
 	{
 		/// <summary>
 		/// Gets the PropertyInfo got by reflection
@@ -286,24 +285,6 @@ namespace WattleScript.Interpreter.Interop
 		{
 			this.OptimizeGetter();
 			this.OptimizeSetter();
-		}
-
-		/// <summary>
-		/// Prepares the descriptor for hard-wiring.
-		/// The descriptor fills the passed table with all the needed data for hardwire generators to generate the appropriate code.
-		/// </summary>
-		/// <param name="t">The table to be filled</param>
-		public void PrepareForWiring(Table t)
-		{
-			t.Set("class", DynValue.NewString(this.GetType().FullName));
-			t.Set("visibility", DynValue.NewString(this.PropertyInfo.GetClrVisibility()));
-			t.Set("name", DynValue.NewString(this.Name));
-			t.Set("static", DynValue.NewBoolean(this.IsStatic));
-			t.Set("read", DynValue.NewBoolean(this.CanRead));
-			t.Set("write", DynValue.NewBoolean(this.CanWrite));
-			t.Set("decltype", DynValue.NewString(this.PropertyInfo.DeclaringType.FullName));
-			t.Set("declvtype", DynValue.NewBoolean(this.PropertyInfo.DeclaringType.IsValueType));
-			t.Set("type", DynValue.NewString(this.PropertyInfo.PropertyType.FullName));
 		}
 	}
 }

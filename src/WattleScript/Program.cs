@@ -105,13 +105,11 @@ namespace WattleScript
 			// General options
 			bool show_help = false;
 			bool print_version = false;
-			bool do_hardwire = false;
 			bool do_exec = false;
 			
 			// Hardwire Options
 			string classname = null;
 			string namespacename = null;
-			bool useVb = false;
 			bool lua = false;
 
 			var p = new OptionSet()
@@ -120,8 +118,6 @@ namespace WattleScript
 				{"v|version", "print version and exit", v => print_version = v != null },
 				{"X|exec", "runs the specified command", v => do_exec = v != null },
 				{"L|lua", "run interpreter in lua mode", v => lua = v != null },
-				{"W|wire", "generate code for hardwiring table", v=> do_hardwire = v != null },
-				{"vb", "set hardwire generator to Visual Basic.NET", v => useVb = v != null },
 				{"internals", "enable internals for hardwire generator", v => internals = v != null },
 				{"class=", "hardwire class name", v => classname = v },
 				{"namespace=", "hardwire namespace", v => namespacename = v },
@@ -171,23 +167,6 @@ namespace WattleScript
 						}
 					};
 					ExecuteCommand(script, extra[0]);
-				}
-				else
-				{
-					Console.WriteLine("Incorrect syntax");
-					ShowUsage();
-					Environment.Exit(1);
-				}
-				return true;
-			}
-			
-			if (do_hardwire)
-			{
-				if (extra.Count >= 2)
-				{
-					string dumpfile = extra[0];
-					string destfile = extra[1];
-					HardWireCommand.Generate(useVb ? "vb" : "cs", dumpfile, destfile, internals, classname, namespacename);
 				}
 				else
 				{

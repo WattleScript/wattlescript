@@ -7,7 +7,7 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 	/// <summary>
 	/// Descriptor of parameters used in <see cref="IOverloadableMemberDescriptor"/> implementations.
 	/// </summary>
-	public sealed class ParameterDescriptor : IWireableDescriptor
+	public sealed class ParameterDescriptor
 	{
 		/// <summary>
 		/// Gets the name of the parameter
@@ -152,32 +152,6 @@ namespace WattleScript.Interpreter.Interop.BasicDescriptors
 			m_OriginalType = Type;
 			Type = type;
 		}
-
-
-		/// <summary>
-		/// Prepares the descriptor for hard-wiring.
-		/// The descriptor fills the passed table with all the needed data for hardwire generators to generate the appropriate code.
-		/// </summary>
-		/// <param name="t">The table to be filled</param>
-		public void PrepareForWiring(Table table)
-		{
-			table.Set("name", DynValue.NewString(Name));
-
-			if (Type.IsByRef)
-				table.Set("type", DynValue.NewString(Type.GetElementType().FullName));
-			else
-				table.Set("type", DynValue.NewString(Type.FullName));
-
-			if (OriginalType.IsByRef)
-				table.Set("origtype", DynValue.NewString(OriginalType.GetElementType().FullName));
-			else
-				table.Set("origtype", DynValue.NewString(OriginalType.FullName));
-
-			table.Set("default", DynValue.NewBoolean(HasDefaultValue));
-			table.Set("out", DynValue.NewBoolean(IsOut));
-			table.Set("ref", DynValue.NewBoolean(IsRef));
-			table.Set("varargs", DynValue.NewBoolean(IsVarArgs));
-			table.Set("restricted", DynValue.NewBoolean(HasBeenRestricted));
-		}
+		
 	}
 }

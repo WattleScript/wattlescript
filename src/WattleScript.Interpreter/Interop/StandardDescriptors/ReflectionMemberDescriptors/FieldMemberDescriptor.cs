@@ -11,7 +11,7 @@ namespace WattleScript.Interpreter.Interop
 	/// <summary>
 	/// Class providing easier marshalling of CLR fields
 	/// </summary>
-	public class FieldMemberDescriptor : IMemberDescriptor, IOptimizableDescriptor, IWireableDescriptor
+	public class FieldMemberDescriptor : IMemberDescriptor, IOptimizableDescriptor
 	{
 		/// <summary>
 		/// Gets the FieldInfo got by reflection
@@ -203,27 +203,6 @@ namespace WattleScript.Interpreter.Interop
 		{
 			if (m_OptimizedGetter == null)
 				this.OptimizeGetter();
-		}
-
-		/// <summary>
-		/// Prepares the descriptor for hard-wiring.
-		/// The descriptor fills the passed table with all the needed data for hardwire generators to generate the appropriate code.
-		/// </summary>
-		/// <param name="t">The table to be filled</param>
-		public void PrepareForWiring(Table t)
-		{
-			t.Set("class", DynValue.NewString(this.GetType().FullName));
-			t.Set("visibility", DynValue.NewString(this.FieldInfo.GetClrVisibility()));
-
-			t.Set("name", DynValue.NewString(this.Name));
-			t.Set("static", DynValue.NewBoolean(this.IsStatic));
-			t.Set("const", DynValue.NewBoolean(this.IsConst));
-			t.Set("readonly", DynValue.NewBoolean(this.IsReadonly));
-			t.Set("decltype", DynValue.NewString(this.FieldInfo.DeclaringType.FullName));
-			t.Set("declvtype", DynValue.NewBoolean(this.FieldInfo.DeclaringType.IsValueType));
-			t.Set("type", DynValue.NewString(this.FieldInfo.FieldType.FullName));
-			t.Set("read", DynValue.NewBoolean(true));
-			t.Set("write", DynValue.NewBoolean(!(this.IsConst || this.IsReadonly)));
 		}
 	}
 }

@@ -11,7 +11,7 @@ namespace WattleScript.Interpreter.Interop
 	/// <summary>
 	/// Class providing easier marshalling of overloaded CLR functions
 	/// </summary>
-	public class OverloadedMethodMemberDescriptor : IOptimizableDescriptor, IMemberDescriptor, IWireableDescriptor
+	public class OverloadedMethodMemberDescriptor : IOptimizableDescriptor, IMemberDescriptor
 	{
 		/// <summary>
 		/// Comparer class for IOverloadableMemberDescriptor
@@ -482,38 +482,6 @@ namespace WattleScript.Interpreter.Interop
 		public void SetValue(Script script, object obj, DynValue value)
 		{
 			this.CheckAccess(MemberDescriptorAccess.CanWrite, obj);
-		}
-
-		/// <summary>
-		/// Prepares the descriptor for hard-wiring.
-		/// The descriptor fills the passed table with all the needed data for hardwire generators to generate the appropriate code.
-		/// </summary>
-		/// <param name="t">The table to be filled</param>
-		public void PrepareForWiring(Table t)
-		{
-			t.Set("class", DynValue.NewString(this.GetType().FullName));
-			t.Set("name", DynValue.NewString(this.Name));
-			t.Set("decltype", DynValue.NewString(this.DeclaringType.FullName));
-			DynValue mst = DynValue.NewPrimeTable();
-			t.Set("overloads", mst);
-
-			int i = 0;
-
-			foreach (var m in this.m_Overloads)
-			{
-				IWireableDescriptor sd = m as IWireableDescriptor;
-
-				if (sd != null)
-				{
-					DynValue mt = DynValue.NewPrimeTable();
-					mst.Table.Set(++i, mt);
-					sd.PrepareForWiring(mt.Table);
-				}
-				else
-				{
-					mst.Table.Set(++i, DynValue.NewString(string.Format("unsupported - {0} is not serializable", m.GetType().FullName)));
-				}
-			}
 		}
 	}
 }

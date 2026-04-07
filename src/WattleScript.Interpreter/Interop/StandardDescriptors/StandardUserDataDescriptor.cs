@@ -9,7 +9,7 @@ namespace WattleScript.Interpreter.Interop
 	/// <summary>
 	/// Standard descriptor for userdata types.
 	/// </summary>
-	public class StandardUserDataDescriptor : DispatchingUserDataDescriptor, IWireableDescriptor
+	public class StandardUserDataDescriptor : DispatchingUserDataDescriptor
 	{
 		/// <summary>
 		/// Gets the interop access mode this descriptor uses for members access
@@ -166,49 +166,6 @@ namespace WattleScript.Interpreter.Interop
 				{
 					AddMember(SPECIALNAME_INDEXER_SET, new ArrayMemberDescriptor(SPECIALNAME_INDEXER_SET, true));
 					AddMember(SPECIALNAME_INDEXER_GET, new ArrayMemberDescriptor(SPECIALNAME_INDEXER_GET, false));
-				}
-			}
-		}
-
-
-
-
-		public void PrepareForWiring(Table t)
-		{
-			if (AccessMode == InteropAccessMode.HideMembers || Type.Assembly == this.GetType().Assembly)
-			{
-				t.Set("skip", DynValue.NewBoolean(true));
-			}
-			else
-			{
-				t.Set("visibility", DynValue.NewString(this.Type.GetClrVisibility()));
-
-				t.Set("class", DynValue.NewString(this.GetType().FullName));
-				DynValue tm = DynValue.NewPrimeTable();
-				t.Set("members", tm);
-				DynValue tmm = DynValue.NewPrimeTable();
-				t.Set("metamembers", tmm);
-
-				Serialize(tm.Table, Members);
-				Serialize(tmm.Table, MetaMembers);
-			}
-		}
-
-		private void Serialize(Table t, IEnumerable<KeyValuePair<string, IMemberDescriptor>> members)
-		{
-			foreach (var pair in members)
-			{
-				IWireableDescriptor sd = pair.Value as IWireableDescriptor;
-
-				if (sd != null)
-				{
-					DynValue mt = DynValue.NewPrimeTable();
-					t.Set(pair.Key, mt);
-					sd.PrepareForWiring(mt.Table);
-				}
-				else
-				{
-					t.Set(pair.Key, DynValue.NewString("unsupported member type : " + pair.Value.GetType().FullName));
 				}
 			}
 		}

@@ -355,32 +355,6 @@ namespace WattleScript.Interpreter
 			return TypeDescriptorRegistry.GetDescriptorForType(o.GetType(), true);
 		}
 
-
-		/// <summary>
-		/// Gets a table with the description of registered types.
-		/// </summary>
-		/// <param name="useHistoricalData">if set to true, it will also include the last found descriptor of all unregistered types.</param>
-		/// <returns></returns>
-		public static Table GetDescriptionOfRegisteredTypes(bool useHistoricalData = false)
-		{
-			DynValue output = DynValue.NewPrimeTable();
-			var registeredTypesPairs = useHistoricalData ? TypeDescriptorRegistry.RegisteredTypesHistory : TypeDescriptorRegistry.RegisteredTypes;
-
-			foreach (var descpair in registeredTypesPairs)
-			{
-				IWireableDescriptor sd = descpair.Value as IWireableDescriptor;
-
-				if (sd != null)
-				{
-					DynValue t = DynValue.NewPrimeTable();
-					output.Table.Set(descpair.Key.FullName, t);
-					sd.PrepareForWiring(t.Table);
-				}
-			}
-
-			return output.Table;
-		}
-
 		/// <summary>
 		/// Gets all the registered types.
 		/// </summary>
@@ -391,8 +365,5 @@ namespace WattleScript.Interpreter
 			var registeredTypesPairs = useHistoricalData ? TypeDescriptorRegistry.RegisteredTypesHistory : TypeDescriptorRegistry.RegisteredTypes;
 			return registeredTypesPairs.Select(p => p.Value.Type);
 		}
-
-		
-
 	}
 }

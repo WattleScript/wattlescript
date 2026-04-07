@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\WattleScript.Hardwire\WattleScript.Hardwire.csproj" />
       <ProjectReference Include="..\WattleScript.Interpreter\WattleScript.Interpreter.csproj" />
     </ItemGroup>
 
