@@ -195,7 +195,8 @@ public partial class HardwireSourceGenerator : IIncrementalGenerator
                 }
 
                 TypeFieldDesc desc = new TypeFieldDesc() { Type = property.Type };
-                if (property.GetMethod != null)
+                if (property.GetMethod != null
+                    && property.GetMethod.DeclaredAccessibility == Accessibility.Public)
                 {
                     desc.Read = true;
                     var name = "get_" + property.Name;
@@ -209,7 +210,8 @@ public partial class HardwireSourceGenerator : IIncrementalGenerator
                     methods[name].AddMethod(m.level, property.GetMethod);
                 }
 
-                if (property.SetMethod != null)
+                if (property.SetMethod != null
+                    && property.SetMethod.DeclaredAccessibility == Accessibility.Public)
                 {
                     desc.Write = true;
                     var name = "set_" + property.Name;

@@ -67,4 +67,15 @@ public class SanityTest
         ").CastToInt());
         Assert.AreEqual(3, p.Property);
     }
+    
+    [Test]
+    public void ShouldNotSetProtectedProperty()
+    {
+        var sc = new Script(CoreModules.None);
+        var p = new WithProperty();
+        sc.Globals["data"] = p;
+        Assert.Throws<ScriptRuntimeException>(() => sc.DoString(@"
+        data.Property2 = 3
+        "));
+    }
 }

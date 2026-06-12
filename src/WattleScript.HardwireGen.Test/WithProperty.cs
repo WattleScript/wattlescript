@@ -6,4 +6,5 @@ namespace WattleScript.HardwireGen.Test;
 public class WithProperty
 {
     public int Property { get; set; }
+    public int Property2 { get; protected set; }
 }
