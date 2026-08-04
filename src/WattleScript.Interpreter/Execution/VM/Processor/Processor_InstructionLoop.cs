@@ -34,12 +34,13 @@ namespace WattleScript.Interpreter.Execution.VM
 
 			try
 			{
+				new_frame:
+				ref var currentFrame = ref m_ExecutionStack.Peek();
+				
 				while (true)
 				{
 					//TODO: Hoist outside of while loop, update any instruction that
 					//can change frame to jump to before loop when changing frame
-					ref var currentFrame = ref m_ExecutionStack.Peek();
-					
 					Instruction i = currentFrame.Function.code[instructionPtr];
 					int currentPtr = instructionPtr;
 					if (m_Debug.DebuggerAttached != null)
@@ -121,69 +122,69 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.Add:
 							instructionPtr = ExecAdd(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.AddStr:
 							instructionPtr = ExecAddStr(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Concat:
 							instructionPtr = ExecConcat(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Neg:
 							instructionPtr = ExecNeg(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Sub:
 							instructionPtr = ExecSub(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Mul:
 							instructionPtr = ExecMul(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Div:
 							instructionPtr = ExecDiv(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Mod:
 							instructionPtr = ExecMod(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Power:
 							instructionPtr = ExecPower(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Eq:
 							instructionPtr = ExecEq(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.LessEq:
 							instructionPtr = ExecLessEq(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Less:
 							instructionPtr = ExecLess(instructionPtr, i);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Len:
 							instructionPtr = ExecLen(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Switch:
 							instructionPtr = ExecSwitch(currentPtr, i, ref currentFrame);
-							break;
+							goto new_frame;
 						case OpCode.Call:
 						case OpCode.ThisCall:
 							instructionPtr = Internal_ExecCall(canAwait, i.NumVal, instructionPtr, null, null, i.OpCode == OpCode.ThisCall, GetString(i.NumVal2));
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
-							break;
+							goto new_frame;
 						case OpCode.NewCall:
 							instructionPtr = ExecNewCall(i, instructionPtr, canAwait);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr == YIELD_SPECIAL_AWAIT) goto yield_to_await;
-							break;
+							goto new_frame;
 						case OpCode.Scalar:
 							m_ValueStack.Push(m_ValueStack.Pop().ToScalar());
 							break;
@@ -209,7 +210,7 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.JtOrPop:
 							instructionPtr = ExecShortCircuitingOperator(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.JNil:
 							{
 								DynValue v = m_ValueStack.Pop().ToScalar();
@@ -218,25 +219,25 @@ namespace WattleScript.Interpreter.Execution.VM
 									instructionPtr = i.NumVal;
 							}
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.JNilChk:
 							{
 								if(m_ValueStack.Peek().IsNil())
 									instructionPtr = i.NumVal;
 							}
-							break;
+							goto new_frame;
 						case OpCode.Jf:
 							instructionPtr = JumpBool(i, false, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Jt:
 							instructionPtr = JumpBool(i, true, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.Jump:
 							instructionPtr = i.NumVal;
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.MkTuple:
 							ExecMkTuple(i);
 							break;
@@ -263,14 +264,14 @@ namespace WattleScript.Interpreter.Execution.VM
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
 							if (instructionPtr < 0)
 								goto return_to_native_code;
-							break;
+							goto new_frame;
 						case OpCode.Incr:
 							ExecIncr(i);
 							break;
 						case OpCode.JFor:
 							instructionPtr = ExecJFor(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.TabProps:
 						{
 							ref var top = ref m_ValueStack.Peek();
@@ -368,21 +369,21 @@ namespace WattleScript.Interpreter.Execution.VM
 						case OpCode.IndexL:
 							instructionPtr = ExecIndex(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.IndexSet:
 						case OpCode.IndexSetN:
 						case OpCode.IndexSetL:
 							instructionPtr = ExecIndexSet(i, instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.NilCoalescing:
 							instructionPtr = ExecNilCoalescingAssignment( instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.NilCoalescingInverse:
 							instructionPtr = ExecNilCoalescingAssignmentInverse(instructionPtr);
 							if (instructionPtr == YIELD_SPECIAL_TRAP) goto yield_to_calling_coroutine;
-							break;
+							goto new_frame;
 						case OpCode.JLclInit:
 							if(m_ValueStack[m_ExecutionStack.Peek().BasePointer + i.NumVal2].IsNotNil())
 								instructionPtr = i.NumVal;
