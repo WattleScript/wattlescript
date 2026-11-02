@@ -639,5 +639,9 @@ namespace WattleScript.Interpreter
 				throw new ScriptRuntimeException(this);
 		}
 
+		public override string ToString()
+		{
+			return DoNotDecorateMessage ? base.ToString() : $"{DecoratedMessage}\n{base.ToString()}";
+		}
 	}
 }
